@@ -1,16 +1,18 @@
 import {
   BlendOption,
   CallbackProperty,
+  CameraEventType,
   Cartesian2,
   Cartesian3,
   Color,
   ColorGeometryInstanceAttribute,
   ColorMaterialProperty,
-  createGooglePhotorealistic3DTileset,
+  createWorldTerrainAsync,
   defined,
   EllipsoidGeometry,
   GeometryInstance,
   Ion,
+  IonImageryProvider,
   JulianDate,
   Material,
   Math as CesiumMath,
@@ -31,7 +33,7 @@ import { useEffect, useRef } from "react";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
 import { env } from "../utils/env";
-import { createOrbitPositions, earthRadiusMeters, kpToAuroraRadiusDegrees } from "../utils/orbit";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -44,11 +46,21 @@ interface SatellitePickPayload {
   satellite: Satellite;
 }
 
+interface SatelliteAnimState {
+  point: PointPrimitive;
+  satellite: Satellite;
+  radius: number;
+  inclination: number;
+  ascendingNode: number;
+  period: number;
+  initialTheta: number;
+}
+
 interface ConjunctionLineState {
   conjunction: ConjunctionWarning;
-  polyline: {
-    material: Material;
-  };
+  polyline: ReturnType<PolylineCollection["add"]>;
+  sat1NoradId: number;
+  sat2NoradId: number;
 }
 
 interface SolarWindParticle {
@@ -62,6 +74,53 @@ interface SolarWindParticle {
 interface GeometryAttributes {
   color?: Uint8Array;
 }
+
+/** Build an arc between two satellite positions using spherical interpolation (stays above earth) */
+const createArcPositions = (start: Cartesian3, end: Cartesian3, segments = 32): Cartesian3[] => {
+  const startMag = Cartesian3.magnitude(start);
+  const endMag = Cartesian3.magnitude(end);
+
+  // Guard: if either point is at origin, just return a simple two-point line
+  if (startMag < 1 || endMag < 1) {
+    return [start, end];
+  }
+
+  const positions: Cartesian3[] = [];
+
+  const startNorm = new Cartesian3(start.x / startMag, start.y / startMag, start.z / startMag);
+  const endNorm = new Cartesian3(end.x / endMag, end.y / endMag, end.z / endMag);
+
+  const dot = clamp(startNorm.x * endNorm.x + startNorm.y * endNorm.y + startNorm.z * endNorm.z, -1, 1);
+  const omega = Math.acos(dot);
+  const sinOmega = Math.sin(omega);
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+
+    let dirX: number, dirY: number, dirZ: number;
+
+    if (sinOmega < 1e-6) {
+      dirX = startNorm.x + (endNorm.x - startNorm.x) * t;
+      dirY = startNorm.y + (endNorm.y - startNorm.y) * t;
+      dirZ = startNorm.z + (endNorm.z - startNorm.z) * t;
+    } else {
+      const a = Math.sin((1 - t) * omega) / sinOmega;
+      const b = Math.sin(t * omega) / sinOmega;
+      dirX = a * startNorm.x + b * endNorm.x;
+      dirY = a * startNorm.y + b * endNorm.y;
+      dirZ = a * startNorm.z + b * endNorm.z;
+    }
+
+    const radius = startMag + (endMag - startMag) * t;
+    const bow = 1 + 0.08 * Math.sin(t * Math.PI);
+    const r = radius * bow;
+
+    const mag = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+    const scale = mag > 0 ? r / mag : 0;
+    positions.push(new Cartesian3(dirX * scale, dirY * scale, dirZ * scale));
+  }
+  return positions;
+};
 
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
@@ -138,35 +197,63 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     viewer.scene.globe.baseColor = Color.BLACK;
     viewer.scene.globe.enableLighting = true;
 
-    const cameraController = viewer.scene.screenSpaceCameraController;
-    cameraController.inertiaSpin = 0.95;
-    cameraController.inertiaTranslate = 0.95;
-    cameraController.inertiaZoom = 0.92;
+    const controller = viewer.scene.screenSpaceCameraController;
 
+    // Completely disable all default event types first
+    controller.rotateEventTypes = [];
+    controller.translateEventTypes = [];
+    controller.zoomEventTypes = [];
+    controller.tiltEventTypes = [];
+    controller.lookEventTypes = [];
+
+    // Left drag + middle drag: rotate/orbit around the globe (earth stays centered)
+    controller.rotateEventTypes = [
+      CameraEventType.LEFT_DRAG,
+      CameraEventType.MIDDLE_DRAG
+    ];
+    // Translate disabled — prevents panning away from earth
+    controller.translateEventTypes = [];
+    // Scroll wheel + pinch: zoom
+    controller.zoomEventTypes = [
+      CameraEventType.WHEEL,
+      CameraEventType.PINCH
+    ];
+    controller.zoomFactor = 2.0;
+    // Right mouse button: tilt/yaw to view satellites parallel to ground
+    controller.tiltEventTypes = CameraEventType.RIGHT_DRAG;
+
+    // Zoom limits: can't fly into earth or zoom out past the magnetosphere
+    controller.minimumZoomDistance = 500_000;    // ~500km above surface
+    controller.maximumZoomDistance = 200_000_000; // ~200,000km out
+
+    // Start looking at earth from space, centered
     viewer.camera.setView({
-      destination: Cartesian3.fromDegrees(-75, 20, 20_000_000),
+      destination: Cartesian3.fromDegrees(0, 20, 35_000_000),
       orientation: {
-        heading: CesiumMath.toRadians(22),
-        pitch: CesiumMath.toRadians(-30),
+        heading: 0,
+        pitch: CesiumMath.toRadians(-90),
         roll: 0
       }
     });
 
     let isDisposed = false;
 
-    createGooglePhotorealistic3DTileset()
-      .then((googleTileset) => {
-        if (isDisposed || viewer.isDestroyed()) {
-          googleTileset.destroy();
-          return;
-        }
+    createWorldTerrainAsync({
+      requestWaterMask: true,
+      requestVertexNormals: true
+    }).then((terrainProvider) => {
+      if (isDisposed || viewer.isDestroyed()) return;
+      viewer.terrainProvider = terrainProvider;
+    }).catch((err) => {
+      console.error("[AURORA] Failed to load terrain", err);
+    });
 
-        viewer.scene.primitives.add(googleTileset);
-      })
-      .catch((error: unknown) => {
-        // This keeps the globe functional even when token/config is missing.
-        console.error("[AURORA] Failed to load Google Photorealistic 3D Tiles", error);
-      });
+    IonImageryProvider.fromAssetId(2).then((provider) => {
+      if (isDisposed || viewer.isDestroyed()) return;
+      viewer.imageryLayers.addImageryProvider(provider);
+    }).catch((err) => {
+      console.error("[AURORA] Failed to load imagery", err);
+    });
 
     const satelliteMap = new Map<number, Satellite>();
     satellites.forEach((satellite) => {
@@ -178,20 +265,39 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     );
 
     const criticalPoints: PointPrimitive[] = [];
+    const satAnimStates: SatelliteAnimState[] = [];
+    const satAnimByNorad = new Map<number, SatelliteAnimState>();
 
     satellites.forEach((satellite) => {
+      const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
+      const period = getOrbitalPeriod(radius);
+      const initialTheta = CesiumMath.toRadians(satellite.lon + 180);
+      const startPos = orbitPoint(initialTheta, radius, inclination, ascendingNode);
+
       const point = satellitePoints.add({
-        position: Cartesian3.fromDegrees(satellite.lon, satellite.lat, satellite.altitudeKm * 1000),
+        position: startPos,
         pixelSize: satellite.riskLevel === "critical" ? 10 : 6,
         color: riskColorMap[satellite.riskLevel].clone(),
         outlineColor: Color.WHITE.withAlpha(0.25),
         outlineWidth: satellite.riskLevel === "critical" ? 2 : 1,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        disableDepthTestDistance: 0.0,
         id: {
           type: "satellite",
           satellite
         }
       });
+
+      const state: SatelliteAnimState = {
+        point,
+        satellite,
+        radius,
+        inclination,
+        ascendingNode,
+        period,
+        initialTheta
+      };
+      satAnimStates.push(state);
+      satAnimByNorad.set(satellite.noradId, state);
 
       if (satellite.riskLevel === "critical") {
         criticalPoints.push(point);
@@ -218,7 +324,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
             dashPattern: 255
           })
         }),
-        asynchronous: true
+        asynchronous: false
       })
     );
 
@@ -227,18 +333,16 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const conjunctionLineState: ConjunctionLineState[] = [];
 
     conjunctions.forEach((conjunction) => {
-      const first = satelliteMap.get(conjunction.object1.noradId);
-      const second = satelliteMap.get(conjunction.object2.noradId);
+      const first = satAnimByNorad.get(conjunction.object1.noradId);
+      const second = satAnimByNorad.get(conjunction.object2.noradId);
 
       if (!first || !second) {
         return;
       }
 
       const polyline = conjunctionLines.add({
-        positions: [
-          Cartesian3.fromDegrees(first.lon, first.lat, first.altitudeKm * 1000),
-          Cartesian3.fromDegrees(second.lon, second.lat, second.altitudeKm * 1000)
-        ],
+        positions: [first.point.position, second.point.position],
+        show: false,
         width: 2,
         material: Material.fromType("Color", {
           color: ORANGE_COLOR.withAlpha(0.8)
@@ -247,9 +351,9 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
 
       conjunctionLineState.push({
         conjunction,
-        polyline: {
-          material: polyline.material
-        }
+        polyline,
+        sat1NoradId: conjunction.object1.noradId,
+        sat2NoradId: conjunction.object2.noradId
       });
     });
 
@@ -305,7 +409,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
             slicePartitions: 64
           }),
           attributes: {
-            color: ColorGeometryInstanceAttribute.fromColor(new Color(100 / 255, 180 / 255, 1, 0.04))
+            color: ColorGeometryInstanceAttribute.fromColor(new Color(100 / 255, 180 / 255, 1, 0.02))
           }
         }),
         appearance: new PerInstanceColorAppearance({
@@ -325,14 +429,14 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     );
 
     const particleCount = 200;
-    const streamStartX = -earthR * 25;
-    const streamEndX = earthR * 3;
+    const streamStartX = earthR * 25;
+    const streamEndX = -earthR * 8;
     const streamSpread = earthR * 6;
 
     const particles: SolarWindParticle[] = [];
 
     for (let index = 0; index < particleCount; index += 1) {
-      const x = randomInRange(streamStartX, -earthR * 9);
+      const x = randomInRange(earthR * 9, streamStartX);
       const y = randomInRange(-streamSpread, streamSpread);
       const z = randomInRange(-streamSpread, streamSpread);
       const point = particleCollection.add({
@@ -352,6 +456,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     }
 
     let lastFrameMs = performance.now();
+    const startTimeMs = performance.now();
 
     const onPreRender = (_scene: unknown, time: JulianDate): void => {
       const nowMs = performance.now();
@@ -359,22 +464,46 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       lastFrameMs = nowMs;
 
       const timeSeconds = JulianDate.toDate(time).getTime() / 1000;
+      const elapsedSeconds = (nowMs - startTimeMs) / 1000;
+
+      // --- Animate satellites along their orbits ---
+      satAnimStates.forEach((state) => {
+        const angularVelocity = CesiumMath.TWO_PI / state.period;
+        const theta = state.initialTheta + angularVelocity * elapsedSeconds;
+        state.point.position = orbitPoint(theta, state.radius, state.inclination, state.ascendingNode);
+      });
+
+      // --- Update conjunction lines: only show when satellites are near each other ---
+      const conjunctionProximityThreshold = earthR * 3; // ~19,000km
+      conjunctionLineState.forEach((lineState) => {
+        const s1 = satAnimByNorad.get(lineState.sat1NoradId);
+        const s2 = satAnimByNorad.get(lineState.sat2NoradId);
+        if (!s1 || !s2) return;
+
+        const dist = Cartesian3.distance(s1.point.position, s2.point.position);
+        if (dist > conjunctionProximityThreshold) {
+          // Too far apart — hide the line
+          lineState.polyline.show = false;
+          return;
+        }
+
+        lineState.polyline.show = true;
+        lineState.polyline.positions = createArcPositions(s1.point.position, s2.point.position);
+
+        const hoursToTca = (lineState.conjunction.tca.getTime() - Date.now()) / 3_600_000;
+        const urgency = clamp((6 - hoursToTca) / 6, 0, 1);
+        const threadPulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(timeSeconds * Math.PI));
+        const color = Color.lerp(ORANGE_COLOR, RED_COLOR, urgency, new Color());
+        color.alpha = threadPulse;
+
+        const uniforms = lineState.polyline.material.uniforms as { color: Color };
+        uniforms.color = color;
+      });
 
       const criticalPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
       criticalPoints.forEach((point) => {
         point.pixelSize = 10 + criticalPulse * 2;
         point.color = RED_COLOR.withAlpha(0.7 + criticalPulse * 0.3);
-      });
-
-      const threadPulseAlpha = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(timeSeconds * Math.PI));
-      conjunctionLineState.forEach((lineState) => {
-        const hoursToTca = (lineState.conjunction.tca.getTime() - Date.now()) / 3_600_000;
-        const urgency = clamp((6 - hoursToTca) / 6, 0, 1);
-        const color = Color.lerp(ORANGE_COLOR, RED_COLOR, urgency, new Color());
-        color.alpha = threadPulseAlpha;
-
-        const uniforms = lineState.polyline.material.uniforms as { color: Color };
-        uniforms.color = color;
       });
 
       if (!magnetosphereAttributes && magnetospherePrimitive.ready) {
@@ -384,53 +513,103 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       }
 
       if (magnetosphereAttributes?.color) {
-        const alpha = 0.02 + 0.04 * (0.5 + 0.5 * Math.sin(timeSeconds * (Math.PI / 2)));
+        const alpha = 0.01 + 0.02 * (0.5 + 0.5 * Math.sin(timeSeconds * (Math.PI / 2)));
         magnetosphereAttributes.color = ColorGeometryInstanceAttribute.toValue(
           new Color(100 / 255, 180 / 255, 1, alpha)
         );
       }
 
       const flowSpeed = spaceWeather.solarWindSpeed * 18_000;
+      const shieldRadiusYZ = earthR * 10; // magnetosphere Y/Z radius
+      const shieldRadiusX = earthR * 9;   // magnetosphere X radius
+      const shieldCenterX = earthR;       // magnetosphere is offset +X
+
       particles.forEach((particle, index) => {
-        particle.x += flowSpeed * particle.speedScale * deltaSeconds;
+        particle.x -= flowSpeed * particle.speedScale * deltaSeconds;
         particle.y += Math.sin((timeSeconds + index) * 0.7) * 1_500 * deltaSeconds;
         particle.z += Math.cos((timeSeconds + index) * 0.5) * 1_500 * deltaSeconds;
 
-        if (particle.x > streamEndX) {
-          particle.x = streamStartX - randomInRange(0, earthR * 3);
+        if (particle.x < streamEndX) {
+          particle.x = streamStartX + randomInRange(0, earthR * 3);
           particle.y = randomInRange(-streamSpread, streamSpread);
           particle.z = randomInRange(-streamSpread, streamSpread);
         }
 
-        particle.primitive.position = new Cartesian3(particle.x, particle.y, particle.z);
+        // Check if particle is inside the magnetosphere ellipsoid
+        const dx = particle.x - shieldCenterX;
+        const ellipsoidDist =
+          (dx * dx) / (shieldRadiusX * shieldRadiusX) +
+          (particle.y * particle.y) / (shieldRadiusYZ * shieldRadiusYZ) +
+          (particle.z * particle.z) / (shieldRadiusYZ * shieldRadiusYZ);
+
+        if (ellipsoidDist < 1.0) {
+          // Deflect outward in Y/Z — push away from the central axis
+          const lateralDist = Math.sqrt(particle.y * particle.y + particle.z * particle.z);
+          if (lateralDist < 1) {
+            // Particle is right on the axis, give it a random push direction
+            const angle = randomInRange(0, CesiumMath.TWO_PI);
+            particle.y += Math.cos(angle) * earthR * 0.5;
+            particle.z += Math.sin(angle) * earthR * 0.5;
+          } else {
+            // Push outward along the Y/Z direction (away from the nose)
+            const deflectStrength = flowSpeed * particle.speedScale * deltaSeconds * 2.5;
+            particle.y += (particle.y / lateralDist) * deflectStrength;
+            particle.z += (particle.z / lateralDist) * deflectStrength;
+          }
+
+          // Also slow down forward (X) motion near the magnetosphere nose
+          particle.x += flowSpeed * particle.speedScale * deltaSeconds * 0.4;
+        }
+
+        particle.primitive.position = new Cartesian3(
+          particle.x,
+          particle.y,
+          particle.z
+        );
       });
     };
 
     viewer.scene.preRender.addEventListener(onPreRender);
 
+    let mouseDownPosition = { x: 0, y: 0 };
+
     viewer.screenSpaceEventHandler.setInputAction(
-      (movement: { position: Cartesian2 }) => {
-        const pickedObject = viewer.scene.pick(movement.position);
-
-        if (!defined(pickedObject)) {
-          return;
-        }
-
-        const pickedWithId = pickedObject as { id?: unknown };
-        if (!isSatellitePickPayload(pickedWithId.id)) {
-          return;
-        }
-
-        console.log("[AURORA] Satellite selected", pickedWithId.id.satellite);
+      (event: { position: Cartesian2 }) => {
+        mouseDownPosition = {
+          x: event.position.x,
+          y: event.position.y
+        };
       },
-      ScreenSpaceEventType.LEFT_CLICK
+      ScreenSpaceEventType.LEFT_DOWN
+    );
+
+    viewer.screenSpaceEventHandler.setInputAction(
+      (event: { position: Cartesian2 }) => {
+        const dx = event.position.x - mouseDownPosition.x;
+        const dy = event.position.y - mouseDownPosition.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 5) return;
+
+        const picked = viewer.scene.pick(event.position);
+        if (!defined(picked)) return;
+
+        const pickedWithId = picked as { id?: unknown };
+        if (!isSatellitePickPayload(pickedWithId.id)) return;
+
+        console.log(
+          "[AURORA] Satellite selected:",
+          pickedWithId.id.satellite.name,
+          pickedWithId.id.satellite
+        );
+      },
+      ScreenSpaceEventType.LEFT_UP
     );
 
     return () => {
       isDisposed = true;
 
       viewer.scene.preRender.removeEventListener(onPreRender);
-      viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
+      viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOWN);
+      viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_UP);
 
       if (!viewer.isDestroyed()) {
         viewer.destroy();

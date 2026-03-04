@@ -5,7 +5,10 @@ const EARTH_RADIUS_METERS = Ellipsoid.WGS84.maximumRadius;
 
 const toRadians = CesiumMath.toRadians;
 
-export const createOrbitPositions = (satellite: Satellite, segments = 180): Cartesian3[] => {
+// GM for Earth (m^3/s^2)
+const MU_EARTH = 3.986004418e14;
+
+export const getOrbitParams = (satellite: Satellite) => {
   const radius = EARTH_RADIUS_METERS + satellite.altitudeKm * 1000;
   const inclinationDeg =
     satellite.orbitType === "LEO"
@@ -17,24 +20,43 @@ export const createOrbitPositions = (satellite: Satellite, segments = 180): Cart
   const inclination = toRadians(inclinationDeg);
   const ascendingNode = toRadians((satellite.noradId * 13) % 360);
 
+  return { radius, inclination, ascendingNode };
+};
+
+/** Orbital period in seconds using Kepler's third law */
+export const getOrbitalPeriod = (radiusMeters: number): number =>
+  2 * Math.PI * Math.sqrt((radiusMeters ** 3) / MU_EARTH);
+
+export const orbitPoint = (theta: number, radius: number, inclination: number, ascendingNode: number): Cartesian3 => {
+  const x = radius * Math.cos(theta);
+  const y = radius * Math.sin(theta);
+
+  const yInclined = y * Math.cos(inclination);
+  const zInclined = y * Math.sin(inclination);
+
+  const xRotated = x * Math.cos(ascendingNode) - yInclined * Math.sin(ascendingNode);
+  const yRotated = x * Math.sin(ascendingNode) + yInclined * Math.cos(ascendingNode);
+
+  return new Cartesian3(xRotated, yRotated, zInclined);
+};
+
+export const createOrbitPositions = (satellite: Satellite, segments = 180): Cartesian3[] => {
+  const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
   const positions: Cartesian3[] = [];
 
   for (let index = 0; index <= segments; index += 1) {
     const theta = (index / segments) * CesiumMath.TWO_PI;
-
-    const x = radius * Math.cos(theta);
-    const y = radius * Math.sin(theta);
-
-    const yInclined = y * Math.cos(inclination);
-    const zInclined = y * Math.sin(inclination);
-
-    const xRotated = x * Math.cos(ascendingNode) - yInclined * Math.sin(ascendingNode);
-    const yRotated = x * Math.sin(ascendingNode) + yInclined * Math.cos(ascendingNode);
-
-    positions.push(new Cartesian3(xRotated, yRotated, zInclined));
+    positions.push(orbitPoint(theta, radius, inclination, ascendingNode));
   }
 
   return positions;
+};
+
+export const getSatellitePositionOnOrbit = (satellite: Satellite): Cartesian3 => {
+  const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
+  // Use the satellite's longitude to derive its position along the orbit
+  const theta = toRadians(satellite.lon + 180);
+  return orbitPoint(theta, radius, inclination, ascendingNode);
 };
 
 export const kpToAuroraRadiusDegrees = (kpIndex: number): number => {
