@@ -42,3 +42,17 @@ export interface ConjunctionWarning {
 }
 
 export type Conjunction = ConjunctionWarning;
+
+export type VisualMode = "OPS" | "STORM" | "INTEL" | "HELIO";
+
+export interface HistoricalEvent {
+  id: string;
+  name: string;
+  date: Date;
+  description: string;
+  type: "solar_storm" | "conjunction" | "satellite_loss";
+  kpIndex?: number;
+  solarWindSpeed?: number;
+  bzComponent?: number;
+  stormLevel?: SpaceWeather["stormLevel"];
+}

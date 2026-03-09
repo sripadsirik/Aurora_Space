@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { mockConjunctions } from "../data/mock/conjunctions";
 import { mockSatellites } from "../data/mock/satellites";
 import { mockSpaceWeather } from "../data/mock/spaceWeather";
-import type { Conjunction, Satellite, SpaceWeather } from "../types/space";
+import type { Conjunction, HistoricalEvent, Satellite, SpaceWeather, VisualMode } from "../types/space";
 
 export type PanelType =
   | "satellite-detail"
@@ -19,10 +19,23 @@ interface AuroraStoreState {
   satellites: Satellite[];
   conjunctions: Conjunction[];
   isConnectedToBackend: boolean;
+
+  currentMode: VisualMode;
+  earthOnlyMode: boolean;
+  timelineActive: boolean;
+  timelinePosition: Date;
+  timelineEvent: HistoricalEvent | null;
+
   setSelectedSatellite: (satellite: Satellite | null) => void;
   setSelectedConjunction: (conjunction: Conjunction | null) => void;
   openPanel: (panel: PanelType) => void;
   closePanel: (panel: PanelType) => void;
+  setMode: (mode: VisualMode) => void;
+  setEarthOnlyMode: (active: boolean) => void;
+  toggleEarthOnlyMode: () => void;
+  setTimelineActive: (active: boolean) => void;
+  setTimelinePosition: (date: Date) => void;
+  setTimelineEvent: (event: HistoricalEvent | null) => void;
 }
 
 const openPanelInSet = (panels: Set<PanelType>, panel: PanelType): Set<PanelType> => {
@@ -45,6 +58,13 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   satellites: mockSatellites,
   conjunctions: mockConjunctions,
   isConnectedToBackend: false,
+
+  currentMode: "OPS",
+  earthOnlyMode: false,
+  timelineActive: false,
+  timelinePosition: new Date(),
+  timelineEvent: null,
+
   setSelectedSatellite: (satellite) =>
     set((state) => ({
       selectedSatellite: satellite,
@@ -78,5 +98,11 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
       }
 
       return nextState;
-    })
+    }),
+  setMode: (mode) => set({ currentMode: mode }),
+  setEarthOnlyMode: (active) => set({ earthOnlyMode: active }),
+  toggleEarthOnlyMode: () => set((state) => ({ earthOnlyMode: !state.earthOnlyMode })),
+  setTimelineActive: (active) => set({ timelineActive: active }),
+  setTimelinePosition: (date) => set({ timelinePosition: date }),
+  setTimelineEvent: (event) => set({ timelineEvent: event })
 }));

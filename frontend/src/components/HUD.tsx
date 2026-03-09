@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
@@ -20,50 +18,68 @@ interface LayerRow {
   isLive: boolean;
 }
 
-export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element => {
+export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element | null => {
   const now = useUtcClock();
   const openPanel = useAuroraStore((state) => state.openPanel);
   const selectedConjunction = useAuroraStore((state) => state.selectedConjunction);
   const setSelectedConjunction = useAuroraStore((state) => state.setSelectedConjunction);
+  const currentMode = useAuroraStore((state) => state.currentMode);
+  const timelineEvent = useAuroraStore((state) => state.timelineEvent);
 
-  const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
+  const kpDisplay = timelineEvent?.kpIndex ?? spaceWeather.kpIndex;
+  const windDisplay = timelineEvent?.solarWindSpeed ?? spaceWeather.solarWindSpeed;
+  const bzDisplay = timelineEvent?.bzComponent ?? spaceWeather.bzComponent;
+  const stormDisplay = timelineEvent?.stormLevel ?? spaceWeather.stormLevel;
 
-  const layers = useMemo<LayerRow[]>(
-    () => [
-      {
-        name: "Satellites",
-        source: "CelesTrak",
-        freshness: "2m ago",
-        count: satellites.length,
-        isLive: true
-      },
-      {
-        name: "Conjunctions",
-        source: "Space-Track",
-        freshness: "2m ago",
-        count: conjunctions.length,
-        isLive: true
-      },
-      {
-        name: "Space Weather",
-        source: "NOAA SWPC",
-        freshness: "2m ago",
-        count: 1,
-        isLive: true
-      },
-      {
-        name: "Aurora Forecast",
-        source: "NOAA Ovation",
-        freshness: "2m ago",
-        count: 2,
-        isLive: true
-      }
-    ],
-    [conjunctions.length, satellites.length]
-  );
+  const kpPosition = Math.max(0, Math.min(100, (kpDisplay / 9) * 100));
+
+  // Mode-dependent color styles
+  const isIntel = currentMode === "INTEL";
+  const isStorm = currentMode === "STORM" || kpDisplay > 5;
+  const textColor = isIntel ? "#00ff44" : isStorm ? "#ffd8b8" : "var(--aurora-text)";
+  const accentColor = isIntel ? "#00ff44" : isStorm ? "#ff8844" : "var(--aurora-accent)";
+  const subTextColor = isIntel ? "#00cc33" : isStorm ? "#ffccaa" : "#cde4f6";
+
+  const layers: LayerRow[] = [
+    {
+      name: "Satellites",
+      source: "CelesTrak",
+      freshness: "2m ago",
+      count: satellites.length,
+      isLive: true
+    },
+    {
+      name: "Conjunctions",
+      source: "Space-Track",
+      freshness: "2m ago",
+      count: conjunctions.length,
+      isLive: true
+    },
+    {
+      name: "Space Weather",
+      source: "NOAA SWPC",
+      freshness: "2m ago",
+      count: 1,
+      isLive: true
+    },
+    {
+      name: "Aurora Forecast",
+      source: "NOAA Ovation",
+      freshness: "2m ago",
+      count: 2,
+      isLive: true
+    }
+  ];
+
+  if (currentMode === "HELIO") {
+    return null;
+  }
 
   return (
-    <div className="pointer-events-none absolute inset-0 p-4 font-mono text-[13px] text-[var(--aurora-text)]">
+    <div
+      className="pointer-events-none absolute inset-0 p-4 font-mono text-[13px] transition-colors duration-400"
+      style={{ color: textColor }}
+    >
       <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-4">
         <div
           className="hud-panel pointer-events-auto w-[330px] cursor-pointer self-start rounded p-3 transition-colors hover:border-cyan-400/50"
@@ -76,23 +92,23 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             }
           }}
         >
-          <p className="text-xs tracking-[0.2em] text-[var(--aurora-accent)]">SPACE WEATHER</p>
+          <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>SPACE WEATHER</p>
           <div className="mt-2 flex items-end gap-3">
-            <p className="text-2xl font-semibold" style={{ color: getKpColor(spaceWeather.kpIndex) }}>
-              Kp {spaceWeather.kpIndex.toFixed(1)}
+            <p className="text-2xl font-semibold" style={{ color: getKpColor(kpDisplay) }}>
+              Kp {kpDisplay.toFixed(1)}
             </p>
             <span className="rounded border border-white/20 px-2 py-0.5 text-xs uppercase tracking-[0.12em]">
-              {spaceWeather.stormLevel}
+              {stormDisplay}
             </span>
           </div>
           <div className="relative mt-2 h-2 w-full overflow-hidden rounded bg-gradient-to-r from-[#6dff79] via-[#ffcb3b] to-[#ff2a2a]">
             <div className="absolute -top-1 h-4 w-[2px] bg-white" style={{ left: `calc(${kpPosition}% - 1px)` }} />
           </div>
 
-          <div className="mt-3 space-y-1 text-xs text-[#cde4f6]">
+          <div className="mt-3 space-y-1 text-xs" style={{ color: subTextColor }}>
             <div className="flex justify-between">
               <span>Solar Wind Speed</span>
-              <span>{spaceWeather.solarWindSpeed} km/s</span>
+              <span>{windDisplay} km/s</span>
             </div>
             <div className="flex justify-between">
               <span>Solar Wind Density</span>
@@ -100,8 +116,8 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             </div>
             <div className="flex justify-between">
               <span>Bz Component</span>
-              <span className={spaceWeather.bzComponent < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]"}>
-                {spaceWeather.bzComponent.toFixed(1)} nT
+              <span className={bzDisplay < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]"}>
+                {bzDisplay.toFixed(1)} nT
               </span>
             </div>
             <div className="flex justify-between">
@@ -112,8 +128,8 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
         </div>
 
         <div className="hud-panel pointer-events-auto ml-auto w-[430px] self-start rounded p-3">
-          <p className="text-xs tracking-[0.2em] text-[var(--aurora-accent)]">ACTIVE ALERTS</p>
-          <div className="mt-2 space-y-1 text-xs text-[#d8ebff]">
+          <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>ACTIVE ALERTS</p>
+          <div className="mt-2 space-y-1 text-xs" style={{ color: isIntel ? "#00cc33" : "#d8ebff" }}>
             {conjunctions.map((conjunction) => {
               const isCritical = isCriticalConjunction(conjunction);
               const isSelected = selectedConjunction?.id === conjunction.id;
@@ -150,13 +166,13 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             }
           }}
         >
-          <p className="text-xs tracking-[0.2em] text-[var(--aurora-accent)]">DATA LAYERS</p>
+          <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>DATA LAYERS</p>
           <div className="mt-2 space-y-1 text-xs">
             {layers.map((layer) => (
               <div key={layer.name} className="grid grid-cols-[8px_1.2fr_1fr_0.8fr_0.6fr] items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${layer.isLive ? "bg-[#00ff88]" : "bg-[#7a8896]"}`} />
+                <span className={`h-2 w-2 rounded-full ${layer.isLive ? (isIntel ? "bg-[#00ff44]" : "bg-[#00ff88]") : "bg-[#7a8896]"}`} />
                 <span>{layer.name}</span>
-                <span className="text-[#9ec3df]">{layer.source}</span>
+                <span style={{ color: isIntel ? "#009933" : "#9ec3df" }}>{layer.source}</span>
                 <span>{layer.freshness}</span>
                 <span className="text-right">{layer.count}</span>
               </div>
@@ -166,8 +182,8 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
 
         <div className="ml-auto mt-auto self-end text-right">
           <div className="hud-panel pointer-events-auto inline-block rounded px-4 py-2">
-            <p className="text-lg tracking-[0.25em] text-[var(--aurora-accent)]">AURORA</p>
-            <p className="text-xs text-[#b9d6ee]">{formatUtcTime(now)}</p>
+            <p className="text-lg tracking-[0.25em]" style={{ color: accentColor }}>AURORA</p>
+            <p className="text-xs" style={{ color: isIntel ? "#009933" : "#b9d6ee" }}>{formatUtcTime(now)}</p>
           </div>
         </div>
       </div>
