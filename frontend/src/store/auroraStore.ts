@@ -25,6 +25,11 @@ interface AuroraStoreState {
   timelineActive: boolean;
   timelinePosition: Date;
   timelineEvent: HistoricalEvent | null;
+  helioSimulationSeconds: number;
+  helioPlaybackRate: number;
+  helioSelectedPlaybackRate: number;
+  helioBurstIntensity: number;
+  helioScenarioVersion: number;
 
   setSelectedSatellite: (satellite: Satellite | null) => void;
   setSelectedConjunction: (conjunction: Conjunction | null) => void;
@@ -36,6 +41,13 @@ interface AuroraStoreState {
   setTimelineActive: (active: boolean) => void;
   setTimelinePosition: (date: Date) => void;
   setTimelineEvent: (event: HistoricalEvent | null) => void;
+  setHelioSimulationSeconds: (seconds: number) => void;
+  setHelioPlaybackRate: (rate: number) => void;
+  setHelioSelectedPlaybackRate: (rate: number) => void;
+  setHelioBurstIntensity: (intensity: number) => void;
+  toggleHelioPlayback: () => void;
+  resetHelioSimulation: () => void;
+  newHelioSimulation: () => void;
 }
 
 const openPanelInSet = (panels: Set<PanelType>, panel: PanelType): Set<PanelType> => {
@@ -64,6 +76,11 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   timelineActive: false,
   timelinePosition: new Date(),
   timelineEvent: null,
+  helioSimulationSeconds: 0,
+  helioPlaybackRate: 0,
+  helioSelectedPlaybackRate: 1,
+  helioBurstIntensity: 1,
+  helioScenarioVersion: 0,
 
   setSelectedSatellite: (satellite) =>
     set((state) => ({
@@ -104,5 +121,34 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   toggleEarthOnlyMode: () => set((state) => ({ earthOnlyMode: !state.earthOnlyMode })),
   setTimelineActive: (active) => set({ timelineActive: active }),
   setTimelinePosition: (date) => set({ timelinePosition: date }),
-  setTimelineEvent: (event) => set({ timelineEvent: event })
+  setTimelineEvent: (event) => set({ timelineEvent: event }),
+  setHelioSimulationSeconds: (seconds) => set({ helioSimulationSeconds: seconds }),
+  setHelioPlaybackRate: (rate) =>
+    set((state) => ({
+      helioPlaybackRate: rate,
+      helioSelectedPlaybackRate: rate > 0 ? rate : state.helioSelectedPlaybackRate
+    })),
+  setHelioSelectedPlaybackRate: (rate) =>
+    set((state) => ({
+      helioSelectedPlaybackRate: rate,
+      helioPlaybackRate: state.helioPlaybackRate === 0 ? 0 : rate
+    })),
+  setHelioBurstIntensity: (intensity) => set({ helioBurstIntensity: intensity }),
+  toggleHelioPlayback: () =>
+    set((state) => ({
+      helioPlaybackRate: state.helioPlaybackRate === 0 ? state.helioSelectedPlaybackRate : 0
+    })),
+  resetHelioSimulation: () =>
+    set((state) => ({
+      helioSimulationSeconds: 0,
+      helioPlaybackRate: 0,
+      helioSelectedPlaybackRate: state.helioSelectedPlaybackRate
+    })),
+  newHelioSimulation: () =>
+    set((state) => ({
+      helioSimulationSeconds: 0,
+      helioPlaybackRate: 0,
+      helioSelectedPlaybackRate: state.helioSelectedPlaybackRate,
+      helioScenarioVersion: state.helioScenarioVersion + 1
+    }))
 }));

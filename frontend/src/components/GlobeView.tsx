@@ -14,6 +14,7 @@ import {
   EllipsoidGeometry,
   EasingFunction,
   GeometryInstance,
+  ImageMaterialProperty,
   Ion,
   IonImageryProvider,
   JulianDate,
@@ -24,6 +25,7 @@ import {
   PointPrimitive,
   PointPrimitiveCollection,
   PolygonHierarchy,
+  PolylineDashMaterialProperty,
   PolylineCollection,
   PolylineGeometry,
   PolylineMaterialAppearance,
@@ -38,20 +40,14 @@ import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
 import {
-  createHelioBandHierarchy,
   createOrbitArcPositions,
   createOrbitRingPositions,
-  createSectorHierarchy,
   formatHelioArrivalLabel,
-  getHelioCmeRadius,
+  HELIO_CME_DURATION_SECONDS,
   getHelioOrbitAngle,
   HELIO_AU_SCENE_UNITS,
-  HELIO_CAMERA_DESTINATION,
-  HELIO_CAMERA_PITCH,
-  HELIO_CME_HALF_ANGLE,
   HELIO_L1_OFFSET,
   HELIO_ORBIT_RADII,
-  HELIO_SUN_GLOW_RADIUS,
   HELIO_SUN_RADIUS,
   positionOnHelioOrbit
 } from "../utils/helio";
@@ -103,22 +99,66 @@ interface SolarWindFrame {
   spreadAxisB: Cartesian3;
 }
 
+interface HelioCmeEmberState {
+  primitive: PointPrimitive;
+  progressOffset: number;
+  lateralBias: number;
+  liftBias: number;
+  speedScale: number;
+  alpha: number;
+  size: number;
+}
+
+interface HelioDensityParticleState {
+  primitive: PointPrimitive;
+  distanceOffset: number;
+  lateralBias: number;
+  verticalBias: number;
+  alpha: number;
+  size: number;
+}
+
 type Showable = { show: boolean };
 
 const EARTH_CAMERA_DESTINATION = Cartesian3.fromDegrees(0, 20, 35_000_000);
 const EARTH_CAMERA_ORIENTATION = { heading: 0, pitch: CesiumMath.toRadians(-90), roll: 0 } as const;
-const HELIO_CAMERA_ORIENTATION = { heading: 0, pitch: HELIO_CAMERA_PITCH, roll: 0 } as const;
 const HELIO_PHASES = {
-  earth: CesiumMath.toRadians(112),
+  earth: 0,
   venus: CesiumMath.toRadians(28),
   mars: CesiumMath.toRadians(196)
 } as const;
-const HELIO_LABEL_OFFSET = new Cartesian2(16, 0);
+const HELIO_CAMERA_DESTINATION_VISUAL = new Cartesian3(
+  -HELIO_AU_SCENE_UNITS * 1.9,
+  -HELIO_AU_SCENE_UNITS * 0.72,
+  HELIO_AU_SCENE_UNITS * 0.98
+);
+const HELIO_CAMERA_TARGET = new Cartesian3(
+  HELIO_AU_SCENE_UNITS * 0.16,
+  HELIO_AU_SCENE_UNITS * 0.08,
+  0
+);
+const HELIO_CAMERA_DIRECTION = Cartesian3.normalize(
+  Cartesian3.subtract(HELIO_CAMERA_TARGET, HELIO_CAMERA_DESTINATION_VISUAL, new Cartesian3()),
+  new Cartesian3()
+);
 const HELIO_CME_OFFSET = new Cartesian2(0, -16);
 const EARTH_ONLY_LATITUDE = 18;
 const EARTH_ONLY_HEIGHT = 35_000_000;
 const EARTH_ONLY_ROTATION_DEGREES_PER_SECOND = 2.4;
 const EARTH_ONLY_IDLE_DELAY_MS = 1800;
+const HELIO_VISUAL_SUN_RADIUS = HELIO_SUN_RADIUS * 1.4;
+const HELIO_CME_VISUAL_HALF_ANGLE = CesiumMath.toRadians(25);
+const HELIO_CME_PROGRESS_START = 0.4;
+const HELIO_CME_PROGRESS_END = 1.2;
+const HELIO_ORBIT_TIME_SCALE_SECONDS = 12 * 3600;
+const HELIO_PLAYBACK_BASE_RATE = 1;
+const HELIO_ORBIT_DASH_PATTERN = Number.parseInt("1111111100000000", 2);
+const HELIO_SIM_SYNC_INTERVAL_MS = 120;
+const HELIO_PLANET_RADII = {
+  earth: 360_000,
+  venus: 320_000,
+  mars: 290_000
+} as const;
 
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
@@ -212,11 +252,202 @@ const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { cur
     return AURORA_COLOR.withAlpha(baseMin + (baseMax - baseMin) * phase);
   }, false));
 
+const createBezierArcPositions = (start: Cartesian3, control: Cartesian3, end: Cartesian3, intermediatePoints = 8): Cartesian3[] => {
+  const segments = intermediatePoints + 1;
+  const positions: Cartesian3[] = [];
+
+  for (let index = 0; index <= segments; index += 1) {
+    const t = index / segments;
+    const u = 1 - t;
+    positions.push(new Cartesian3(
+      u * u * start.x + 2 * u * t * control.x + t * t * end.x,
+      u * u * start.y + 2 * u * t * control.y + t * t * end.y,
+      u * u * start.z + 2 * u * t * control.z + t * t * end.z
+    ));
+  }
+
+  return positions;
+};
+
+const createFireConeFrontPositions = (
+  sunToEarth: Cartesian3,
+  right: Cartesian3,
+  up: Cartesian3,
+  length: number,
+  halfAngle: number,
+  timeSeconds: number,
+  flareScale: number,
+  liftScale: number,
+  segments = 18
+): Cartesian3[] => {
+  const positions: Cartesian3[] = [];
+  const spread = Math.tan(halfAngle);
+
+  for (let index = 0; index <= segments; index += 1) {
+    const t = index / segments;
+    const lateralFactor = CesiumMath.lerp(-1, 1, t);
+    const centerBias = 1 - Math.pow(Math.abs(lateralFactor), 1.45);
+    const tongue = Math.max(0, Math.sin(timeSeconds * 4.4 + t * 19)) * centerBias;
+    const flutter = Math.sin(timeSeconds * 10.5 + t * 31) * 0.035;
+    const forwardScale = clamp(0.8 + centerBias * 0.14 + tongue * (0.22 * flareScale) + flutter, 0.62, 1.28);
+    const verticalFactor = Math.sin(timeSeconds * 3.8 + t * 13) * centerBias * liftScale;
+    const direction = new Cartesian3(
+      sunToEarth.x + lateralFactor * spread * right.x + verticalFactor * up.x,
+      sunToEarth.y + lateralFactor * spread * right.y + verticalFactor * up.y,
+      sunToEarth.z + lateralFactor * spread * right.z + verticalFactor * up.z
+    );
+
+    Cartesian3.normalize(direction, direction);
+    positions.push(Cartesian3.multiplyByScalar(direction, length * forwardScale, new Cartesian3()));
+  }
+
+  return positions;
+};
+
+const createMutableFlameFront = (count: number): Cartesian3[] => Array.from({ length: count }, () => new Cartesian3());
+
+const createDiamondMarkerImage = (): string => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const context = canvas.getContext("2d");
+  if (!context) return "";
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.translate(32, 32);
+
+  context.shadowBlur = 18;
+  context.shadowColor = "rgba(0,255,255,0.95)";
+  context.fillStyle = "rgba(0,255,255,0.95)";
+  context.strokeStyle = "rgba(255,255,255,0.9)";
+  context.lineWidth = 2;
+
+  context.beginPath();
+  context.moveTo(0, -18);
+  context.lineTo(18, 0);
+  context.lineTo(0, 18);
+  context.lineTo(-18, 0);
+  context.closePath();
+  context.fill();
+  context.stroke();
+
+  context.shadowBlur = 10;
+  context.beginPath();
+  context.moveTo(-22, 0);
+  context.lineTo(22, 0);
+  context.moveTo(0, -22);
+  context.lineTo(0, 22);
+  context.stroke();
+
+  return canvas.toDataURL("image/png");
+};
+
+const createPlanetTexture = (planet: "earth" | "venus" | "mars"): HTMLCanvasElement => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 512;
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+
+  const drawBands = (colors: string[], blur: number, alpha = 1): void => {
+    context.save();
+    context.globalAlpha = alpha;
+    context.filter = `blur(${blur}px)`;
+    colors.forEach((color, index) => {
+      context.fillStyle = color;
+      context.fillRect(0, (index / colors.length) * canvas.height, canvas.width, canvas.height / colors.length + 28);
+    });
+    context.restore();
+  };
+
+  const drawBlobs = (count: number, minRadius: number, maxRadius: number, color: string, alpha: number): void => {
+    context.save();
+    context.globalAlpha = alpha;
+    context.fillStyle = color;
+    for (let index = 0; index < count; index += 1) {
+      const x = randomInRange(0, canvas.width);
+      const y = randomInRange(0, canvas.height);
+      const radiusX = randomInRange(minRadius, maxRadius);
+      const radiusY = randomInRange(minRadius * 0.4, maxRadius * 0.75);
+      context.beginPath();
+      context.ellipse(x, y, radiusX, radiusY, randomInRange(0, Math.PI), 0, Math.PI * 2);
+      context.fill();
+    }
+    context.restore();
+  };
+
+  if (planet === "earth") {
+    const ocean = context.createLinearGradient(0, 0, 0, canvas.height);
+    ocean.addColorStop(0, "#173f8d");
+    ocean.addColorStop(0.55, "#0c2458");
+    ocean.addColorStop(1, "#071831");
+    context.fillStyle = ocean;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawBlobs(24, 44, 110, "#2da05e", 0.9);
+    drawBlobs(16, 20, 70, "#c7bb6e", 0.24);
+    drawBands(["rgba(255,255,255,0.18)", "rgba(190,220,255,0.08)", "rgba(255,255,255,0.14)"], 18, 0.9);
+    context.save();
+    context.strokeStyle = "rgba(120,180,255,0.12)";
+    context.lineWidth = 1;
+    for (let x = 0; x <= canvas.width; x += 64) {
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, canvas.height);
+      context.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += 64) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  if (planet === "venus") {
+    const haze = context.createLinearGradient(0, 0, 0, canvas.height);
+    haze.addColorStop(0, "#e9d49d");
+    haze.addColorStop(0.45, "#c59a52");
+    haze.addColorStop(1, "#8f5926");
+    context.fillStyle = haze;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawBands(["rgba(255,245,220,0.16)", "rgba(255,196,110,0.12)", "rgba(155,88,30,0.08)"], 22, 1);
+    drawBlobs(34, 40, 120, "#f5deb3", 0.18);
+  }
+
+  if (planet === "mars") {
+    const dust = context.createLinearGradient(0, 0, 0, canvas.height);
+    dust.addColorStop(0, "#d88958");
+    dust.addColorStop(0.55, "#a2492c");
+    dust.addColorStop(1, "#5f2318");
+    context.fillStyle = dust;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawBlobs(26, 28, 90, "#7b2a19", 0.34);
+    drawBlobs(12, 36, 120, "#f0d3bc", 0.08);
+    context.fillStyle = "rgba(255,245,230,0.45)";
+    context.beginPath();
+    context.ellipse(canvas.width * 0.18, canvas.height * 0.1, 70, 30, 0, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.ellipse(canvas.width * 0.82, canvas.height * 0.9, 64, 28, 0, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  return canvas;
+};
+
 export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewProps): JSX.Element => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const setSelectedSatellite = useAuroraStore((state) => state.setSelectedSatellite);
+  const setHelioSimulationSeconds = useAuroraStore((state) => state.setHelioSimulationSeconds);
+  const setHelioPlaybackRate = useAuroraStore((state) => state.setHelioPlaybackRate);
+  const resetHelioSimulation = useAuroraStore((state) => state.resetHelioSimulation);
   const currentModeRef = useRef(useAuroraStore.getState().currentMode);
   const earthOnlyRef = useRef(useAuroraStore.getState().earthOnlyMode);
+  const helioSimulationSecondsRef = useRef(useAuroraStore.getState().helioSimulationSeconds);
+  const helioPlaybackRateRef = useRef(useAuroraStore.getState().helioPlaybackRate);
+  const helioBurstIntensityRef = useRef(useAuroraStore.getState().helioBurstIntensity);
+  const helioScenarioVersionRef = useRef(useAuroraStore.getState().helioScenarioVersion);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -264,8 +495,59 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     let isDisposed = false;
     let earthImageryLayer: Showable | null = null;
     let osmBuildingsTileset: Showable | null = null;
-    let helioStartedAtMs = performance.now();
     let earthOnlyLastInteractionMs = performance.now();
+    let lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+    let helioSimulationBaseDate = new Date();
+    let helioCmeLaunchDirection = Cartesian3.normalize(new Cartesian3(1, 0, 0), new Cartesian3());
+    let helioCmeLaunchRight = Cartesian3.normalize(new Cartesian3(0, 1, 0), new Cartesian3());
+    let helioCmeLaunchUp = Cartesian3.normalize(new Cartesian3(0, 0, 1), new Cartesian3());
+    let helioCurrentCmeDirection = Cartesian3.clone(helioCmeLaunchDirection, new Cartesian3());
+    let helioCmeCurveRight = 0;
+    let helioCmeCurveUp = 0;
+    let helioCmeSpreadScale = 1;
+    let helioCmeFlareScale = 1;
+    let helioCmeDensityTwist = 0;
+    const helioPlanetTargets = new Map<string, { radius: number; getPosition: () => Cartesian3 }>();
+
+    const getHelioSimulationDate = (): Date =>
+      new Date(helioSimulationBaseDate.getTime() + helioSimulationSecondsRef.current * HELIO_ORBIT_TIME_SCALE_SECONDS * 1000);
+
+    const regenerateHelioScenario = (): void => {
+      const earthAtLaunch = positionOnHelioOrbit(
+        HELIO_ORBIT_RADII.earth,
+        getHelioOrbitAngle(helioSimulationBaseDate, 365.25, HELIO_PHASES.earth)
+      );
+      const baseDirection = Cartesian3.normalize(earthAtLaunch, new Cartesian3());
+      const worldUp = Math.abs(Cartesian3.dot(baseDirection, Cartesian3.UNIT_Z)) > 0.98 ? Cartesian3.UNIT_Y : Cartesian3.UNIT_Z;
+      const baseRight = Cartesian3.normalize(Cartesian3.cross(baseDirection, worldUp, new Cartesian3()), new Cartesian3());
+      const baseUp = Cartesian3.normalize(Cartesian3.cross(baseRight, baseDirection, new Cartesian3()), new Cartesian3());
+      const lateralAim = randomInRange(-0.08, 0.08);
+      const verticalAim = randomInRange(-0.03, 0.03);
+
+      helioCmeLaunchDirection = Cartesian3.normalize(new Cartesian3(
+        baseDirection.x + baseRight.x * lateralAim + baseUp.x * verticalAim,
+        baseDirection.y + baseRight.y * lateralAim + baseUp.y * verticalAim,
+        baseDirection.z + baseRight.z * lateralAim + baseUp.z * verticalAim
+      ), helioCmeLaunchDirection);
+      helioCmeLaunchRight = Cartesian3.normalize(Cartesian3.cross(helioCmeLaunchDirection, worldUp, helioCmeLaunchRight), helioCmeLaunchRight);
+      if (Cartesian3.magnitudeSquared(helioCmeLaunchRight) < 1e-6) {
+        helioCmeLaunchRight = Cartesian3.normalize(Cartesian3.cross(helioCmeLaunchDirection, Cartesian3.UNIT_Y, helioCmeLaunchRight), helioCmeLaunchRight);
+      }
+      helioCmeLaunchUp = Cartesian3.normalize(Cartesian3.cross(helioCmeLaunchRight, helioCmeLaunchDirection, helioCmeLaunchUp), helioCmeLaunchUp);
+      helioCmeCurveRight = randomInRange(-0.12, 0.12);
+      helioCmeCurveUp = randomInRange(-0.045, 0.045);
+      helioCmeSpreadScale = randomInRange(0.92, 1.14);
+      helioCmeFlareScale = randomInRange(0.92, 1.22);
+      helioCmeDensityTwist = randomInRange(-0.1, 0.1);
+    };
+
+    const syncHelioSimulationState = (force = false): void => {
+      const nowMs = performance.now();
+      if (!force && nowMs - lastHelioStoreSyncMs < HELIO_SIM_SYNC_INTERVAL_MS) return;
+      lastHelioStoreSyncMs = nowMs;
+      setHelioSimulationSeconds(helioSimulationSecondsRef.current);
+    };
+    regenerateHelioScenario();
 
     const applyModeVisibility = (mode: string): void => {
       const isEarthOnly = earthOnlyRef.current;
@@ -296,7 +578,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       if (viewer.scene.sun) viewer.scene.sun.show = !isHelio;
       if (viewer.scene.moon) viewer.scene.moon.show = !isHelio;
       viewer.scene.globe.showGroundAtmosphere = !isHelio;
-      controller.minimumZoomDistance = isHelio ? HELIO_SUN_RADIUS * 0.45 : 25;
+      controller.minimumZoomDistance = isHelio ? 1_000 : 25;
       controller.maximumZoomDistance = isHelio ? HELIO_AU_SCENE_UNITS * 6 : 200_000_000;
     };
 
@@ -317,8 +599,11 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       if (earthOnlyRef.current) return;
       if (mode === "HELIO") {
         viewer.camera.flyTo({
-          destination: HELIO_CAMERA_DESTINATION,
-          orientation: HELIO_CAMERA_ORIENTATION,
+          destination: HELIO_CAMERA_DESTINATION_VISUAL,
+          orientation: {
+            direction: HELIO_CAMERA_DIRECTION,
+            up: Cartesian3.UNIT_Z
+          },
           duration: 1.8,
           easingFunction: EasingFunction.QUADRATIC_IN_OUT
         });
@@ -391,6 +676,57 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       viewer.camera.flyTo({
         destination: Cartesian3.add(state.point.position, offset, new Cartesian3()),
         duration: 1.25,
+        easingFunction: EasingFunction.QUADRATIC_OUT
+      });
+    };
+
+    const getPickedHelioPlanetId = (picked: unknown): string | null => {
+      if (typeof picked === "string" && helioPlanetTargets.has(picked)) {
+        return picked;
+      }
+
+      if (typeof picked !== "object" || picked === null) {
+        return null;
+      }
+
+      const record = picked as { id?: unknown };
+      if (typeof record.id === "string" && helioPlanetTargets.has(record.id)) {
+        return record.id;
+      }
+
+      if (typeof record.id === "object" && record.id !== null) {
+        const nested = record.id as { id?: unknown };
+        if (typeof nested.id === "string" && helioPlanetTargets.has(nested.id)) {
+          return nested.id;
+        }
+      }
+
+      return null;
+    };
+
+    const flyCameraToHelioPlanet = (planetId: string): void => {
+      const target = helioPlanetTargets.get(planetId);
+      if (!target) return;
+
+      const focusPosition = target.getPosition();
+      const cameraAway = Cartesian3.subtract(viewer.camera.position, focusPosition, new Cartesian3());
+      const fallbackAway =
+        Cartesian3.magnitudeSquared(cameraAway) < 1
+          ? Cartesian3.normalize(new Cartesian3(-1, -0.35, 0.28), new Cartesian3())
+          : Cartesian3.normalize(cameraAway, cameraAway);
+      const offset = Cartesian3.multiplyByScalar(fallbackAway, target.radius * 18, new Cartesian3());
+      offset.z += target.radius * 4;
+      const destination = Cartesian3.add(focusPosition, offset, new Cartesian3());
+      const direction = Cartesian3.normalize(Cartesian3.subtract(focusPosition, destination, new Cartesian3()), new Cartesian3());
+      const up = Math.abs(Cartesian3.dot(direction, Cartesian3.UNIT_Z)) > 0.95 ? Cartesian3.UNIT_Y : Cartesian3.UNIT_Z;
+
+      viewer.camera.flyTo({
+        destination,
+        orientation: {
+          direction,
+          up
+        },
+        duration: 1.2,
         easingFunction: EasingFunction.QUADRATIC_OUT
       });
     };
@@ -501,166 +837,526 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       particles.push(particle);
     }
 
+    const getHelioPlanetAngle = (orbitalPeriodDays: number, phase: number): number =>
+      getHelioOrbitAngle(getHelioSimulationDate(), orbitalPeriodDays, phase);
+    const getHelioEarthAngle = (): number => getHelioPlanetAngle(365.25, HELIO_PHASES.earth);
+    const getHelioElapsedSeconds = (): number => helioSimulationSecondsRef.current;
+    const getHelioCmeProgress = (): number =>
+      clamp(
+        HELIO_CME_PROGRESS_START + (helioSimulationSecondsRef.current / HELIO_CME_DURATION_SECONDS) * (HELIO_CME_PROGRESS_END - HELIO_CME_PROGRESS_START),
+        HELIO_CME_PROGRESS_START,
+        HELIO_CME_PROGRESS_END
+      );
+    const createHelioCoronaPrimitive = (radius: number, color: Color): Primitive =>
+      viewer.scene.primitives.add(new Primitive({
+        geometryInstances: new GeometryInstance({
+          geometry: new EllipsoidGeometry({
+            radii: new Cartesian3(radius, radius, radius),
+            vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT,
+            stackPartitions: 64,
+            slicePartitions: 64
+          }),
+          attributes: { color: ColorGeometryInstanceAttribute.fromColor(color) }
+        }),
+        appearance: new PerInstanceColorAppearance({
+          translucent: true,
+          closed: false
+        }),
+        asynchronous: false,
+        allowPicking: false
+      }));
+    const l1MarkerImage = createDiamondMarkerImage();
+    const earthTexture = createPlanetTexture("earth");
+    const venusTexture = createPlanetTexture("venus");
+    const marsTexture = createPlanetTexture("mars");
+
+    const helioStarfield = registerHelio(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    for (let index = 0; index < 800; index += 1) {
+      const theta = randomInRange(0, CesiumMath.TWO_PI);
+      const z = randomInRange(-1, 1);
+      const radial = Math.sqrt(1 - z * z);
+      const distance = randomInRange(earthR * 500, earthR * 2000);
+      helioStarfield.add({
+        position: new Cartesian3(Math.cos(theta) * radial * distance, Math.sin(theta) * radial * distance, z * distance),
+        pixelSize: randomInRange(1, 2.1),
+        color: Color.WHITE.withAlpha(randomInRange(0.4, 0.8)),
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      });
+    }
+
     [
+      createHelioCoronaPrimitive(HELIO_VISUAL_SUN_RADIUS * 3.0, Color.fromCssColorString("#ff6400").withAlpha(0.025)),
+      createHelioCoronaPrimitive(HELIO_VISUAL_SUN_RADIUS * 2.0, Color.fromCssColorString("#ffa01e").withAlpha(0.06)),
+      createHelioCoronaPrimitive(HELIO_VISUAL_SUN_RADIUS * 1.4, Color.fromCssColorString("#ffdc50").withAlpha(0.12)),
       viewer.entities.add({
+        id: "helio-planet-sun",
         position: Cartesian3.ZERO,
         ellipsoid: {
-          radii: new Cartesian3(HELIO_SUN_GLOW_RADIUS, HELIO_SUN_GLOW_RADIUS, HELIO_SUN_GLOW_RADIUS),
-          material: Color.fromCssColorString("#ffb347").withAlpha(0.12)
-        }
-      }),
-      viewer.entities.add({
-        position: Cartesian3.ZERO,
-        ellipsoid: {
-          radii: new Cartesian3(HELIO_SUN_RADIUS, HELIO_SUN_RADIUS, HELIO_SUN_RADIUS),
-          material: Color.fromCssColorString("#ffe694").withAlpha(0.96)
+          radii: new Cartesian3(HELIO_VISUAL_SUN_RADIUS, HELIO_VISUAL_SUN_RADIUS, HELIO_VISUAL_SUN_RADIUS),
+          material: Color.fromCssColorString("#fffde7").withAlpha(0.98)
         },
         label: {
           text: "Sun",
-          font: "11px 'JetBrains Mono', monospace",
-          fillColor: Color.fromCssColorString("#ffe8ab"),
+          font: "12px 'JetBrains Mono', monospace",
+          fillColor: Color.fromCssColorString("#fff7c9"),
           showBackground: true,
-          backgroundColor: Color.fromCssColorString("#2b1800").withAlpha(0.72),
-          pixelOffset: new Cartesian2(0, 24),
+          backgroundColor: Color.fromCssColorString("#301500").withAlpha(0.78),
+          pixelOffset: new Cartesian2(0, 28),
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         }
       }),
-      viewer.entities.add({ polyline: { positions: createOrbitRingPositions(HELIO_ORBIT_RADII.venus), width: 1.2, material: Color.fromCssColorString("#dcc28a").withAlpha(0.22) } }),
-      viewer.entities.add({ polyline: { positions: createOrbitRingPositions(HELIO_ORBIT_RADII.earth), width: 1.4, material: Color.fromCssColorString("#46a2ff").withAlpha(0.26) } }),
-      viewer.entities.add({ polyline: { positions: createOrbitRingPositions(HELIO_ORBIT_RADII.mars), width: 1.2, material: Color.fromCssColorString("#e27c55").withAlpha(0.2) } })
+      viewer.entities.add({
+        polyline: {
+          positions: createOrbitRingPositions(HELIO_ORBIT_RADII.earth),
+          width: 7,
+          material: Color.fromCssColorString("#64b4ff").withAlpha(0.1)
+        }
+      }),
+      viewer.entities.add({
+        polyline: {
+          positions: createOrbitRingPositions(HELIO_ORBIT_RADII.earth),
+          width: 2.2,
+          material: new PolylineDashMaterialProperty({
+            color: Color.fromCssColorString("#64b4ff").withAlpha(0.5),
+            gapColor: Color.TRANSPARENT,
+            dashLength: 32,
+            dashPattern: HELIO_ORBIT_DASH_PATTERN
+          })
+        }
+      }),
+      viewer.entities.add({
+        polyline: {
+          positions: createOrbitRingPositions(HELIO_ORBIT_RADII.venus),
+          width: 1.1,
+          material: new PolylineDashMaterialProperty({
+            color: Color.fromCssColorString("#ffc864").withAlpha(0.3),
+            gapColor: Color.TRANSPARENT,
+            dashLength: 20,
+            dashPattern: HELIO_ORBIT_DASH_PATTERN
+          })
+        }
+      }),
+      viewer.entities.add({
+        polyline: {
+          positions: createOrbitRingPositions(HELIO_ORBIT_RADII.mars),
+          width: 1.1,
+          material: new PolylineDashMaterialProperty({
+            color: Color.fromCssColorString("#ff7850").withAlpha(0.3),
+            gapColor: Color.TRANSPARENT,
+            dashLength: 20,
+            dashPattern: HELIO_ORBIT_DASH_PATTERN
+          })
+        }
+      })
     ].forEach((entity) => registerHelio(entity));
+    helioPlanetTargets.set("helio-planet-sun", { radius: HELIO_VISUAL_SUN_RADIUS, getPosition: () => Cartesian3.ZERO });
 
-    [
-      { start: HELIO_ORBIT_RADII.earth * 0.18, end: HELIO_ORBIT_RADII.earth * 1.02, width: HELIO_AU_SCENE_UNITS * 0.26, color: Color.fromCssColorString("#ffb347").withAlpha(0.05) },
-      { start: HELIO_ORBIT_RADII.earth * 0.24, end: HELIO_ORBIT_RADII.earth * 0.95, width: HELIO_AU_SCENE_UNITS * 0.18, color: Color.fromCssColorString("#ff7a2a").withAlpha(0.08) },
-      { start: HELIO_ORBIT_RADII.earth * 0.32, end: HELIO_ORBIT_RADII.earth * 0.86, width: HELIO_AU_SCENE_UNITS * 0.11, color: Color.fromCssColorString("#ff4f1f").withAlpha(0.11) }
-    ].forEach((band) => registerHelio(viewer.entities.add({
-      polygon: {
-        hierarchy: new CallbackProperty((time) => {
-          const earthAngle = getHelioOrbitAngle(toCallbackDate(time), 365.25, HELIO_PHASES.earth);
-          return createHelioBandHierarchy(earthAngle, band.start, band.end, band.width);
-        }, false),
-        material: band.color,
-        perPositionHeight: true
-      }
-    })));
+    const helioPoints = registerHelio(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    const helioDensityField = registerHelio(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    const helioDensityStates: HelioDensityParticleState[] = [];
+    for (let index = 0; index < 180; index += 1) {
+      helioDensityStates.push({
+        primitive: helioDensityField.add({
+          position: new Cartesian3(),
+          pixelSize: randomInRange(5, 12),
+          color: Color.fromCssColorString("#ff9f40").withAlpha(randomInRange(0.03, 0.12)),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        }),
+        distanceOffset: Math.random(),
+        lateralBias: randomInRange(-1, 1),
+        verticalBias: randomInRange(-0.18, 0.18),
+        alpha: randomInRange(0.03, 0.12),
+        size: randomInRange(5, 12)
+      });
+    }
 
+    const earthPosition = new CallbackPositionProperty(
+      (_time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle(), result),
+      false
+    );
+    const venusPosition = new CallbackPositionProperty(
+      (_time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.venus, getHelioPlanetAngle(224.7, HELIO_PHASES.venus), result),
+      false
+    );
+    const marsPosition = new CallbackPositionProperty(
+      (_time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.mars, getHelioPlanetAngle(687, HELIO_PHASES.mars), result),
+      false
+    );
+    const initialHelioEarthPosition = positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle());
+    const helioEarthGlow = helioPoints.add({
+      position: Cartesian3.clone(initialHelioEarthPosition, new Cartesian3()),
+      pixelSize: 28,
+      color: Color.fromCssColorString("#4488ff").withAlpha(0.2),
+      id: "helio-planet-earth",
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    });
+    const helioEarthCore = helioPoints.add({
+      position: Cartesian3.clone(initialHelioEarthPosition, new Cartesian3()),
+      pixelSize: 14,
+      color: Color.fromCssColorString("#4488ff"),
+      id: "helio-planet-earth",
+      disableDepthTestDistance: Number.POSITIVE_INFINITY
+    });
     registerHelio(viewer.entities.add({
-      position: new CallbackPositionProperty((time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioOrbitAngle(toCallbackDate(time), 365.25, HELIO_PHASES.earth), result), false),
-      point: {
-        pixelSize: 12,
-        color: Color.fromCssColorString("#46a2ff"),
-        outlineColor: Color.WHITE.withAlpha(0.9),
-        outlineWidth: 2,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
-      },
+      id: "helio-planet-earth-sphere",
+      position: earthPosition,
+      ellipsoid: {
+        radii: new Cartesian3(HELIO_PLANET_RADII.earth, HELIO_PLANET_RADII.earth, HELIO_PLANET_RADII.earth),
+        material: new ImageMaterialProperty({ image: earthTexture })
+      }
+    }));
+    registerHelio(viewer.entities.add({
+      id: "helio-planet-earth-label",
+      position: earthPosition,
       label: {
         text: "Earth",
-        font: "12px 'JetBrains Mono', monospace",
-        fillColor: Color.fromCssColorString("#9fd0ff"),
-        showBackground: true,
-        backgroundColor: Color.fromCssColorString("#071826").withAlpha(0.72),
-        pixelOffset: HELIO_LABEL_OFFSET,
+        font: "11px JetBrains Mono",
+        fillColor: Color.fromCssColorString("#88bbff"),
+        showBackground: false,
+        pixelOffset: new Cartesian2(0, -20),
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       }
     }));
 
     registerHelio(viewer.entities.add({
-      position: new CallbackPositionProperty((time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.venus, getHelioOrbitAngle(toCallbackDate(time), 224.7, HELIO_PHASES.venus), result), false),
+      id: "helio-planet-venus",
+      position: venusPosition,
+      ellipsoid: {
+        radii: new Cartesian3(HELIO_PLANET_RADII.venus, HELIO_PLANET_RADII.venus, HELIO_PLANET_RADII.venus),
+        material: new ImageMaterialProperty({ image: venusTexture })
+      }
+    }));
+    registerHelio(viewer.entities.add({
+      id: "helio-planet-venus-marker",
+      position: venusPosition,
       point: {
         pixelSize: 8,
-        color: Color.fromCssColorString("#dcc28a"),
-        outlineColor: Color.WHITE.withAlpha(0.45),
+        color: Color.fromCssColorString("#ffd278").withAlpha(0.9),
+        outlineColor: Color.WHITE.withAlpha(0.55),
         outlineWidth: 1,
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       label: {
         text: "Venus",
         font: "10px 'JetBrains Mono', monospace",
-        fillColor: Color.fromCssColorString("#dcc28a"),
-        pixelOffset: new Cartesian2(14, -10),
+        fillColor: Color.fromCssColorString("#ffe0a6"),
+        showBackground: true,
+        backgroundColor: Color.fromCssColorString("#251200").withAlpha(0.52),
+        pixelOffset: new Cartesian2(0, 16),
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       }
     }));
 
     registerHelio(viewer.entities.add({
-      position: new CallbackPositionProperty((time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.mars, getHelioOrbitAngle(toCallbackDate(time), 687, HELIO_PHASES.mars), result), false),
+      id: "helio-planet-mars",
+      position: marsPosition,
+      ellipsoid: {
+        radii: new Cartesian3(HELIO_PLANET_RADII.mars, HELIO_PLANET_RADII.mars, HELIO_PLANET_RADII.mars),
+        material: new ImageMaterialProperty({ image: marsTexture })
+      }
+    }));
+    registerHelio(viewer.entities.add({
+      id: "helio-planet-mars-marker",
+      position: marsPosition,
       point: {
         pixelSize: 8,
-        color: Color.fromCssColorString("#e27c55"),
-        outlineColor: Color.WHITE.withAlpha(0.45),
+        color: Color.fromCssColorString("#ff643c").withAlpha(0.9),
+        outlineColor: Color.WHITE.withAlpha(0.55),
         outlineWidth: 1,
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       label: {
         text: "Mars",
         font: "10px 'JetBrains Mono', monospace",
-        fillColor: Color.fromCssColorString("#e27c55"),
-        pixelOffset: new Cartesian2(14, 10),
+        fillColor: Color.fromCssColorString("#ffb19b"),
+        showBackground: true,
+        backgroundColor: Color.fromCssColorString("#250500").withAlpha(0.56),
+        pixelOffset: new Cartesian2(0, 16),
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       }
     }));
 
     registerHelio(viewer.entities.add({
-      position: new CallbackPositionProperty((time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth - HELIO_L1_OFFSET, getHelioOrbitAngle(toCallbackDate(time), 365.25, HELIO_PHASES.earth), result), false),
-      point: {
-        pixelSize: 7,
-        color: Color.fromCssColorString("#00d4ff"),
-        outlineColor: Color.WHITE.withAlpha(0.35),
-        outlineWidth: 1,
+      position: new CallbackPositionProperty((_time, result) => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth - HELIO_L1_OFFSET, getHelioEarthAngle(), result), false),
+      billboard: {
+        image: l1MarkerImage,
+        scale: new CallbackProperty(() => 0.82 + 0.16 * (0.5 + 0.5 * Math.sin(performance.now() * 0.0031)), false),
+        color: Color.fromCssColorString("#00ffff"),
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       label: {
-        text: "L1 - DSCOVR (Early Warning)",
+        text: "L1  DSCOVR\nEarly Warning Sensor",
         font: "11px 'JetBrains Mono', monospace",
-        fillColor: Color.fromCssColorString("#00d4ff"),
+        fillColor: Color.fromCssColorString("#bcffff"),
         showBackground: true,
-        backgroundColor: Color.fromCssColorString("#051624").withAlpha(0.74),
-        pixelOffset: new Cartesian2(18, 0),
+        backgroundColor: Color.fromCssColorString("#051624").withAlpha(0.8),
+        pixelOffset: new Cartesian2(28, -4),
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       }
     }));
 
+    helioPlanetTargets.set("helio-planet-earth", { radius: HELIO_PLANET_RADII.earth, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle()) });
+    helioPlanetTargets.set("helio-planet-earth-sphere", { radius: HELIO_PLANET_RADII.earth, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle()) });
+    helioPlanetTargets.set("helio-planet-earth-label", { radius: HELIO_PLANET_RADII.earth, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle()) });
+    helioPlanetTargets.set("helio-planet-venus", { radius: HELIO_PLANET_RADII.venus, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.venus, getHelioPlanetAngle(224.7, HELIO_PHASES.venus)) });
+    helioPlanetTargets.set("helio-planet-venus-marker", { radius: HELIO_PLANET_RADII.venus, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.venus, getHelioPlanetAngle(224.7, HELIO_PHASES.venus)) });
+    helioPlanetTargets.set("helio-planet-mars", { radius: HELIO_PLANET_RADII.mars, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.mars, getHelioPlanetAngle(687, HELIO_PHASES.mars)) });
+    helioPlanetTargets.set("helio-planet-mars-marker", { radius: HELIO_PLANET_RADII.mars, getPosition: () => positionOnHelioOrbit(HELIO_ORBIT_RADII.mars, getHelioPlanetAngle(687, HELIO_PHASES.mars)) });
+
+    const createFlameHierarchyCallback = (apex: Cartesian3, front: Cartesian3[]): CallbackProperty =>
+      new CallbackProperty(() => new PolygonHierarchy([
+        Cartesian3.clone(apex, new Cartesian3()),
+        ...front.map((point) => Cartesian3.clone(point, new Cartesian3()))
+      ]), false);
+    const createFlameMaterial = (color: string, minAlpha: number, maxAlpha: number, speed: number): ColorMaterialProperty =>
+      new ColorMaterialProperty(new CallbackProperty(() => {
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() * speed);
+        return Color.fromCssColorString(color).withAlpha(minAlpha + (maxAlpha - minAlpha) * pulse);
+      }, false));
+
+    const helioCmeEdges = registerHelio(viewer.scene.primitives.add(new PolylineCollection()));
+    const helioCmeLeftGlow = helioCmeEdges.add({
+      positions: [Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth * HELIO_CME_PROGRESS_START, -HELIO_CME_VISUAL_HALF_ANGLE)],
+      width: 7,
+      material: Material.fromType("Color", { color: Color.fromCssColorString("#ff6a00").withAlpha(0.12) })
+    });
+    const helioCmeRightGlow = helioCmeEdges.add({
+      positions: [Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth * HELIO_CME_PROGRESS_START, HELIO_CME_VISUAL_HALF_ANGLE)],
+      width: 7,
+      material: Material.fromType("Color", { color: Color.fromCssColorString("#ff6a00").withAlpha(0.12) })
+    });
+    const helioCmeLeadingGlow = helioCmeEdges.add({
+      positions: createOrbitArcPositions(HELIO_ORBIT_RADII.earth * HELIO_CME_PROGRESS_START, 0, HELIO_CME_VISUAL_HALF_ANGLE, 8),
+      width: 9,
+      material: Material.fromType("Color", { color: Color.fromCssColorString("#ff7b00").withAlpha(0.16) })
+    });
+    const helioCmeLeftEdge = helioCmeEdges.add({
+      positions: [Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth * HELIO_CME_PROGRESS_START, -HELIO_CME_VISUAL_HALF_ANGLE)],
+      width: 2.4,
+      material: Material.fromType("Color", { color: Color.fromCssColorString("#ff9a1f").withAlpha(0.86) })
+    });
+    const helioCmeRightEdge = helioCmeEdges.add({
+      positions: [Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth * HELIO_CME_PROGRESS_START, HELIO_CME_VISUAL_HALF_ANGLE)],
+      width: 2.4,
+      material: Material.fromType("Color", { color: Color.fromCssColorString("#ff9a1f").withAlpha(0.86) })
+    });
+    const helioCmeLeadingEdge = helioCmeEdges.add({
+      positions: createOrbitArcPositions(HELIO_ORBIT_RADII.earth * HELIO_CME_PROGRESS_START, 0, HELIO_CME_VISUAL_HALF_ANGLE, 8),
+      width: 3.6,
+      material: Material.fromType("Color", { color: Color.fromCssColorString("#ffd857").withAlpha(0.95) })
+    });
+    const cmeOuterApex = new Cartesian3(HELIO_VISUAL_SUN_RADIUS * 0.9, 0, 0);
+    const cmeMidApex = new Cartesian3(HELIO_VISUAL_SUN_RADIUS * 0.98, 0, 0);
+    const cmeCoreApex = new Cartesian3(HELIO_VISUAL_SUN_RADIUS * 1.06, 0, 0);
+    const cmeOuterFront = createMutableFlameFront(19);
+    const cmeMidFront = createMutableFlameFront(17);
+    const cmeCoreFront = createMutableFlameFront(15);
     registerHelio(viewer.entities.add({
       polygon: {
-        hierarchy: new CallbackProperty((time) => {
-          const radius = Math.max(getHelioCmeRadius((performance.now() - helioStartedAtMs) / 1000), HELIO_SUN_RADIUS * 1.2);
-          return createSectorHierarchy(radius, getHelioOrbitAngle(toCallbackDate(time), 365.25, HELIO_PHASES.earth), HELIO_CME_HALF_ANGLE);
-        }, false),
-        material: new ColorMaterialProperty(new CallbackProperty(() => {
-          const pulse = 0.14 + 0.08 * (0.5 + 0.5 * Math.sin(performance.now() * 0.0034));
-          return Color.fromCssColorString("#ff5e1f").withAlpha(pulse);
-        }, false)),
+        hierarchy: createFlameHierarchyCallback(cmeOuterApex, cmeOuterFront),
+        material: createFlameMaterial("#ff3b00", 0.07, 0.14, 0.0028),
         perPositionHeight: true
       }
     }));
-
     registerHelio(viewer.entities.add({
-      polyline: {
-        positions: new CallbackProperty((time) => {
-          const radius = Math.max(getHelioCmeRadius((performance.now() - helioStartedAtMs) / 1000), HELIO_SUN_RADIUS * 1.2);
-          return createOrbitArcPositions(radius, getHelioOrbitAngle(toCallbackDate(time), 365.25, HELIO_PHASES.earth), HELIO_CME_HALF_ANGLE, 40);
-        }, false),
-        width: 3,
-        material: Color.fromCssColorString("#ff9b4a").withAlpha(0.72)
+      polygon: {
+        hierarchy: createFlameHierarchyCallback(cmeMidApex, cmeMidFront),
+        material: createFlameMaterial("#ff7b00", 0.12, 0.22, 0.0036),
+        perPositionHeight: true
       }
     }));
+    registerHelio(viewer.entities.add({
+      polygon: {
+        hierarchy: createFlameHierarchyCallback(cmeCoreApex, cmeCoreFront),
+        material: createFlameMaterial("#ffd24a", 0.1, 0.2, 0.0048),
+        perPositionHeight: true
+      }
+    }));
+    const helioCmeEmbers = registerHelio(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    const helioCmeEmberStates: HelioCmeEmberState[] = [];
+    for (let index = 0; index < 56; index += 1) {
+      helioCmeEmberStates.push({
+        primitive: helioCmeEmbers.add({
+          position: new Cartesian3(),
+          pixelSize: randomInRange(2, 4.8),
+          color: Color.fromCssColorString("#ffb347").withAlpha(randomInRange(0.3, 0.85)),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        }),
+        progressOffset: Math.random(),
+        lateralBias: randomInRange(-0.8, 0.8),
+        liftBias: randomInRange(-0.32, 0.32),
+        speedScale: randomInRange(0.75, 1.35),
+        alpha: randomInRange(0.28, 0.82),
+        size: randomInRange(2, 4.8)
+      });
+    }
 
     registerHelio(viewer.entities.add({
-      position: new CallbackPositionProperty((time, result) => {
-        const radius = getHelioCmeRadius((performance.now() - helioStartedAtMs) / 1000);
-        return positionOnHelioOrbit(Math.max(radius + HELIO_AU_SCENE_UNITS * 0.08, HELIO_SUN_RADIUS * 2), getHelioOrbitAngle(toCallbackDate(time), 365.25, HELIO_PHASES.earth), result);
+      position: new CallbackPositionProperty((_time, result) => {
+        const earthDistance = Cartesian3.distance(Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle()));
+        const coneLength = earthDistance * getHelioCmeProgress() + HELIO_AU_SCENE_UNITS * 0.07;
+        return Cartesian3.multiplyByScalar(helioCurrentCmeDirection, coneLength, result ?? new Cartesian3());
       }, false),
       label: {
-        text: new CallbackProperty(() => `ESTIMATED ARRIVAL: ${formatHelioArrivalLabel((performance.now() - helioStartedAtMs) / 1000)}`, false),
+        text: new CallbackProperty(() => `ESTIMATED ARRIVAL: ${formatHelioArrivalLabel(getHelioElapsedSeconds())}`, false),
         font: "11px 'JetBrains Mono', monospace",
-        fillColor: Color.fromCssColorString("#ffbf78"),
+        fillColor: Color.fromCssColorString("#ffca84"),
         showBackground: true,
-        backgroundColor: Color.fromCssColorString("#2a1100").withAlpha(0.8),
+        backgroundColor: Color.fromCssColorString("#2a1100").withAlpha(0.82),
         pixelOffset: HELIO_CME_OFFSET,
         disableDepthTestDistance: Number.POSITIVE_INFINITY
       }
     }));
+    const helioEarthPositionScratch = new Cartesian3();
+    const helioSunToEarthScratch = new Cartesian3();
+    const helioRightScratch = new Cartesian3();
+    const helioEdge1DirScratch = new Cartesian3();
+    const helioEdge2DirScratch = new Cartesian3();
+    const helioTip1Scratch = new Cartesian3();
+    const helioTipCenterScratch = new Cartesian3();
+    const helioTip2Scratch = new Cartesian3();
+    const helioUpScratch = new Cartesian3();
+    const updateHelioVisuals = (time: JulianDate, deltaSeconds: number, advanceCme: boolean): void => {
+      const earthAngle = getHelioEarthAngle();
+      const helioEarthPosition = positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, earthAngle, helioEarthPositionScratch);
+      helioEarthGlow.position = Cartesian3.clone(helioEarthPosition, new Cartesian3());
+      helioEarthCore.position = Cartesian3.clone(helioEarthPosition, new Cartesian3());
+      const burstIntensity = helioBurstIntensityRef.current;
+      const curveScale = 0.72 + burstIntensity * 0.32;
+      const spreadScale = helioCmeSpreadScale * (0.78 + burstIntensity * 0.34);
+      const flameScale = helioCmeFlareScale * (0.72 + burstIntensity * 0.56);
+      const densityTwist = helioCmeDensityTwist * (0.7 + burstIntensity * 0.35);
+      const densityScale = 0.8 + burstIntensity * 0.45;
+      const emberScale = 0.82 + burstIntensity * 0.5;
+
+      if (advanceCme && currentModeRef.current === "HELIO" && !earthOnlyRef.current && helioPlaybackRateRef.current > 0) {
+        helioSimulationSecondsRef.current = Math.min(
+          HELIO_CME_DURATION_SECONDS,
+          helioSimulationSecondsRef.current + deltaSeconds * helioPlaybackRateRef.current * HELIO_PLAYBACK_BASE_RATE
+        );
+        syncHelioSimulationState();
+        if (helioSimulationSecondsRef.current >= HELIO_CME_DURATION_SECONDS && helioPlaybackRateRef.current !== 0) {
+          helioPlaybackRateRef.current = 0;
+          setHelioPlaybackRate(0);
+        }
+      }
+
+      const sunToEarth = Cartesian3.normalize(
+        Cartesian3.subtract(helioEarthPosition, Cartesian3.ZERO, helioSunToEarthScratch),
+        helioSunToEarthScratch
+      );
+      const cmeProgress = getHelioCmeProgress();
+      helioCurrentCmeDirection = Cartesian3.normalize(new Cartesian3(
+        helioCmeLaunchDirection.x + helioCmeLaunchRight.x * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.x * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI)),
+        helioCmeLaunchDirection.y + helioCmeLaunchRight.y * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.y * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI)),
+        helioCmeLaunchDirection.z + helioCmeLaunchRight.z * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.z * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI))
+      ), helioCurrentCmeDirection);
+      const right = Cartesian3.cross(helioCurrentCmeDirection, helioCmeLaunchUp, helioRightScratch);
+      if (Cartesian3.magnitudeSquared(right) < 1e-6) {
+        Cartesian3.cross(helioCurrentCmeDirection, Cartesian3.UNIT_Z, right);
+      }
+      Cartesian3.normalize(right, right);
+      const up = Cartesian3.normalize(Cartesian3.cross(right, helioCurrentCmeDirection, helioUpScratch), helioUpScratch);
+      const sunEarthDistance = Cartesian3.distance(Cartesian3.ZERO, helioEarthPosition);
+
+      helioDensityStates.forEach((state, index) => {
+        const progress = 0.14 + (((helioSimulationSecondsRef.current * 0.00018) + state.distanceOffset) % 1) * 0.88;
+        const centerDistance = sunEarthDistance * progress;
+        const spreadScale = HELIO_AU_SCENE_UNITS * (0.02 + (1 - progress) * 0.03);
+        const twist = densityTwist * progress;
+        const densityPosition = new Cartesian3(
+          helioCurrentCmeDirection.x * centerDistance + right.x * (state.lateralBias + twist) * spreadScale + up.x * state.verticalBias * spreadScale * 0.4,
+          helioCurrentCmeDirection.y * centerDistance + right.y * (state.lateralBias + twist) * spreadScale + up.y * state.verticalBias * spreadScale * 0.4,
+          helioCurrentCmeDirection.z * centerDistance + right.z * (state.lateralBias + twist) * spreadScale + up.z * state.verticalBias * spreadScale * 0.4
+        );
+        const densityPulse = 0.55 + 0.45 * Math.sin(helioSimulationSecondsRef.current * 0.002 + index * 0.7);
+        state.primitive.position = densityPosition;
+        state.primitive.pixelSize = state.size * (0.8 + densityPulse * 0.45) * densityScale;
+        state.primitive.color = Color.fromCssColorString("#ff9f40").withAlpha(clamp(state.alpha * (0.4 + densityPulse * 0.6) * (0.78 + burstIntensity * 0.34), 0, 0.28));
+      });
+
+      const spread = Math.tan(HELIO_CME_VISUAL_HALF_ANGLE * spreadScale);
+      const edge1Dir = Cartesian3.normalize(new Cartesian3(
+        helioCurrentCmeDirection.x + spread * right.x,
+        helioCurrentCmeDirection.y + spread * right.y,
+        helioCurrentCmeDirection.z + spread * right.z
+      ), helioEdge1DirScratch);
+      const edge2Dir = Cartesian3.normalize(new Cartesian3(
+        helioCurrentCmeDirection.x - spread * right.x,
+        helioCurrentCmeDirection.y - spread * right.y,
+        helioCurrentCmeDirection.z - spread * right.z
+      ), helioEdge2DirScratch);
+
+      const coneLength = sunEarthDistance * cmeProgress;
+      const tip1 = Cartesian3.multiplyByScalar(edge1Dir, coneLength, helioTip1Scratch);
+      const tipCenter = Cartesian3.multiplyByScalar(helioCurrentCmeDirection, coneLength, helioTipCenterScratch);
+      const tip2 = Cartesian3.multiplyByScalar(edge2Dir, coneLength, helioTip2Scratch);
+      const flameTime = getHelioElapsedSeconds();
+      const outerFrontPositions = createFireConeFrontPositions(helioCurrentCmeDirection, right, up, coneLength * 1.02, HELIO_CME_VISUAL_HALF_ANGLE * 1.04 * spreadScale, flameTime, 1.25 * flameScale, 0.08 + burstIntensity * 0.02, cmeOuterFront.length - 1);
+      const midFrontPositions = createFireConeFrontPositions(helioCurrentCmeDirection, right, up, coneLength * 0.94, HELIO_CME_VISUAL_HALF_ANGLE * 0.82 * spreadScale, flameTime + 0.35, 0.95 * flameScale, 0.05 + burstIntensity * 0.014, cmeMidFront.length - 1);
+      const coreFrontPositions = createFireConeFrontPositions(helioCurrentCmeDirection, right, up, coneLength * 0.82, HELIO_CME_VISUAL_HALF_ANGLE * 0.56 * spreadScale, flameTime + 0.72, 0.58 * flameScale, 0.025 + burstIntensity * 0.008, cmeCoreFront.length - 1);
+
+      Cartesian3.multiplyByScalar(helioCurrentCmeDirection, HELIO_VISUAL_SUN_RADIUS * 0.88, cmeOuterApex);
+      Cartesian3.multiplyByScalar(helioCurrentCmeDirection, HELIO_VISUAL_SUN_RADIUS * 0.96, cmeMidApex);
+      Cartesian3.multiplyByScalar(helioCurrentCmeDirection, HELIO_VISUAL_SUN_RADIUS * 1.04, cmeCoreApex);
+      outerFrontPositions.forEach((position, index) => Cartesian3.clone(position, cmeOuterFront[index]));
+      midFrontPositions.forEach((position, index) => Cartesian3.clone(position, cmeMidFront[index]));
+      coreFrontPositions.forEach((position, index) => Cartesian3.clone(position, cmeCoreFront[index]));
+
+      const edgeGlowPulse = 0.5 + 0.5 * Math.sin(flameTime * 7.5);
+      const edgeHotPulse = 0.5 + 0.5 * Math.sin(flameTime * 11.5 + 0.6);
+      helioCmeLeftGlow.width = (6 + edgeGlowPulse * 4) * (0.84 + burstIntensity * 0.3);
+      helioCmeRightGlow.width = (6 + edgeGlowPulse * 4) * (0.84 + burstIntensity * 0.3);
+      helioCmeLeadingGlow.width = (8 + edgeGlowPulse * 5) * (0.84 + burstIntensity * 0.34);
+      helioCmeLeadingEdge.width = (3 + edgeHotPulse * 2.2) * (0.88 + burstIntensity * 0.22);
+
+      const glowColor = Color.fromCssColorString("#ff5a00").withAlpha(clamp((0.08 + edgeGlowPulse * 0.12) * (0.8 + burstIntensity * 0.28), 0, 0.42));
+      const edgeColor = Color.fromCssColorString("#ff9e2f").withAlpha(clamp((0.74 + edgeHotPulse * 0.18) * (0.86 + burstIntensity * 0.16), 0, 1));
+      const leadingColor = Color.fromCssColorString("#fff1a6").withAlpha(clamp((0.72 + edgeHotPulse * 0.24) * (0.86 + burstIntensity * 0.18), 0, 1));
+      (helioCmeLeftGlow.material.uniforms as { color: Color }).color = glowColor;
+      (helioCmeRightGlow.material.uniforms as { color: Color }).color = glowColor;
+      (helioCmeLeadingGlow.material.uniforms as { color: Color }).color = Color.fromCssColorString("#ff8a00").withAlpha(clamp((0.12 + edgeGlowPulse * 0.16) * (0.84 + burstIntensity * 0.24), 0, 0.46));
+      (helioCmeLeftEdge.material.uniforms as { color: Color }).color = edgeColor;
+      (helioCmeRightEdge.material.uniforms as { color: Color }).color = edgeColor;
+      (helioCmeLeadingEdge.material.uniforms as { color: Color }).color = leadingColor;
+
+      helioCmeLeftGlow.positions = [Cartesian3.clone(cmeOuterApex, new Cartesian3()), Cartesian3.clone(outerFrontPositions[0], new Cartesian3())];
+      helioCmeRightGlow.positions = [Cartesian3.clone(cmeOuterApex, new Cartesian3()), Cartesian3.clone(outerFrontPositions[outerFrontPositions.length - 1], new Cartesian3())];
+      helioCmeLeadingGlow.positions = outerFrontPositions.map((position) => Cartesian3.clone(position, new Cartesian3()));
+      helioCmeLeftEdge.positions = [Cartesian3.clone(cmeMidApex, new Cartesian3()), Cartesian3.clone(midFrontPositions[0], new Cartesian3())];
+      helioCmeRightEdge.positions = [Cartesian3.clone(cmeMidApex, new Cartesian3()), Cartesian3.clone(midFrontPositions[midFrontPositions.length - 1], new Cartesian3())];
+      helioCmeLeadingEdge.positions = createBezierArcPositions(tip1, tipCenter, tip2, 8).map((position, index) => {
+        const source = midFrontPositions[Math.min(index * 2, midFrontPositions.length - 1)] ?? position;
+        return Cartesian3.clone(source, new Cartesian3());
+      });
+
+      helioCmeEmberStates.forEach((ember, index) => {
+        const emberProgress = (getHelioCmeProgress() * 0.52 + ember.progressOffset + flameTime * 0.038 * ember.speedScale) % 1.16;
+        const progressAlongCone = clamp(0.08 + emberProgress * 0.92, 0.08, 1.08);
+        const lateralScale = ember.lateralBias * spread * (0.2 + progressAlongCone * 0.7);
+        const liftScale = ember.liftBias * (0.14 + progressAlongCone * 0.06);
+        const emberDir = new Cartesian3(
+          helioCurrentCmeDirection.x + lateralScale * right.x + liftScale * up.x,
+          helioCurrentCmeDirection.y + lateralScale * right.y + liftScale * up.y,
+          helioCurrentCmeDirection.z + lateralScale * right.z + liftScale * up.z
+        );
+        Cartesian3.normalize(emberDir, emberDir);
+        const emberLength = coneLength * progressAlongCone;
+        ember.primitive.position = Cartesian3.multiplyByScalar(emberDir, emberLength, new Cartesian3());
+        const emberPulse = 0.45 + 0.55 * Math.sin(flameTime * 9 + index * 0.85);
+        ember.primitive.pixelSize = ember.size * (0.8 + emberPulse * 0.7) * emberScale;
+        const emberHeat = clamp(1 - progressAlongCone * 0.7, 0, 1);
+        const emberColor = Color.lerp(
+          Color.fromCssColorString("#ff3b00"),
+          Color.fromCssColorString("#ffd86a"),
+          emberHeat,
+          new Color()
+        );
+        emberColor.alpha = clamp(ember.alpha * (0.4 + emberPulse * 0.6) * clamp(1.12 - progressAlongCone, 0.18, 1) * (0.76 + burstIntensity * 0.32), 0, 1);
+        ember.primitive.color = emberColor;
+      });
+    };
+    updateHelioVisuals(JulianDate.now(), 0, false);
 
     let lastFrameMs = performance.now();
     const startTimeMs = performance.now();
@@ -670,6 +1366,10 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       lastFrameMs = nowMs;
       const timeSeconds = JulianDate.toDate(time).getTime() / 1000;
       const elapsedSeconds = (nowMs - startTimeMs) / 1000;
+
+      if (currentModeRef.current === "HELIO") {
+        updateHelioVisuals(time, deltaSeconds, true);
+      }
 
       satAnimStates.forEach((state) => {
         const theta = state.initialTheta + (CesiumMath.TWO_PI / state.period) * elapsedSeconds;
@@ -764,6 +1464,30 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const unsubscribeStore = useAuroraStore.subscribe((state, previousState) => {
       currentModeRef.current = state.currentMode;
       earthOnlyRef.current = state.earthOnlyMode;
+      helioSimulationSecondsRef.current = state.helioSimulationSeconds;
+      helioPlaybackRateRef.current = state.helioPlaybackRate;
+      helioBurstIntensityRef.current = state.helioBurstIntensity;
+      helioScenarioVersionRef.current = state.helioScenarioVersion;
+
+      if (
+        state.currentMode === "HELIO" &&
+        state.helioSimulationSeconds === 0 &&
+        previousState.helioSimulationSeconds !== 0
+      ) {
+        helioSimulationBaseDate = new Date();
+        lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+        updateHelioVisuals(JulianDate.now(), 0, false);
+      }
+
+      if (
+        state.currentMode === "HELIO" &&
+        state.helioScenarioVersion !== previousState.helioScenarioVersion
+      ) {
+        helioSimulationBaseDate = new Date();
+        regenerateHelioScenario();
+        lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+        updateHelioVisuals(JulianDate.now(), 0, false);
+      }
 
       if (state.earthOnlyMode !== previousState.earthOnlyMode) {
         applyModeVisibility(state.currentMode);
@@ -771,7 +1495,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           earthOnlyLastInteractionMs = performance.now();
           flyCameraToEarthOnly();
         } else if (state.currentMode === "HELIO") {
-          helioStartedAtMs = performance.now();
+          updateHelioVisuals(JulianDate.now(), 0, false);
           transitionCameraForMode("HELIO");
         } else {
           viewer.camera.flyTo({
@@ -784,7 +1508,15 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       }
 
       if (state.currentMode !== previousState.currentMode) {
-        if (state.currentMode === "HELIO" && previousState.currentMode !== "HELIO") helioStartedAtMs = performance.now();
+        if (state.currentMode === "HELIO" && previousState.currentMode !== "HELIO") {
+          helioSimulationBaseDate = new Date();
+          regenerateHelioScenario();
+          helioSimulationSecondsRef.current = 0;
+          helioPlaybackRateRef.current = 0;
+          lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+          resetHelioSimulation();
+          updateHelioVisuals(JulianDate.now(), 0, false);
+        }
         applyModeVisibility(state.currentMode);
         if (!state.earthOnlyMode) {
           transitionCameraForMode(state.currentMode, previousState.currentMode);
@@ -808,7 +1540,13 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       earthOnlyLastInteractionMs = performance.now();
       flyCameraToEarthOnly();
     } else if (currentModeRef.current === "HELIO") {
-      helioStartedAtMs = performance.now();
+      helioSimulationBaseDate = new Date();
+      regenerateHelioScenario();
+      helioSimulationSecondsRef.current = 0;
+      helioPlaybackRateRef.current = 0;
+      lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+      resetHelioSimulation();
+      updateHelioVisuals(JulianDate.now(), 0, false);
       transitionCameraForMode("HELIO");
     }
 
@@ -835,6 +1573,13 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const picked = viewer.scene.pick(event.position);
       if (!defined(picked)) return;
       const pickedWithId = picked as { id?: unknown };
+      if (currentModeRef.current === "HELIO") {
+        const helioPlanetId = getPickedHelioPlanetId(pickedWithId.id);
+        if (helioPlanetId) {
+          flyCameraToHelioPlanet(helioPlanetId);
+          return;
+        }
+      }
       if (!isSatellitePickPayload(pickedWithId.id)) return;
       setSelectedSatellite(pickedWithId.id.satellite);
     }, ScreenSpaceEventType.LEFT_UP);

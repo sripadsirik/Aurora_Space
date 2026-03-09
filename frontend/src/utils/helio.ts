@@ -20,13 +20,12 @@ export const HELIO_CAMERA_DESTINATION = new Cartesian3(
 );
 export const HELIO_CAMERA_PITCH = CesiumMath.toRadians(-86);
 
-const getUtcDayOfYear = (date: Date): number => {
-  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 1);
-  return (date.getTime() - yearStart) / 86_400_000;
-};
+const HELIO_REFERENCE_EPOCH_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
+
+const getUtcElapsedDays = (date: Date): number => (date.getTime() - HELIO_REFERENCE_EPOCH_MS) / 86_400_000;
 
 export const getHelioOrbitAngle = (date: Date, orbitalPeriodDays: number, phase = -CesiumMath.PI_OVER_TWO): number =>
-  phase + (getUtcDayOfYear(date) / orbitalPeriodDays) * CesiumMath.TWO_PI;
+  phase + (getUtcElapsedDays(date) / orbitalPeriodDays) * CesiumMath.TWO_PI;
 
 export const positionOnHelioOrbit = (radius: number, angle: number, result?: Cartesian3): Cartesian3 => {
   const target = result ?? new Cartesian3();
@@ -98,9 +97,13 @@ export const createHelioBandHierarchy = (
 export const getHelioCmeRadius = (elapsedSeconds: number): number =>
   (elapsedSeconds * HELIO_CME_SPEED) % HELIO_CME_MAX_RADIUS;
 
+export const getHelioRemainingSeconds = (elapsedSeconds: number): number =>
+  Math.max(0, HELIO_CME_DURATION_SECONDS - elapsedSeconds);
+
 export const formatHelioArrivalLabel = (elapsedSeconds: number): string => {
-  const remainingSeconds = Math.max(0, HELIO_CME_DURATION_SECONDS - (elapsedSeconds % HELIO_CME_DURATION_SECONDS));
+  const remainingSeconds = getHelioRemainingSeconds(elapsedSeconds);
   const hours = Math.floor(remainingSeconds / 3600);
   const minutes = Math.floor((remainingSeconds % 3600) / 60);
-  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  const seconds = Math.floor(remainingSeconds % 60);
+  return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 };
