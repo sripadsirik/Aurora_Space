@@ -45,6 +45,24 @@ export type Conjunction = ConjunctionWarning;
 
 export type VisualMode = "OPS" | "STORM" | "INTEL" | "HELIO";
 
+export type CmeImpactStatus = "DIRECT HIT" | "GLANCING BLOW" | "NO IMPACT — MISS";
+
+export interface MockCME {
+  id: number;
+  label: string;
+  startTime: string;
+  speed: number;
+  arrivalTime: string;
+  hoursUntilArrival: number;
+  predictedKp: number;
+  stormLevel: string;
+  confidence: number;
+  direction: string;
+  impactStatus: CmeImpactStatus;
+  azimuthFromEarth?: number;
+  note?: string;
+}
+
 export interface HistoricalEvent {
   id: string;
   name: string;

@@ -5,11 +5,17 @@ import { mockSatellites } from "../data/mock/satellites";
 import { mockSpaceWeather } from "../data/mock/spaceWeather";
 import type { Conjunction, HistoricalEvent, Satellite, SpaceWeather, VisualMode } from "../types/space";
 
+export type FeedKey = "satellites" | "conjunctions" | "spaceWeather";
+
 export type PanelType =
   | "satellite-detail"
   | "conjunction-detail"
   | "space-weather"
-  | "data-layers";
+  | "data-layers"
+  | "active-conjunctions"
+  | "storm-impact"
+  | "intel-analysis"
+  | "cme-library";
 
 interface AuroraStoreState {
   selectedSatellite: Satellite | null;
@@ -19,6 +25,7 @@ interface AuroraStoreState {
   satellites: Satellite[];
   conjunctions: Conjunction[];
   isConnectedToBackend: boolean;
+  feedLastUpdated: Record<FeedKey, Date | null>;
 
   currentMode: VisualMode;
   earthOnlyMode: boolean;
@@ -30,6 +37,8 @@ interface AuroraStoreState {
   helioSelectedPlaybackRate: number;
   helioBurstIntensity: number;
   helioScenarioVersion: number;
+  stormAutoTriggered: boolean;
+  helioSelectedCME: number | null;
 
   setSelectedSatellite: (satellite: Satellite | null) => void;
   setSelectedConjunction: (conjunction: Conjunction | null) => void;
@@ -48,6 +57,10 @@ interface AuroraStoreState {
   toggleHelioPlayback: () => void;
   resetHelioSimulation: () => void;
   newHelioSimulation: () => void;
+  setStormAutoTriggered: (triggered: boolean) => void;
+  setHelioSelectedCME: (index: number | null) => void;
+  closeAllPanels: () => void;
+  recordFeedUpdate: (feed: FeedKey) => void;
 }
 
 const openPanelInSet = (panels: Set<PanelType>, panel: PanelType): Set<PanelType> => {
@@ -70,6 +83,7 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   satellites: mockSatellites,
   conjunctions: mockConjunctions,
   isConnectedToBackend: false,
+  feedLastUpdated: { satellites: null, conjunctions: null, spaceWeather: null },
 
   currentMode: "OPS",
   earthOnlyMode: false,
@@ -81,6 +95,8 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   helioSelectedPlaybackRate: 1,
   helioBurstIntensity: 1,
   helioScenarioVersion: 0,
+  stormAutoTriggered: false,
+  helioSelectedCME: null,
 
   setSelectedSatellite: (satellite) =>
     set((state) => ({
@@ -150,5 +166,17 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
       helioPlaybackRate: 0,
       helioSelectedPlaybackRate: state.helioSelectedPlaybackRate,
       helioScenarioVersion: state.helioScenarioVersion + 1
+    })),
+  setStormAutoTriggered: (triggered) => set({ stormAutoTriggered: triggered }),
+  setHelioSelectedCME: (index) => set({ helioSelectedCME: index }),
+  closeAllPanels: () =>
+    set({
+      activePanels: new Set<PanelType>(),
+      selectedSatellite: null,
+      selectedConjunction: null
+    }),
+  recordFeedUpdate: (feed) =>
+    set((state) => ({
+      feedLastUpdated: { ...state.feedLastUpdated, [feed]: new Date() }
     }))
 }));

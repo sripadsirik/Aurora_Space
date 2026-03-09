@@ -6,11 +6,24 @@ export const StormOverlay = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
   const spaceWeather = useAuroraStore((s) => s.spaceWeather);
   const timelineEvent = useAuroraStore((s) => s.timelineEvent);
+  const stormAutoTriggered = useAuroraStore((s) => s.stormAutoTriggered);
+  const setStormAutoTriggered = useAuroraStore((s) => s.setStormAutoTriggered);
+  const setMode = useAuroraStore((s) => s.setMode);
   const [visible, setVisible] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const kp = timelineEvent?.kpIndex ?? spaceWeather.kpIndex;
   const stormLevel = timelineEvent?.stormLevel ?? spaceWeather.stormLevel;
   const isStormActive = currentMode === "STORM" || kp > 5;
+
+  // Auto-trigger STORM mode when kp > 5
+  useEffect(() => {
+    if (kp > 5 && currentMode !== "STORM") {
+      setMode("STORM");
+      setStormAutoTriggered(true);
+      setBannerDismissed(false);
+    }
+  }, [kp, currentMode, setMode, setStormAutoTriggered]);
 
   useEffect(() => {
     if (isStormActive) {
@@ -19,6 +32,13 @@ export const StormOverlay = (): JSX.Element | null => {
       setVisible(false);
     }
   }, [isStormActive]);
+
+  // Reset banner dismissed when leaving storm mode
+  useEffect(() => {
+    if (currentMode !== "STORM") {
+      setBannerDismissed(false);
+    }
+  }, [currentMode]);
 
   if (!isStormActive && !visible) return null;
 
@@ -52,6 +72,22 @@ export const StormOverlay = (): JSX.Element | null => {
           GEOMAGNETIC STORM ACTIVE - {stormLevel.toUpperCase()} - Kp {kp.toFixed(1)}
         </div>
       </div>
+
+      {/* Auto-trigger banner */}
+      {stormAutoTriggered && !bannerDismissed && currentMode === "STORM" && (
+        <div className="pointer-events-auto absolute left-0 right-0 top-12 flex justify-center pt-2">
+          <div className="flex items-center gap-3 rounded border border-red-500/40 bg-[rgba(80,10,0,0.8)] px-4 py-2 font-mono text-[11px] tracking-[0.15em] text-[#ffaa66] backdrop-blur-sm">
+            <span>STORM MODE AUTO-ACTIVATED — Kp {kp.toFixed(1)} detected</span>
+            <button
+              type="button"
+              onClick={() => setBannerDismissed(true)}
+              className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-white/60 hover:bg-white/10 hover:text-white"
+            >
+              DISMISS
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

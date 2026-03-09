@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
@@ -36,6 +36,18 @@ export const HelioOverlay = (): JSX.Element | null => {
   const setHelioBurstIntensity = useAuroraStore((state) => state.setHelioBurstIntensity);
   const resetHelioSimulation = useAuroraStore((state) => state.resetHelioSimulation);
   const newHelioSimulation = useAuroraStore((state) => state.newHelioSimulation);
+  const helioScenarioVersion = useAuroraStore((state) => state.helioScenarioVersion);
+
+  const [newSimNotification, setNewSimNotification] = useState<string | null>(null);
+
+  // Show flash notification on NEW SIM
+  useEffect(() => {
+    if (helioScenarioVersion > 0 && currentMode === "HELIO") {
+      setNewSimNotification("NEW CME EVENT GENERATED");
+      const timer = setTimeout(() => setNewSimNotification(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [helioScenarioVersion, currentMode]);
 
   if (currentMode !== "HELIO") {
     return null;
@@ -47,6 +59,10 @@ export const HelioOverlay = (): JSX.Element | null => {
   const kpColor = getKpColor(spaceWeather.kpIndex);
   const playbackLabel = helioPlaybackRate === 0 ? `PAUSED @ x${helioSelectedPlaybackRate}` : `PLAY x${helioPlaybackRate}`;
   const intensityPercent = Math.round(helioBurstIntensity * 100);
+
+  // Bz shield status
+  const bzShieldColor = spaceWeather.bzComponent < 0 ? "#ff5a5a" : "#7dff6a";
+  const bzShieldLabel = spaceWeather.bzComponent < 0 ? "SHIELD WEAKENED" : "SHIELD CLOSED";
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
@@ -68,6 +84,7 @@ export const HelioOverlay = (): JSX.Element | null => {
           <HelioRow color={bzColor} label="BZ COMPONENT" value={`${spaceWeather.bzComponent.toFixed(1)} nT`} />
           <HelioRow color={kpColor} label="KP INDEX" value={spaceWeather.kpIndex.toFixed(1)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
+          <HelioRow color={bzShieldColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-cyan-500/10 pt-2 text-[10px] tracking-[0.18em] text-[#6d8ea9]">
           <span>VIEW WIDTH ~ 2.0 AU</span>
@@ -136,7 +153,33 @@ export const HelioOverlay = (): JSX.Element | null => {
             </div>
           </div>
         </div>
+
+        {/* L1 DSCOVR Data */}
+        <div className="mt-3 border-t border-cyan-500/10 pt-2">
+          <p className="text-[9px] tracking-[0.18em] text-[#00d4ff80]">L1 DSCOVR READINGS</p>
+          <div className="mt-1 space-y-0.5 text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Solar Wind</span>
+              <span className="text-[#e7f5ff]">{spaceWeather.solarWindSpeed} km/s</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Density</span>
+              <span className="text-[#e7f5ff]">{spaceWeather.solarWindDensity} p/cm³</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Bz</span>
+              <span style={{ color: bzColor }}>{spaceWeather.bzComponent.toFixed(1)} nT</span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* New SIM notification flash */}
+      {newSimNotification && (
+        <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded border border-orange-400/40 bg-[rgba(80,40,0,0.9)] px-4 py-2 font-mono backdrop-blur-sm transition-opacity duration-500">
+          <p className="text-[12px] tracking-[0.15em] text-[#ffd080]">{newSimNotification}</p>
+        </div>
+      )}
 
       <div className="absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded border border-cyan-500/15 bg-[rgba(5,15,30,0.55)] px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-[#7ba5c5] backdrop-blur-sm">
         <span className="rounded border border-cyan-400/30 bg-[rgba(0,212,255,0.08)] px-2 py-0.5 text-[#d8f8ff] shadow-[0_0_14px_rgba(0,212,255,0.08)]">

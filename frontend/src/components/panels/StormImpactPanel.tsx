@@ -1,0 +1,227 @@
+import { useEffect, useMemo } from "react";
+
+import { useAuroraStore } from "../../store/auroraStore";
+import { getKpColor } from "../../utils/colors";
+
+const getGLevel = (kp: number): string => {
+  if (kp >= 9) return "G5";
+  if (kp >= 8) return "G4";
+  if (kp >= 7) return "G3";
+  if (kp >= 6) return "G2";
+  if (kp >= 5) return "G1";
+  return "G0";
+};
+
+const getGLevelColor = (gLevel: string): string => {
+  switch (gLevel) {
+    case "G5": return "#ff0000";
+    case "G4": return "#ff3300";
+    case "G3": return "#ff6600";
+    case "G2": return "#ff9900";
+    case "G1": return "#ffcc00";
+    default: return "#7dff6a";
+  }
+};
+
+interface ImpactRow {
+  system: string;
+  status: string;
+  color: string;
+}
+
+const getImpacts = (kp: number): ImpactRow[] => {
+  if (kp > 8) {
+    return [
+      { system: "HF Radio", status: "BLACKOUT — R4", color: "#ff2a2a" },
+      { system: "GPS Accuracy", status: "DEGRADED ±15m", color: "#ff6600" },
+      { system: "Power Grids", status: "ELEVATED RISK — High latitudes", color: "#ffcc00" },
+      { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff6600" }
+    ];
+  }
+  if (kp >= 7) {
+    return [
+      { system: "HF Radio", status: "BLACKOUT — R3", color: "#ff6600" },
+      { system: "GPS Accuracy", status: "DEGRADED ±8m", color: "#ff8b38" },
+      { system: "Power Grids", status: "ELEVATED RISK — Northern regions", color: "#ffcc00" },
+      { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff8b38" }
+    ];
+  }
+  if (kp >= 5) {
+    return [
+      { system: "HF Radio", status: "MINOR DEGRADATION — R1", color: "#ffcc00" },
+      { system: "GPS Accuracy", status: "SLIGHT DEGRADATION ±3m", color: "#ffcc00" },
+      { system: "Power Grids", status: "NOMINAL", color: "#7dff6a" },
+      { system: "Aviation", status: "MONITORING", color: "#ffcc00" }
+    ];
+  }
+  return [
+    { system: "HF Radio", status: "NOMINAL", color: "#7dff6a" },
+    { system: "GPS Accuracy", status: "NOMINAL", color: "#7dff6a" },
+    { system: "Power Grids", status: "NOMINAL", color: "#7dff6a" },
+    { system: "Aviation", status: "NOMINAL", color: "#7dff6a" }
+  ];
+};
+
+const mockKpHistory = [
+  2.3, 2.1, 2.5, 2.8, 3.0, 3.2, 3.1, 2.9,
+  3.4, 3.8, 4.1, 4.5, 4.8, 5.2, 5.6, 5.9,
+  6.2, 6.8, 7.1, 6.5, 5.8, 5.2, 4.8, 4.3
+];
+
+export const StormImpactPanel = (): JSX.Element | null => {
+  const currentMode = useAuroraStore((s) => s.currentMode);
+  const spaceWeather = useAuroraStore((s) => s.spaceWeather);
+  const satellites = useAuroraStore((s) => s.satellites);
+  const timelineEvent = useAuroraStore((s) => s.timelineEvent);
+  const openPanel = useAuroraStore((s) => s.openPanel);
+
+  const kp = timelineEvent?.kpIndex ?? spaceWeather.kpIndex;
+
+  useEffect(() => {
+    if (currentMode === "STORM") {
+      openPanel("storm-impact");
+    }
+  }, [currentMode, openPanel]);
+
+  const riskCounts = useMemo(() => {
+    const leo = satellites.filter((s) => s.altitudeKm < 2000).length;
+    const geo = satellites.filter((s) => s.altitudeKm > 35000).length;
+    const debris = satellites.filter((s) => s.owner === "DEBRIS").length;
+    return { leo, geo, debris };
+  }, [satellites]);
+
+  if (currentMode !== "STORM") return null;
+
+  const gLevel = getGLevel(kp);
+  const gColor = getGLevelColor(gLevel);
+  const impacts = getImpacts(kp);
+
+  // KP Sparkline
+  const sparklineWidth = 240;
+  const sparklineHeight = 40;
+  const points = mockKpHistory.map((val, i) => {
+    const x = (i / (mockKpHistory.length - 1)) * sparklineWidth;
+    const y = sparklineHeight - (val / 9) * sparklineHeight;
+    return { x, y, val };
+  });
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+  return (
+    <div
+      className="pointer-events-auto fixed left-4 top-4 z-[70] w-[300px] rounded border font-mono text-[11px] shadow-[0_0_30px_rgba(255,60,0,0.08)] backdrop-blur-xl"
+      style={{
+        borderColor: "rgba(255,60,0,0.3)",
+        backgroundColor: "rgba(5,15,30,0.92)",
+        boxShadow: "0 0 30px rgba(255,60,0,0.08), inset 0 0 1px rgba(255,60,0,0.15)"
+      }}
+    >
+      <div className="border-b border-red-500/20 px-3 py-2">
+        <span className="text-xs tracking-[0.18em] text-[#ff6644]">STORM IMPACT ASSESSMENT</span>
+      </div>
+
+      <div className="space-y-3 px-3 py-2">
+        {/* Current Storm */}
+        <div>
+          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">CURRENT STORM</p>
+          <div className="mt-1 flex items-center gap-3">
+            <span
+              className="rounded border px-2 py-0.5 text-[14px] font-bold"
+              style={{ borderColor: gColor, color: gColor, backgroundColor: `${gColor}18` }}
+            >
+              {gLevel}
+            </span>
+            <div>
+              <p className="text-lg font-semibold" style={{ color: getKpColor(kp) }}>
+                Kp {kp.toFixed(1)}
+              </p>
+            </div>
+          </div>
+          <div className="mt-1 space-y-0.5 text-[10px] text-[#ffccaa]">
+            <p>Storm start: 14 minutes ago (mock)</p>
+            <p>Est. duration: 6-12 hours (mock)</p>
+          </div>
+        </div>
+
+        {/* At-Risk Assets */}
+        <div className="border-t border-red-500/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">AT-RISK ASSETS</p>
+          <div className="mt-1 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#ff8b38]" />
+                LEO — Drag Risk
+              </span>
+              <span className="text-[#ffcc88]">{riskCounts.leo} satellites</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#ffcc00]" />
+                GEO — Charge Risk
+              </span>
+              <span className="text-[#ffcc88]">{riskCounts.geo} satellites</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#ff2a2a]" />
+                Debris — Decay Risk
+              </span>
+              <span className="text-[#ffcc88]">{riskCounts.debris} objects</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Affected Systems */}
+        <div className="border-t border-red-500/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">AFFECTED SYSTEMS (mock)</p>
+          <div className="mt-1 space-y-1">
+            {impacts.map((row) => (
+              <div key={row.system} className="flex items-center justify-between">
+                <span className="text-[#d8c8b8]">{row.system}</span>
+                <span style={{ color: row.color }} className="text-[10px]">{row.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Kp Sparkline */}
+        <div className="border-t border-red-500/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">KP HISTORY (24h, mock)</p>
+          <svg
+            viewBox={`-4 -4 ${sparklineWidth + 8} ${sparklineHeight + 8}`}
+            className="mt-1 h-[50px] w-full"
+          >
+            {/* Threshold lines */}
+            <line
+              x1="0" y1={sparklineHeight - (5 / 9) * sparklineHeight}
+              x2={sparklineWidth} y2={sparklineHeight - (5 / 9) * sparklineHeight}
+              stroke="#ffcc0030" strokeWidth="1" strokeDasharray="4 4"
+            />
+            <line
+              x1="0" y1={sparklineHeight - (7 / 9) * sparklineHeight}
+              x2={sparklineWidth} y2={sparklineHeight - (7 / 9) * sparklineHeight}
+              stroke="#ff2a2a30" strokeWidth="1" strokeDasharray="4 4"
+            />
+            {/* Path */}
+            <path d={pathD} fill="none" stroke="#ff8844" strokeWidth="1.5" />
+            {/* Segment coloring */}
+            {points.map((p, i) => {
+              const color = p.val > 7 ? "#ff2a2a" : p.val >= 5 ? "#ffcc00" : "#7dff6a";
+              return (
+                <circle key={i} cx={p.x} cy={p.y} r="2" fill={color} />
+              );
+            })}
+            {/* Current value dot */}
+            <circle
+              cx={points[points.length - 1].x}
+              cy={points[points.length - 1].y}
+              r="4"
+              fill={getKpColor(mockKpHistory[mockKpHistory.length - 1])}
+              stroke="white"
+              strokeWidth="1"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+};

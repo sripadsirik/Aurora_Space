@@ -4,14 +4,21 @@ import { GlobeView } from "./components/GlobeView";
 import { HUD } from "./components/HUD";
 import { ModeSelector } from "./components/ModeSelector";
 import { Timeline } from "./components/Timeline";
+import { useWebSocket } from "./hooks/useWebSocket";
 import { HelioOverlay } from "./components/overlays/HelioOverlay";
 import { IntelOverlay } from "./components/overlays/IntelOverlay";
 import { StormOverlay } from "./components/overlays/StormOverlay";
+import { ActiveConjunctionsPanel } from "./components/panels/ActiveConjunctionsPanel";
+import { CmeLibraryPanel } from "./components/panels/CmeLibraryPanel";
+import { IntelAnalysisPanel } from "./components/panels/IntelAnalysisPanel";
+import { OpsWarningBadge } from "./components/panels/OpsWarningBadge";
 import { PanelManager } from "./components/panels/PanelManager";
+import { StormImpactPanel } from "./components/panels/StormImpactPanel";
 import { useAuroraStore } from "./store/auroraStore";
 import { env, hasValidCesiumIonToken } from "./utils/env";
 
 export const App = (): JSX.Element => {
+  useWebSocket();
   const satellites = useAuroraStore((state) => state.satellites);
   const conjunctions = useAuroraStore((state) => state.conjunctions);
   const spaceWeather = useAuroraStore((state) => state.spaceWeather);
@@ -73,6 +80,12 @@ export const App = (): JSX.Element => {
           />
 
           {currentMode !== "HELIO" && <PanelManager />}
+
+          <OpsWarningBadge />
+          <ActiveConjunctionsPanel />
+          <StormImpactPanel />
+          <IntelAnalysisPanel />
+          <CmeLibraryPanel />
 
           <ModeSelector />
           <Timeline />

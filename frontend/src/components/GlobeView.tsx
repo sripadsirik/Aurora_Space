@@ -512,6 +512,10 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const getHelioSimulationDate = (): Date =>
       new Date(helioSimulationBaseDate.getTime() + helioSimulationSecondsRef.current * HELIO_ORBIT_TIME_SCALE_SECONDS * 1000);
 
+    let helioCmeImpactStatus: "DIRECT HIT" | "GLANCING BLOW" | "NO IMPACT — MISS" = "DIRECT HIT";
+    let helioCmeLaunchAngle = 0;
+    let helioCmeSpeed = 1250;
+
     const regenerateHelioScenario = (): void => {
       const earthAtLaunch = positionOnHelioOrbit(
         HELIO_ORBIT_RADII.earth,
@@ -521,24 +525,75 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const worldUp = Math.abs(Cartesian3.dot(baseDirection, Cartesian3.UNIT_Z)) > 0.98 ? Cartesian3.UNIT_Y : Cartesian3.UNIT_Z;
       const baseRight = Cartesian3.normalize(Cartesian3.cross(baseDirection, worldUp, new Cartesian3()), new Cartesian3());
       const baseUp = Cartesian3.normalize(Cartesian3.cross(baseRight, baseDirection, new Cartesian3()), new Cartesian3());
-      const lateralAim = randomInRange(-0.08, 0.08);
-      const verticalAim = randomInRange(-0.03, 0.03);
+
+      // Realistic CME trajectory distribution
+      const roll = Math.random();
+      let launchAngle: number;
+      if (roll < 0.15) {
+        // Earth-directed (15% chance)
+        launchAngle = (Math.random() - 0.5) * 40;
+      } else if (roll < 0.40) {
+        // Glancing blow (25% chance)
+        const sign = Math.random() < 0.5 ? 1 : -1;
+        launchAngle = sign * (20 + Math.random() * 25);
+      } else {
+        // Not Earth-directed (60% chance)
+        const sign = Math.random() < 0.5 ? 1 : -1;
+        launchAngle = sign * (45 + Math.random() * 135);
+      }
+      helioCmeLaunchAngle = launchAngle;
+
+      // Determine impact status
+      const absAngle = Math.abs(launchAngle);
+      if (absAngle <= 20) {
+        helioCmeImpactStatus = "DIRECT HIT";
+      } else if (absAngle <= 45) {
+        helioCmeImpactStatus = "GLANCING BLOW";
+      } else {
+        helioCmeImpactStatus = "NO IMPACT — MISS";
+      }
+
+      // Randomize CME speed: log-normal biased toward 400-1200 km/s
+      helioCmeSpeed = 400 + Math.pow(Math.random(), 2) * 2600;
+
+      // Launch elevation: ±15° from ecliptic
+      const elevationDeg = randomInRange(-15, 15);
+      const launchAngleRad = CesiumMath.toRadians(launchAngle);
+      const elevationRad = CesiumMath.toRadians(elevationDeg);
+
+      // Apply launch angle as rotation in the ecliptic plane around the Sun
+      const cosA = Math.cos(launchAngleRad);
+      const sinA = Math.sin(launchAngleRad);
+      const lateralAim = sinA;
+      const forwardAim = cosA;
+      const verticalAim = Math.sin(elevationRad) * 0.3;
 
       helioCmeLaunchDirection = Cartesian3.normalize(new Cartesian3(
-        baseDirection.x + baseRight.x * lateralAim + baseUp.x * verticalAim,
-        baseDirection.y + baseRight.y * lateralAim + baseUp.y * verticalAim,
-        baseDirection.z + baseRight.z * lateralAim + baseUp.z * verticalAim
+        baseDirection.x * forwardAim + baseRight.x * lateralAim + baseUp.x * verticalAim,
+        baseDirection.y * forwardAim + baseRight.y * lateralAim + baseUp.y * verticalAim,
+        baseDirection.z * forwardAim + baseRight.z * lateralAim + baseUp.z * verticalAim
       ), helioCmeLaunchDirection);
       helioCmeLaunchRight = Cartesian3.normalize(Cartesian3.cross(helioCmeLaunchDirection, worldUp, helioCmeLaunchRight), helioCmeLaunchRight);
       if (Cartesian3.magnitudeSquared(helioCmeLaunchRight) < 1e-6) {
         helioCmeLaunchRight = Cartesian3.normalize(Cartesian3.cross(helioCmeLaunchDirection, Cartesian3.UNIT_Y, helioCmeLaunchRight), helioCmeLaunchRight);
       }
       helioCmeLaunchUp = Cartesian3.normalize(Cartesian3.cross(helioCmeLaunchRight, helioCmeLaunchDirection, helioCmeLaunchUp), helioCmeLaunchUp);
+
+      // Randomize other parameters
       helioCmeCurveRight = randomInRange(-0.12, 0.12);
       helioCmeCurveUp = randomInRange(-0.045, 0.045);
-      helioCmeSpreadScale = randomInRange(0.92, 1.14);
+
+      // Cone spread: 20-120° mapped to spread scale
+      const coneSpreadDeg = 20 + Math.random() * 100;
+      helioCmeSpreadScale = coneSpreadDeg / 50; // normalize around ~50° = 1.0
+
       helioCmeFlareScale = randomInRange(0.92, 1.22);
       helioCmeDensityTwist = randomInRange(-0.1, 0.1);
+
+      // Randomize burst intensity
+      const newIntensity = 0.2 + Math.random() * 0.8;
+      helioBurstIntensityRef.current = newIntensity;
+      useAuroraStore.getState().setHelioBurstIntensity(newIntensity);
     };
 
     const syncHelioSimulationState = (force = false): void => {
@@ -1375,6 +1430,68 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         const theta = state.initialTheta + (CesiumMath.TWO_PI / state.period) * elapsedSeconds;
         state.point.position = orbitPoint(theta, state.radius, state.inclination, state.ascendingNode);
       });
+
+      // Mode-specific satellite styling
+      const mode = currentModeRef.current;
+      if (mode === "STORM") {
+        satAnimStates.forEach((state) => {
+          const sat = state.satellite;
+          if (sat.altitudeKm < 2000 && sat.owner !== "DEBRIS") {
+            // LEO drag risk
+            state.point.color = Color.fromCssColorString("#ff8b38").withAlpha(1);
+            state.point.pixelSize = 10;
+          } else if (sat.altitudeKm > 35000 && sat.owner !== "DEBRIS") {
+            // GEO charging risk
+            state.point.color = Color.fromCssColorString("#ffcc00").withAlpha(1);
+            state.point.pixelSize = 10;
+          } else if (sat.owner === "DEBRIS") {
+            // Debris decay risk
+            state.point.color = Color.fromCssColorString("#ff2a2a").withAlpha(1);
+            state.point.pixelSize = 8;
+          } else {
+            // Others dimmed
+            state.point.color = riskColorMap[sat.riskLevel].withAlpha(0.15);
+            state.point.pixelSize = 4;
+          }
+        });
+      } else if (mode === "INTEL") {
+        const intelPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 3);
+        satAnimStates.forEach((state) => {
+          const risk = state.satellite.riskLevel;
+          if (risk === "critical") {
+            state.point.color = RED_COLOR.withAlpha(0.8 + intelPulse * 0.2);
+            state.point.pixelSize = 12;
+          } else if (risk === "warning") {
+            state.point.color = ORANGE_COLOR.withAlpha(0.9);
+            state.point.pixelSize = 9;
+          } else if (risk === "watch") {
+            state.point.color = Color.fromCssColorString("#ffcc00").withAlpha(0.85);
+            state.point.pixelSize = 6;
+          } else {
+            state.point.color = riskColorMap[risk].withAlpha(0.08);
+            state.point.pixelSize = 3;
+          }
+        });
+      } else if (mode === "OPS") {
+        // Restore default colors in OPS mode
+        satAnimStates.forEach((state) => {
+          const risk = state.satellite.riskLevel;
+          if (risk !== "critical") {
+            state.point.color = riskColorMap[risk].clone();
+            state.point.pixelSize = 6;
+          }
+        });
+      }
+
+      // INTEL mode conjunction line override
+      if (mode === "INTEL") {
+        conjunctionLineState.forEach((lineState) => {
+          if (lineState.polyline.show) {
+            lineState.polyline.width = 3;
+            (lineState.polyline.material.uniforms as { color: Color }).color = RED_COLOR.withAlpha(1);
+          }
+        });
+      }
 
       if (earthOnlyRef.current || currentModeRef.current === "HELIO") {
         selectedSatelliteRing.show = false;

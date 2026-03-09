@@ -3,16 +3,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { VisualMode } from "../types/space";
 
-const MODES: { key: VisualMode; label: string; shortcut: string }[] = [
-  { key: "OPS", label: "OPS", shortcut: "1" },
-  { key: "STORM", label: "STORM", shortcut: "2" },
-  { key: "INTEL", label: "INTEL", shortcut: "3" },
-  { key: "HELIO", label: "HELIO", shortcut: "4" }
+const MODES: { key: VisualMode; label: string; subtitle: string; shortcut: string }[] = [
+  { key: "OPS", label: "OPS", subtitle: "Operator Dashboard", shortcut: "1" },
+  { key: "STORM", label: "STORM", subtitle: "Weather Response", shortcut: "2" },
+  { key: "INTEL", label: "INTEL", subtitle: "Conjunction Analysis", shortcut: "3" },
+  { key: "HELIO", label: "HELIO", subtitle: "Solar Forecasting", shortcut: "4" }
 ];
 
 export const ModeSelector = (): JSX.Element => {
   const currentMode = useAuroraStore((s) => s.currentMode);
   const setMode = useAuroraStore((s) => s.setMode);
+  const closeAllPanels = useAuroraStore((s) => s.closeAllPanels);
   const [glitch, setGlitch] = useState(false);
   const underlineRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Map<VisualMode, HTMLButtonElement>>(new Map());
@@ -30,6 +31,10 @@ export const ModeSelector = (): JSX.Element => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "Escape") {
+        closeAllPanels();
+        return;
+      }
       const index = parseInt(e.key, 10);
       if (index >= 1 && index <= 4) {
         handleSetMode(MODES[index - 1].key);
@@ -37,7 +42,7 @@ export const ModeSelector = (): JSX.Element => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleSetMode]);
+  }, [handleSetMode, closeAllPanels]);
 
   // Update underline position
   useEffect(() => {
@@ -86,8 +91,13 @@ export const ModeSelector = (): JSX.Element => {
                     : undefined
                 }
               >
-                <span className="relative z-10">{mode.label}</span>
-                <span className="ml-1 text-[9px] opacity-40">{mode.shortcut}</span>
+                <span className="relative z-10 flex flex-col items-center">
+                  <span className="flex items-center gap-1">
+                    {mode.label}
+                    <span className="text-[9px] opacity-40">{mode.shortcut}</span>
+                  </span>
+                  <span className="text-[7px] opacity-50 tracking-[0.1em]">{mode.subtitle}</span>
+                </span>
               </button>
             );
           })}
