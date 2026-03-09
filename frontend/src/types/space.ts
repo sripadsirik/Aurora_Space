@@ -40,3 +40,5 @@ export interface ConjunctionWarning {
   probability: number;
   relativeVelocityKms: number;
 }
+
+export type Conjunction = ConjunctionWarning;

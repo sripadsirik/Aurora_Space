@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import { useUtcClock } from "../hooks/useUtcClock";
+import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getKpColor } from "../utils/colors";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
@@ -21,6 +22,9 @@ interface LayerRow {
 
 export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element => {
   const now = useUtcClock();
+  const openPanel = useAuroraStore((state) => state.openPanel);
+  const selectedConjunction = useAuroraStore((state) => state.selectedConjunction);
+  const setSelectedConjunction = useAuroraStore((state) => state.setSelectedConjunction);
 
   const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
 
@@ -61,7 +65,17 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   return (
     <div className="pointer-events-none absolute inset-0 p-4 font-mono text-[13px] text-[var(--aurora-text)]">
       <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-4">
-        <div className="hud-panel pointer-events-auto w-[330px] self-start rounded p-3">
+        <div
+          className="hud-panel pointer-events-auto w-[330px] cursor-pointer self-start rounded p-3 transition-colors hover:border-cyan-400/50"
+          onClick={() => openPanel("space-weather")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              openPanel("space-weather");
+            }
+          }}
+        >
           <p className="text-xs tracking-[0.2em] text-[var(--aurora-accent)]">SPACE WEATHER</p>
           <div className="mt-2 flex items-end gap-3">
             <p className="text-2xl font-semibold" style={{ color: getKpColor(spaceWeather.kpIndex) }}>
@@ -102,20 +116,40 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           <div className="mt-2 space-y-1 text-xs text-[#d8ebff]">
             {conjunctions.map((conjunction) => {
               const isCritical = isCriticalConjunction(conjunction);
+              const isSelected = selectedConjunction?.id === conjunction.id;
               return (
-                <div key={conjunction.id} className="flex items-center gap-2 rounded border border-white/10 px-2 py-1">
+                <button
+                  key={conjunction.id}
+                  type="button"
+                  onClick={() => setSelectedConjunction(conjunction)}
+                  className={`flex w-full items-center gap-2 rounded border px-2 py-1 text-left transition-colors ${
+                    isSelected
+                      ? "border-cyan-400/70 bg-[#0b2b45]/60"
+                      : "border-white/10 hover:border-cyan-400/50"
+                  }`}
+                >
                   <span className={`h-2 w-2 rounded-full ${isCritical ? "animate-pulse bg-[#ff0000]" : "bg-[#ff6600]"}`} />
                   <span className="truncate">
                     {conjunction.object1.name} - {conjunction.object2.name} | TCA {formatDurationToTca(conjunction.tca)} | Pc{" "}
                     {formatProbability(conjunction.probability)}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
 
-        <div className="hud-panel pointer-events-auto mt-auto w-[420px] self-end rounded p-3">
+        <div
+          className="hud-panel pointer-events-auto mt-auto w-[420px] cursor-pointer self-end rounded p-3 transition-colors hover:border-cyan-400/50"
+          onClick={() => openPanel("data-layers")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              openPanel("data-layers");
+            }
+          }}
+        >
           <p className="text-xs tracking-[0.2em] text-[var(--aurora-accent)]">DATA LAYERS</p>
           <div className="mt-2 space-y-1 text-xs">
             {layers.map((layer) => (

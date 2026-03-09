@@ -37,6 +37,52 @@ body {
   backdrop-filter: blur(8px);
 }
 
+.aurora-panel-stack {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 70;
+  display: flex;
+  width: min(380px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+@keyframes aurora-panel-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.aurora-slide-panel {
+  width: 100%;
+  max-height: calc(100vh - 32px);
+  background: rgba(5, 15, 30, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  backdrop-filter: blur(12px);
+  border-radius: 4px;
+  animation: aurora-panel-slide-in 250ms ease-out;
+}
+
+.aurora-panel-close {
+  border: 1px solid rgba(160, 198, 224, 0.35);
+  background: rgba(10, 22, 40, 0.8);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.aurora-panel-close:hover {
+  border-color: rgba(0, 212, 255, 0.6);
+  color: #e8f6ff;
+}
+
 .cesium-viewer,
 .cesium-viewer-cesiumWidget,
 .cesium-widget,
