@@ -1,5 +1,7 @@
 <img width="3439" height="1324" alt="image" src="https://github.com/user-attachments/assets/7a1ce02b-cdef-4798-92fc-942788287ffb" />
 
+<img width="3439" height="1326" alt="image" src="https://github.com/user-attachments/assets/9d90889a-121c-43eb-a8bc-6b21b88294dc" />
+
 
 # AURORA
 ### Real-Time Space Situational Awareness Platform
