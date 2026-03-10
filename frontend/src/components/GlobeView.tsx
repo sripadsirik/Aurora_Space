@@ -18,6 +18,7 @@ import {
   Ion,
   IonImageryProvider,
   JulianDate,
+  LabelCollection,
   Material,
   Math as CesiumMath,
   Matrix4,
@@ -27,8 +28,6 @@ import {
   PolygonHierarchy,
   PolylineDashMaterialProperty,
   PolylineCollection,
-  PolylineGeometry,
-  PolylineMaterialAppearance,
   Primitive,
   ScreenSpaceEventType,
   Simon1994PlanetaryPositions,
@@ -39,6 +38,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
+import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
   createOrbitRingPositions,
@@ -52,7 +52,7 @@ import {
   positionOnHelioOrbit
 } from "../utils/helio";
 import { env } from "../utils/env";
-import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -73,11 +73,17 @@ interface SatelliteAnimState {
   ascendingNode: number;
   period: number;
   initialTheta: number;
+  thetaEpochSeconds: number;
 }
 
-interface ConjunctionLineState {
+interface ConjunctionVisualState {
   conjunction: ConjunctionWarning;
-  polyline: ReturnType<PolylineCollection["add"]>;
+  riskLevel: Satellite["riskLevel"];
+  object1Arc: ReturnType<PolylineCollection["add"]>;
+  object2Arc: ReturnType<PolylineCollection["add"]>;
+  missDistanceLine: ReturnType<PolylineCollection["add"]>;
+  marker: PointPrimitive;
+  label: ReturnType<LabelCollection["add"]>;
   sat1NoradId: number;
   sat2NoradId: number;
 }
@@ -163,44 +169,71 @@ const HELIO_PLANET_RADII = {
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
+const WATCH_CONJUNCTION_COLOR = Color.fromBytes(255, 100, 0, 153);
+const WARNING_CONJUNCTION_COLOR = Color.fromBytes(255, 50, 0, 204);
+const CRITICAL_CONJUNCTION_COLOR = Color.fromBytes(255, 0, 0, 255);
+const CONJUNCTION_ARC_POINT_COUNT = 20;
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
 
-const createArcPositions = (start: Cartesian3, end: Cartesian3, segments = 32): Cartesian3[] => {
-  const startMag = Cartesian3.magnitude(start);
-  const endMag = Cartesian3.magnitude(end);
-  if (startMag < 1 || endMag < 1) return [start, end];
-  const positions: Cartesian3[] = [];
-  const startNorm = new Cartesian3(start.x / startMag, start.y / startMag, start.z / startMag);
-  const endNorm = new Cartesian3(end.x / endMag, end.y / endMag, end.z / endMag);
-  const dot = clamp(startNorm.x * endNorm.x + startNorm.y * endNorm.y + startNorm.z * endNorm.z, -1, 1);
-  const omega = Math.acos(dot);
-  const sinOmega = Math.sin(omega);
+const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
+  state.initialTheta + (CesiumMath.TWO_PI / state.period) * (elapsedSeconds - state.thetaEpochSeconds);
 
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments;
-    let dirX: number;
-    let dirY: number;
-    let dirZ: number;
-    if (sinOmega < 1e-6) {
-      dirX = startNorm.x + (endNorm.x - startNorm.x) * t;
-      dirY = startNorm.y + (endNorm.y - startNorm.y) * t;
-      dirZ = startNorm.z + (endNorm.z - startNorm.z) * t;
-    } else {
-      const a = Math.sin((1 - t) * omega) / sinOmega;
-      const b = Math.sin(t * omega) / sinOmega;
-      dirX = a * startNorm.x + b * endNorm.x;
-      dirY = a * startNorm.y + b * endNorm.y;
-      dirZ = a * startNorm.z + b * endNorm.z;
-    }
-    const radius = startMag + (endMag - startMag) * t;
-    const bow = 1 + 0.08 * Math.sin(t * Math.PI);
-    const magnitude = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-    const scale = magnitude > 0 ? (radius * bow) / magnitude : 0;
-    positions.push(new Cartesian3(dirX * scale, dirY * scale, dirZ * scale));
+const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
+  orbitPoint(
+    getSatelliteThetaAtElapsed(state, elapsedSeconds) + (CesiumMath.TWO_PI / state.period) * offsetSeconds,
+    state.radius,
+    state.inclination,
+    state.ascendingNode
+  );
+
+const getConjunctionRiskLevel = (conjunction: ConjunctionWarning): Satellite["riskLevel"] => {
+  if (conjunction.probability >= 1 / 1000 || conjunction.missDistanceM <= 250) return "critical";
+  if (conjunction.probability >= 1 / 10000 || conjunction.missDistanceM <= 1000) return "warning";
+  if (conjunction.probability > 0 || conjunction.missDistanceM <= 5000) return "watch";
+  return "nominal";
+};
+
+const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
+  if (riskLevel === "critical") return CRITICAL_CONJUNCTION_COLOR.clone();
+  if (riskLevel === "warning") return WARNING_CONJUNCTION_COLOR.clone();
+  if (riskLevel === "watch") return WATCH_CONJUNCTION_COLOR.clone();
+  return Color.TRANSPARENT.clone();
+};
+
+const getConjunctionLineWidth = (riskLevel: Satellite["riskLevel"]): number =>
+  riskLevel === "watch" ? 2 : 3;
+
+const createConjunctionOrbitArcPositions = (
+  state: SatelliteAnimState,
+  elapsedSeconds: number,
+  timeUntilTcaSeconds: number,
+  pointCount = CONJUNCTION_ARC_POINT_COUNT
+): Cartesian3[] => {
+  const angularVelocity = CesiumMath.TWO_PI / state.period;
+  const lookAheadSeconds = Math.min(
+    Math.max(timeUntilTcaSeconds, state.period * 0.04),
+    state.period * 0.32
+  );
+  const startOffsetSeconds = -Math.min(lookAheadSeconds * 0.2, state.period * 0.05);
+  const endOffsetSeconds = Math.max(lookAheadSeconds, state.period * 0.08);
+  const currentTheta = getSatelliteThetaAtElapsed(state, elapsedSeconds);
+  const positions: Cartesian3[] = [];
+
+  for (let index = 0; index < pointCount; index += 1) {
+    const t = pointCount === 1 ? 0 : index / (pointCount - 1);
+    const offsetSeconds = CesiumMath.lerp(startOffsetSeconds, endOffsetSeconds, t);
+    positions.push(
+      orbitPoint(
+        currentTheta + angularVelocity * offsetSeconds,
+        state.radius,
+        state.inclination,
+        state.ascendingNode
+      )
+    );
   }
 
   return positions;
@@ -448,6 +481,16 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
   const helioPlaybackRateRef = useRef(useAuroraStore.getState().helioPlaybackRate);
   const helioBurstIntensityRef = useRef(useAuroraStore.getState().helioBurstIntensity);
   const helioScenarioVersionRef = useRef(useAuroraStore.getState().helioScenarioVersion);
+  const satellitesRef = useRef(satellites);
+  const conjunctionsRef = useRef(conjunctions);
+  const spaceWeatherRef = useRef(spaceWeather);
+  const syncSatellitesRef = useRef<((nextSatellites: Satellite[]) => void) | null>(null);
+  const syncConjunctionsRef = useRef<((nextConjunctions: ConjunctionWarning[]) => void) | null>(null);
+  const syncSpaceWeatherRef = useRef<((nextSpaceWeather: SpaceWeather) => void) | null>(null);
+
+  satellitesRef.current = satellites;
+  conjunctionsRef.current = conjunctions;
+  spaceWeatherRef.current = spaceWeather;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -692,35 +735,81 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
 
     const earthR = earthRadiusMeters;
     const satellitePoints = registerEarth(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    const conjunctionPolylines = registerEarth(viewer.scene.primitives.add(new PolylineCollection()));
+    const conjunctionMarkers = registerEarth(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    const conjunctionLabels = registerEarth(viewer.scene.primitives.add(new LabelCollection()));
     const criticalPoints: PointPrimitive[] = [];
-    const satAnimStates: SatelliteAnimState[] = [];
+    const satellitePointPool: SatelliteAnimState[] = [];
+    let activeSatAnimStates: SatelliteAnimState[] = [];
     const satAnimByNorad = new Map<number, SatelliteAnimState>();
+    const conjunctionVisualState: ConjunctionVisualState[] = [];
     let selectedSatelliteNoradId = useAuroraStore.getState().selectedSatellite?.noradId ?? null;
     let selectedConjunctionId = useAuroraStore.getState().selectedConjunction?.id ?? null;
+    let elapsedSceneSeconds = 0;
 
-    satellites.forEach((satellite) => {
+    const applySatelliteToState = (state: SatelliteAnimState, satellite: Satellite, thetaEpochSeconds: number): void => {
       const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
-      const state: SatelliteAnimState = {
-        point: satellitePoints.add({
-          position: orbitPoint(CesiumMath.toRadians(satellite.lon + 180), radius, inclination, ascendingNode),
-          pixelSize: satellite.riskLevel === "critical" ? 10 : 6,
-          color: riskColorMap[satellite.riskLevel].clone(),
-          outlineColor: Color.WHITE.withAlpha(0.25),
-          outlineWidth: satellite.riskLevel === "critical" ? 2 : 1,
-          disableDepthTestDistance: 0.0,
-          id: { type: "satellite", satellite }
-        }),
+      state.satellite = satellite;
+      state.radius = radius;
+      state.inclination = inclination;
+      state.ascendingNode = ascendingNode;
+      state.period = getOrbitalPeriod(radius);
+      state.initialTheta = CesiumMath.toRadians(satellite.lon + 180);
+      state.thetaEpochSeconds = thetaEpochSeconds;
+      state.point.show = true;
+      state.point.position = orbitPoint(state.initialTheta, radius, inclination, ascendingNode);
+      state.point.pixelSize = satellite.riskLevel === "critical" ? 10 : 6;
+      state.point.color = riskColorMap[satellite.riskLevel].clone();
+      state.point.outlineColor = Color.WHITE.withAlpha(0.25);
+      state.point.outlineWidth = satellite.riskLevel === "critical" ? 2 : 1;
+      state.point.id = { type: "satellite", satellite };
+    };
+
+    const createSatelliteAnimState = (satellite: Satellite, thetaEpochSeconds: number): SatelliteAnimState => {
+      const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
+      const point = satellitePoints.add({
+        position: orbitPoint(CesiumMath.toRadians(satellite.lon + 180), radius, inclination, ascendingNode),
+        pixelSize: satellite.riskLevel === "critical" ? 10 : 6,
+        color: riskColorMap[satellite.riskLevel].clone(),
+        outlineColor: Color.WHITE.withAlpha(0.25),
+        outlineWidth: satellite.riskLevel === "critical" ? 2 : 1,
+        disableDepthTestDistance: 0.0,
+        id: { type: "satellite", satellite }
+      });
+
+      return {
+        point,
         satellite,
         radius,
         inclination,
         ascendingNode,
         period: getOrbitalPeriod(radius),
-        initialTheta: CesiumMath.toRadians(satellite.lon + 180)
+        initialTheta: CesiumMath.toRadians(satellite.lon + 180),
+        thetaEpochSeconds
       };
-      satAnimStates.push(state);
-      satAnimByNorad.set(satellite.noradId, state);
-      if (satellite.riskLevel === "critical") criticalPoints.push(state.point);
-    });
+    };
+
+    const syncSatellitePoints = (nextSatellites: Satellite[]): void => {
+      satAnimByNorad.clear();
+      criticalPoints.length = 0;
+      activeSatAnimStates = [];
+
+      nextSatellites.forEach((satellite, index) => {
+        const state = satellitePointPool[index] ?? createSatelliteAnimState(satellite, elapsedSceneSeconds);
+        if (!satellitePointPool[index]) {
+          satellitePointPool.push(state);
+        } else {
+          applySatelliteToState(state, satellite, elapsedSceneSeconds);
+        }
+        activeSatAnimStates.push(state);
+        satAnimByNorad.set(satellite.noradId, state);
+        if (satellite.riskLevel === "critical") criticalPoints.push(state.point);
+      });
+
+      for (let index = nextSatellites.length; index < satellitePointPool.length; index += 1) {
+        satellitePointPool[index].point.show = false;
+      }
+    };
 
     const flyCameraToSatellite = (noradId: number): void => {
       if (currentModeRef.current === "HELIO") return;
@@ -799,58 +888,110 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         outlineWidth: 2
       }
     });
+    const syncConjunctionVisuals = (nextConjunctions: ConjunctionWarning[]): void => {
+      conjunctionPolylines.removeAll();
+      conjunctionMarkers.removeAll();
+      conjunctionLabels.removeAll();
+      conjunctionVisualState.length = 0;
 
-    if (selectedSatelliteNoradId !== null && currentModeRef.current !== "HELIO") flyCameraToSatellite(selectedSatelliteNoradId);
+      nextConjunctions.forEach((conjunction) => {
+        const riskLevel = getConjunctionRiskLevel(conjunction);
+        if (riskLevel === "nominal") return;
 
-    registerEarth(viewer.scene.primitives.add(new Primitive({
-      geometryInstances: satellites.map((satellite) => new GeometryInstance({
-        geometry: new PolylineGeometry({
-          positions: createOrbitPositions(satellite),
-          width: 1,
-          vertexFormat: PolylineMaterialAppearance.VERTEX_FORMAT
-        })
+        const color = getConjunctionColor(riskLevel);
+        const width = getConjunctionLineWidth(riskLevel);
+        conjunctionVisualState.push({
+          conjunction,
+          riskLevel,
+          sat1NoradId: conjunction.object1.noradId,
+          sat2NoradId: conjunction.object2.noradId,
+          object1Arc: conjunctionPolylines.add({
+            positions: [],
+            show: false,
+            width,
+            material: Material.fromType("Color", { color: color.clone() })
+          }),
+          object2Arc: conjunctionPolylines.add({
+            positions: [],
+            show: false,
+            width,
+            material: Material.fromType("Color", { color: color.clone() })
+          }),
+          missDistanceLine: conjunctionPolylines.add({
+            positions: [],
+            show: false,
+            width,
+            material: Material.fromType("Color", { color: color.clone() })
+          }),
+          marker: conjunctionMarkers.add({
+            position: Cartesian3.ZERO,
+            show: false,
+            pixelSize: riskLevel === "watch" ? 9 : 11,
+            color: color.clone(),
+            outlineColor: Color.WHITE.withAlpha(0.35),
+            outlineWidth: 1,
+            disableDepthTestDistance: 0.0
+          }),
+          label: conjunctionLabels.add({
+            position: Cartesian3.ZERO,
+            show: false,
+            text: `TCA ${formatDurationToTca(conjunction.tca)}`,
+            fillColor: color.clone(),
+            font: "11px monospace",
+            showBackground: true,
+            backgroundColor: Color.BLACK.withAlpha(0.45),
+            pixelOffset: new Cartesian2(0, -20),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY
+          })
+        });
+      });
+    };
+
+    syncSatellitesRef.current = syncSatellitePoints;
+    syncConjunctionsRef.current = syncConjunctionVisuals;
+
+    syncSatellitePoints(satellitesRef.current);
+    syncConjunctionVisuals(conjunctionsRef.current);
+    if (selectedSatelliteNoradId !== null && currentModeRef.current !== "HELIO") {
+      flyCameraToSatellite(selectedSatelliteNoradId);
+    }
+
+    let auroraCapHierarchies = [
+      createAuroraCapHierarchy(true, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex)),
+      createAuroraCapHierarchy(true, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex) * 0.68),
+      createAuroraCapHierarchy(false, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex)),
+      createAuroraCapHierarchy(false, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex) * 0.68)
+    ];
+    const auroraCapEntities = [
+      registerEarth(viewer.entities.add({
+        polygon: {
+          hierarchy: new CallbackProperty(() => auroraCapHierarchies[0], false),
+          material: createAuroraMaterial(0.07, 0.16, currentModeRef),
+          perPositionHeight: false
+        }
       })),
-      appearance: new PolylineMaterialAppearance({
-        material: Material.fromType("PolylineDash", {
-          color: Color.fromCssColorString("#00d4ff").withAlpha(0.18),
-          gapColor: Color.TRANSPARENT,
-          dashLength: 24,
-          dashPattern: 255
-        })
-      }),
-      asynchronous: false
-    })));
-
-    const conjunctionLines = registerEarth(viewer.scene.primitives.add(new PolylineCollection()));
-    const conjunctionLineState: ConjunctionLineState[] = [];
-    conjunctions.forEach((conjunction) => {
-      const first = satAnimByNorad.get(conjunction.object1.noradId);
-      const second = satAnimByNorad.get(conjunction.object2.noradId);
-      if (!first || !second) return;
-      conjunctionLineState.push({
-        conjunction,
-        sat1NoradId: conjunction.object1.noradId,
-        sat2NoradId: conjunction.object2.noradId,
-        polyline: conjunctionLines.add({
-          positions: [first.point.position, second.point.position],
-          show: false,
-          width: 2,
-          material: Material.fromType("Color", { color: ORANGE_COLOR.withAlpha(0.8) })
-        })
-      });
-    });
-
-    const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
-    [createAuroraCapHierarchy(true, auroraRadiusDeg), createAuroraCapHierarchy(true, auroraRadiusDeg * 0.68), createAuroraCapHierarchy(false, auroraRadiusDeg), createAuroraCapHierarchy(false, auroraRadiusDeg * 0.68)]
-      .forEach((hierarchy, index) => {
-        registerEarth(viewer.entities.add({
-          polygon: {
-            hierarchy,
-            material: createAuroraMaterial(index % 2 === 0 ? 0.07 : 0.17, index % 2 === 0 ? 0.16 : 0.35, currentModeRef),
-            perPositionHeight: false
-          }
-        }));
-      });
+      registerEarth(viewer.entities.add({
+        polygon: {
+          hierarchy: new CallbackProperty(() => auroraCapHierarchies[1], false),
+          material: createAuroraMaterial(0.17, 0.35, currentModeRef),
+          perPositionHeight: false
+        }
+      })),
+      registerEarth(viewer.entities.add({
+        polygon: {
+          hierarchy: new CallbackProperty(() => auroraCapHierarchies[2], false),
+          material: createAuroraMaterial(0.07, 0.16, currentModeRef),
+          perPositionHeight: false
+        }
+      })),
+      registerEarth(viewer.entities.add({
+        polygon: {
+          hierarchy: new CallbackProperty(() => auroraCapHierarchies[3], false),
+          material: createAuroraMaterial(0.17, 0.35, currentModeRef),
+          perPositionHeight: false
+        }
+      }))
+    ];
 
     registerEarth(viewer.scene.primitives.add(new Primitive({
       geometryInstances: new GeometryInstance({
@@ -868,7 +1009,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       allowPicking: false
     })));
 
-    const solarWindColor = getSolarWindColor(spaceWeather.solarWindSpeed);
+    let solarWindColor = getSolarWindColor(spaceWeatherRef.current.solarWindSpeed);
     const particleCollection = registerEarth(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
     const particles: SolarWindParticle[] = [];
     const streamSpread = earthR * 6;
@@ -891,6 +1032,20 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       particle.primitive.position = new Cartesian3(particle.x, particle.y, particle.z);
       particles.push(particle);
     }
+
+    const syncSpaceWeatherVisuals = (nextSpaceWeather: SpaceWeather): void => {
+      solarWindColor = getSolarWindColor(nextSpaceWeather.solarWindSpeed);
+      const auroraRadiusDeg = kpToAuroraRadiusDegrees(nextSpaceWeather.kpIndex);
+      auroraCapHierarchies = [
+        createAuroraCapHierarchy(true, auroraRadiusDeg),
+        createAuroraCapHierarchy(true, auroraRadiusDeg * 0.68),
+        createAuroraCapHierarchy(false, auroraRadiusDeg),
+        createAuroraCapHierarchy(false, auroraRadiusDeg * 0.68)
+      ];
+    };
+
+    syncSpaceWeatherRef.current = syncSpaceWeatherVisuals;
+    syncSpaceWeatherVisuals(spaceWeatherRef.current);
 
     const getHelioPlanetAngle = (orbitalPeriodDays: number, phase: number): number =>
       getHelioOrbitAngle(getHelioSimulationDate(), orbitalPeriodDays, phase);
@@ -1421,20 +1576,20 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       lastFrameMs = nowMs;
       const timeSeconds = JulianDate.toDate(time).getTime() / 1000;
       const elapsedSeconds = (nowMs - startTimeMs) / 1000;
+      elapsedSceneSeconds = elapsedSeconds;
 
       if (currentModeRef.current === "HELIO") {
         updateHelioVisuals(time, deltaSeconds, true);
       }
 
-      satAnimStates.forEach((state) => {
-        const theta = state.initialTheta + (CesiumMath.TWO_PI / state.period) * elapsedSeconds;
-        state.point.position = orbitPoint(theta, state.radius, state.inclination, state.ascendingNode);
+      activeSatAnimStates.forEach((state) => {
+        state.point.position = getSatellitePositionAtOffset(state, elapsedSeconds, 0);
       });
 
       // Mode-specific satellite styling
       const mode = currentModeRef.current;
       if (mode === "STORM") {
-        satAnimStates.forEach((state) => {
+        activeSatAnimStates.forEach((state) => {
           const sat = state.satellite;
           if (sat.altitudeKm < 2000 && sat.owner !== "DEBRIS") {
             // LEO drag risk
@@ -1456,7 +1611,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         });
       } else if (mode === "INTEL") {
         const intelPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 3);
-        satAnimStates.forEach((state) => {
+        activeSatAnimStates.forEach((state) => {
           const risk = state.satellite.riskLevel;
           if (risk === "critical") {
             state.point.color = RED_COLOR.withAlpha(0.8 + intelPulse * 0.2);
@@ -1474,21 +1629,11 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         });
       } else if (mode === "OPS") {
         // Restore default colors in OPS mode
-        satAnimStates.forEach((state) => {
+        activeSatAnimStates.forEach((state) => {
           const risk = state.satellite.riskLevel;
           if (risk !== "critical") {
             state.point.color = riskColorMap[risk].clone();
             state.point.pixelSize = 6;
-          }
-        });
-      }
-
-      // INTEL mode conjunction line override
-      if (mode === "INTEL") {
-        conjunctionLineState.forEach((lineState) => {
-          if (lineState.polyline.show) {
-            lineState.polyline.width = 3;
-            (lineState.polyline.material.uniforms as { color: Color }).color = RED_COLOR.withAlpha(1);
           }
         });
       }
@@ -1503,23 +1648,57 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         selectedSatelliteRing.show = false;
       }
 
-      conjunctionLineState.forEach((lineState) => {
-        const s1 = satAnimByNorad.get(lineState.sat1NoradId);
-        const s2 = satAnimByNorad.get(lineState.sat2NoradId);
-        if (!s1 || !s2) return;
-        const dist = Cartesian3.distance(s1.point.position, s2.point.position);
-        const isSelected = selectedConjunctionId === lineState.conjunction.id;
-        if (dist > earthR * 3 && !isSelected) {
-          lineState.polyline.show = false;
+      conjunctionVisualState.forEach((visual) => {
+        const object1State = satAnimByNorad.get(visual.sat1NoradId);
+        const object2State = satAnimByNorad.get(visual.sat2NoradId);
+        if (!object1State || !object2State) {
+          visual.object1Arc.show = false;
+          visual.object2Arc.show = false;
+          visual.missDistanceLine.show = false;
+          visual.marker.show = false;
+          visual.label.show = false;
           return;
         }
-        lineState.polyline.show = true;
-        lineState.polyline.width = isSelected ? 3 : 2;
-        lineState.polyline.positions = createArcPositions(s1.point.position, s2.point.position);
-        const urgency = clamp((6 - (lineState.conjunction.tca.getTime() - Date.now()) / 3_600_000) / 6, 0, 1);
-        const color = Color.lerp(ORANGE_COLOR, RED_COLOR, urgency, new Color());
-        color.alpha = isSelected ? 1 : 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(timeSeconds * Math.PI));
-        (lineState.polyline.material.uniforms as { color: Color }).color = color;
+
+        const isSelected = selectedConjunctionId === visual.conjunction.id;
+        const baseColor = mode === "INTEL" ? RED_COLOR.withAlpha(1) : getConjunctionColor(visual.riskLevel);
+        const timeUntilTcaSeconds = Math.max(0, (visual.conjunction.tca.getTime() - Date.now()) / 1000);
+        const object1TcaPosition = getSatellitePositionAtOffset(object1State, elapsedSeconds, timeUntilTcaSeconds);
+        const object2TcaPosition = getSatellitePositionAtOffset(object2State, elapsedSeconds, timeUntilTcaSeconds);
+        const midpoint = Cartesian3.midpoint(object1TcaPosition, object2TcaPosition, new Cartesian3());
+        const midpointMagnitude = Cartesian3.magnitude(midpoint);
+        const labelDirection = midpointMagnitude < 1
+          ? Cartesian3.UNIT_Z
+          : Cartesian3.normalize(midpoint, new Cartesian3());
+        const labelPosition = Cartesian3.multiplyByScalar(
+          labelDirection,
+          Math.max(midpointMagnitude, earthR) + 240_000,
+          new Cartesian3()
+        );
+        const pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
+        const lineWidth = Math.max(getConjunctionLineWidth(visual.riskLevel), isSelected ? 4 : 0);
+
+        visual.object1Arc.show = true;
+        visual.object2Arc.show = true;
+        visual.missDistanceLine.show = true;
+        visual.marker.show = true;
+        visual.label.show = true;
+
+        visual.object1Arc.positions = createConjunctionOrbitArcPositions(object1State, elapsedSeconds, timeUntilTcaSeconds);
+        visual.object2Arc.positions = createConjunctionOrbitArcPositions(object2State, elapsedSeconds, timeUntilTcaSeconds);
+        visual.missDistanceLine.positions = [object1TcaPosition, object2TcaPosition];
+        visual.object1Arc.width = lineWidth;
+        visual.object2Arc.width = lineWidth;
+        visual.missDistanceLine.width = lineWidth;
+        (visual.object1Arc.material.uniforms as { color: Color }).color = baseColor.clone();
+        (visual.object2Arc.material.uniforms as { color: Color }).color = baseColor.clone();
+        (visual.missDistanceLine.material.uniforms as { color: Color }).color = baseColor.clone();
+        visual.marker.position = midpoint;
+        visual.marker.pixelSize = (visual.riskLevel === "watch" ? 9 : 11) + pulse * 3;
+        visual.marker.color = baseColor.withAlpha(clamp(baseColor.alpha * (0.75 + pulse * 0.35), 0.5, 1));
+        visual.label.position = labelPosition;
+        visual.label.text = `TCA ${formatDurationToTca(visual.conjunction.tca)}`;
+        visual.label.fillColor = baseColor.clone();
       });
 
       const criticalPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
@@ -1528,8 +1707,9 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         point.color = RED_COLOR.withAlpha(0.7 + criticalPulse * 0.3);
       });
 
-      const isStormMode = currentModeRef.current === "STORM" || spaceWeather.kpIndex > 5;
-      const flowSpeed = spaceWeather.solarWindSpeed * 18_000 * (isStormMode ? 2 : 1);
+      const latestSpaceWeather = spaceWeatherRef.current;
+      const isStormMode = currentModeRef.current === "STORM" || latestSpaceWeather.kpIndex > 5;
+      const flowSpeed = latestSpaceWeather.solarWindSpeed * 18_000 * (isStormMode ? 2 : 1);
       particles.forEach((particle) => {
         particle.primitive.color = (isStormMode ? RED_COLOR : solarWindColor).withAlpha(randomInRange(isStormMode ? 0.5 : 0.35, isStormMode ? 0.9 : 0.8));
       });
@@ -1703,6 +1883,9 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
 
     return () => {
       isDisposed = true;
+      syncSatellitesRef.current = null;
+      syncConjunctionsRef.current = null;
+      syncSpaceWeatherRef.current = null;
       viewer.scene.preRender.removeEventListener(onPreRender);
       viewer.canvas.removeEventListener("pointerdown", markEarthOnlyInteraction);
       viewer.canvas.removeEventListener("wheel", markEarthOnlyInteraction);
@@ -1714,7 +1897,22 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       unsubscribeStore();
       if (!viewer.isDestroyed()) viewer.destroy();
     };
-  }, [conjunctions, satellites, setSelectedSatellite, spaceWeather]);
+  }, [resetHelioSimulation, setHelioPlaybackRate, setHelioSimulationSeconds, setSelectedSatellite]);
+
+  useEffect(() => {
+    satellitesRef.current = satellites;
+    syncSatellitesRef.current?.(satellites);
+  }, [satellites]);
+
+  useEffect(() => {
+    conjunctionsRef.current = conjunctions;
+    syncConjunctionsRef.current?.(conjunctions);
+  }, [conjunctions]);
+
+  useEffect(() => {
+    spaceWeatherRef.current = spaceWeather;
+    syncSpaceWeatherRef.current?.(spaceWeather);
+  }, [spaceWeather]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 };
