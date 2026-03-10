@@ -396,5 +396,5 @@ MIT — build on it, fork it, show it off.
 
 ---
 
-*Built by Sripapa — CS @ UIC + Georgia Tech M.S. CS*
+*Built by Sripapa — CS @ UIC + Georgia Tech M.S. CS or UIUC MCS (IDK which one to pick)*
 *"If you've got domain expertise, this is the time to put it to work."*
