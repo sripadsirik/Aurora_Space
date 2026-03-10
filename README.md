@@ -1,3 +1,6 @@
+<img width="3439" height="1324" alt="image" src="https://github.com/user-attachments/assets/7a1ce02b-cdef-4798-92fc-942788287ffb" />
+
+
 # AURORA
 ### Real-Time Space Situational Awareness Platform
 
