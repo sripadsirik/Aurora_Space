@@ -269,7 +269,7 @@ All keys are free. No paid APIs.
 ### 1. Clone and install frontend
 
 ```powershell
-git clone https://github.com/sripadsirik/aurora.git
+git clone https://github.com/sripadsirik/aurora_space.git
 cd aurora/frontend
 npm install
 copy .env.example .env
