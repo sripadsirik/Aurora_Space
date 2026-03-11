@@ -2,456 +2,310 @@
 
 <img width="3439" height="1326" alt="image" src="https://github.com/user-attachments/assets/9d90889a-121c-43eb-a8bc-6b21b88294dc" />
 
-
 # AURORA
-### Real-Time Space Situational Awareness Platform
+## Real-Time Space Situational Awareness Platform
 
-> *"What happens when you build the backend that Palantir forgot, and the frontend that NASA wishes it had."*
-
-![AURORA Dashboard](https://img.shields.io/badge/status-in%20development-cyan?style=for-the-badge)
-![Go](https://img.shields.io/badge/Go-1.21-00ADD8?style=for-the-badge&logo=go)
-![Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?style=for-the-badge&logo=apache-kafka)
+![Status](https://img.shields.io/badge/status-in%20development-cyan?style=for-the-badge)
+![Rust](https://img.shields.io/badge/Rust-engine-orange?style=for-the-badge&logo=rust)
+![Go](https://img.shields.io/badge/Go-ingestion%20and%20gateway-00ADD8?style=for-the-badge&logo=go)
+![Kafka](https://img.shields.io/badge/Apache%20Kafka-streaming-231F20?style=for-the-badge&logo=apache-kafka)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)
-![CesiumJS](https://img.shields.io/badge/CesiumJS-3D%20Globe-6CADDF?style=for-the-badge)
+![CesiumJS](https://img.shields.io/badge/CesiumJS-3D%20globe-6CADDF?style=for-the-badge)
 
----
+AURORA is a real-time space situational awareness dashboard that combines live orbital data, conjunction alerts, and space weather inside a Cesium-based 3D UI.
 
-## What Is AURORA?
+Current backend split:
 
-AURORA is a production-grade, real-time space situational awareness dashboard that fuses live orbital mechanics, space weather, and satellite conjunction risk data into a single 3D intelligence interface.
+- `backend/engine-rust/` is the primary orbital propagation service.
+- `backend/gateway/` and `backend/ingestion/*` are still Go services.
+- `backend/engine/` is the older Go propagation engine kept in the repo as a fallback/reference path.
 
-It was built to answer the question the Palantir co-founder asked when WorldView went viral: *"Where's the real data fusion?"*
-
-AURORA is that answer. It combines:
-
-- A **Go orbital propagation engine** using SGP4 (`go-satellite`) to compute live satellite positions for 8,000+ objects in real time
-- A **Go-based streaming ingestion layer** pulling from 3 public data sources simultaneously (CelesTrak, Space-Track, NOAA)
-- An **Apache Kafka backbone** with 4 purpose-built topics routing data from ingestion → processing → visualization
-- A **Prometheus + Grafana observability stack** monitoring the entire pipeline with custom space domain metrics
-- A **CesiumJS 3D globe frontend** with mission-control aesthetics, 4 visual modes, and a solar system heliocentric view
-
-This is not a demo. This is a distributed systems project with a jaw-dropping frontend.
-
----
-
-## Live Data Sources (All Free)
-
-| Source | Data | Update Frequency |
-|--------|------|-----------------|
-| [CelesTrak](https://celestrak.org) | TLE orbital elements for all active satellites | Every 2 hours |
-| [Space-Track.org](https://space-track.org) | Conjunction Data Messages (CDMs) — US Space Force collision warnings | Every 6 hours |
-| [NOAA SWPC](https://swpc.noaa.gov) | Solar wind speed, density, Bz component, Kp index, X-ray flux | Every 1-3 minutes |
-
----
-
-## Tech Stack
-
-### Backend
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Ingestion | **Go 1.21** | 3 concurrent data source connectors (CelesTrak, Space-Track, NOAA) |
-| Stream Bus | **Apache Kafka** | 4 topics routing all data flows |
-| Orbital Engine | **Go (`go-satellite`)** | SGP4 propagation, satellite position computation every 30s |
-| API Gateway | **Go (`gorilla/websocket`)** | WebSocket server, frontend bridge |
-| Observability | **Prometheus + Grafana** | Pipeline health + space environment dashboards |
-| Infrastructure | **Docker Compose** | Kafka, Zookeeper, Prometheus, Grafana |
+## Stack
 
 ### Frontend
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Framework | **React 18 + TypeScript + Vite** | Component architecture |
-| 3D Globe | **CesiumJS** | Photorealistic Earth, orbital rendering |
-| State | **Zustand** | Global app state management |
-| Styling | **Tailwind CSS** | HUD panels and UI components |
+- React 18
+- TypeScript
+- Vite
+- CesiumJS
+- Zustand
 
----
+### Backend
+- Rust orbital engine (`rdkafka`, `sgp4`, `tokio`, Prometheus)
+- Go gateway (`gorilla/websocket`)
+- Go ingestion services for CelesTrak, NOAA, and Space-Track
+- Apache Kafka
+- Prometheus + Grafana
+- Docker Compose for local infra
 
-## Architecture
+## Data Sources
 
+| Source | Purpose | Required |
+| --- | --- | --- |
+| CelesTrak | TLEs for satellite propagation | Yes |
+| NOAA SWPC | Space weather feed | Yes |
+| Space-Track | Conjunction/CDM feed | Optional |
+
+## Repo Layout
+
+```text
+Aurora_Space/
+|- frontend/                 React + TypeScript + Cesium app
+|- backend/
+|  |- gateway/               Go WebSocket gateway
+|  |- ingestion/
+|  |  |- celestrak/          Go TLE ingestion service
+|  |  |- noaa/               Go space weather ingestion service
+|  |  `- spacetrack/         Go conjunction ingestion service
+|  |- engine-rust/           Primary Rust propagation engine
+|  |- engine/                Legacy Go propagation engine
+|  |- shared/                Shared Go Kafka/types helpers
+|  |- bin/                   Built local binaries
+|  `- .env.example           Backend env template
+`- infra/
+   |- docker-compose.yml     Kafka, Zookeeper, Prometheus, Grafana
+   `- prometheus/            Prometheus scrape config
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DATA SOURCES                              │
-│         CelesTrak          Space-Track          NOAA SWPC        │
-└──────────┬──────────────────────┬────────────────────┬──────────┘
-           │                      │                    │
-           ▼                      ▼                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   GO INGESTION SERVICES                          │
-│          celestrak/         spacetrack/         noaa/            │
-│                                                                  │
-│   Each service: fetch → normalize → produce to Kafka topic       │
-│   Metrics exposed on /metrics for Prometheus scraping            │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      APACHE KAFKA                                │
-│                                                                  │
-│   aurora.satellites.tle          (raw TLE strings)               │
-│   aurora.satellites.positions    (propagated lat/lon/alt)        │
-│   aurora.conjunctions.alerts     (processed CDM risk alerts)     │
-│   aurora.spaceweather.processed  (normalized Kp/Bz/wind)        │
-└───────────┬──────────────────────────────┬──────────────────────┘
-            │                              │
-            ▼                              ▼
-┌───────────────────────┐      ┌───────────────────────────────────┐
-│   GO ENGINE           │      │   GO GATEWAY                      │
-│                       │      │                                   │
-│ • SGP4 propagation    │      │ • Consumes all processed topics   │
-│ • 8,000+ satellites   │      │ • WebSocket server (:8080)        │
-│ • Position batching   │      │ • Broadcasts to frontend clients  │
-│ • 30s update cycle    │      │ • State snapshot on connect       │
-└───────────────────────┘      └──────────────┬────────────────────┘
-                                              │  WebSocket
-                                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    FRONTEND (CesiumJS + React)                   │
-│                                                                  │
-│   3D Globe  ·  HUD Overlays  ·  4 Visual Modes  ·  Panels       │
-│   Satellite Layer  ·  Aurora Ovals  ·  Solar Wind Particles      │
-│   Conjunction Threads  ·  Helio View  ·  Timeline Scrubber       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Backend Services
-
-| Service | Directory | Metrics Port | Description |
-|---------|-----------|-------------|-------------|
-| **Gateway** | `backend/gateway/` | `:2112` | WebSocket server on `:8080`, bridges Kafka → frontend |
-| **Engine** | `backend/engine/` | `:2114` | SGP4 orbital propagation, consumes TLEs, produces positions every 30s |
-| **CelesTrak Ingestion** | `backend/ingestion/celestrak/` | `:2115` | Fetches satellite TLE catalog every 2 hours |
-| **NOAA Ingestion** | `backend/ingestion/noaa/` | `:2113` | Fetches Kp index, solar wind, Bz, X-ray flux every 1-3 min |
-| **Space-Track Ingestion** | `backend/ingestion/spacetrack/` | `:2116` | Fetches CDM conjunction data every 6 hours (requires Space-Track account) |
-
-All services are **Go** and share types + Kafka wrapper from `backend/shared/`.
-
----
-
-## Kafka Topics
-
-| Topic | Producer | Consumer | Description |
-|-------|----------|----------|-------------|
-| `aurora.satellites.tle` | CelesTrak ingestion | Engine | Raw Three-Line Element sets |
-| `aurora.satellites.positions` | Engine | Gateway | Propagated lat/lon/alt batches every 30s |
-| `aurora.conjunctions.alerts` | Space-Track ingestion | Gateway | Processed conjunction warnings with collision probability |
-| `aurora.spaceweather.processed` | NOAA ingestion | Gateway | Normalized space weather state (Kp, Bz, solar wind) |
-
----
-
-## Prometheus Metrics
-
-Every Go service exposes `/metrics` for Prometheus scraping:
-
-```
-aurora_kafka_messages_produced_total     # counter, per topic
-aurora_spacetrack_fetch_errors_total     # counter
-aurora_conjunctions_active               # gauge
-aurora_satellites_tracked                # gauge
-aurora_kp_index_current                  # gauge
-aurora_engine_propagation_latency_ms     # histogram
-```
-
-Grafana dashboards are auto-provisioned at `http://localhost:3001`:
-- **AURORA Pipeline Health** — throughput, latency, error rates per service
-- **Space Environment** — live Kp index, solar wind speed, conjunction count over time
-
----
-
-## Frontend Visual Modes
-
-AURORA has 4 distinct visual modes toggled with keyboard shortcuts `1` `2` `3` `4`:
-
-### 1. OPS Mode (default)
-Clean dark professional UI. Deep navy background, cyan accents, white labels. The Palantir-lite face. This is what you show at an interview.
-
-### 2. STORM Mode
-Triggered automatically when Kp > 5 or manually. The globe takes on a deep red-orange atmospheric glow, aurora ovals expand toward the equator, solar wind particles turn blood red, and a "GEOMAGNETIC STORM ACTIVE" banner fires. This is the screenshot that goes viral.
-
-### 3. INTEL Mode
-Full CRT aesthetic: scanlines, phosphor green monochrome tint, screen flicker, barrel distortion. A fake "TOP SECRET // SPACE SITUATIONAL AWARENESS // NOFORN" classification banner sits at the top. Satellite labels switch to NORAD IDs. This is the WorldView competitor.
-
-### 4. HELIO Mode
-Zoom out to the inner solar system. The Sun sits at center, Earth's orbital path is traced, and a live CME propagation cone animates from the Sun toward Earth with an arrival countdown. The DSCOVR satellite at L1 is marked as the early warning sensor. Nothing like this exists in any open-source space tool.
-
----
-
-## Frontend Data Layers
-
-| Layer | Source | What It Shows |
-|-------|--------|---------------|
-| Satellites | CelesTrak → Engine | 8,000+ objects, color-coded by conjunction risk |
-| Conjunction Threads | Space-Track CDMs | Glowing lines connecting high-risk pairs |
-| Aurora Ovals | Derived from Kp | Live polar aurora forecast, expands with Kp |
-| Magnetosphere Shell | Derived from solar wind | Translucent ellipsoid, pulses with storm intensity |
-| Solar Wind Particles | NOAA DSCOVR | Animated particle stream from sun direction |
-| Space Weather HUD | NOAA SWPC | Live Kp, Bz, solar wind speed/density |
-| CME Propagation | Simulated | Expanding cone in Helio mode with arrival countdown |
-
----
-
-## Project Structure
-
-```
-aurora_space/
-├── frontend/                    # React + TypeScript + CesiumJS
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── GlobeView.tsx    # CesiumJS globe, all visual layers (~1900 lines)
-│   │   │   ├── HUD.tsx          # Overlay panels, alerts ticker
-│   │   │   ├── ModeSelector.tsx # OPS/STORM/INTEL/HELIO mode switcher
-│   │   │   ├── Timeline.tsx     # Historical event timeline scrubber
-│   │   │   ├── ErrorBoundary.tsx
-│   │   │   ├── overlays/        # STORM, INTEL, HELIO overlay effects
-│   │   │   └── panels/          # Satellite, conjunction, weather panels
-│   │   ├── hooks/
-│   │   │   └── useWebSocket.ts  # WebSocket connection to Go gateway
-│   │   ├── store/
-│   │   │   └── auroraStore.ts   # Zustand global state
-│   │   ├── types/
-│   │   │   └── space.ts         # TypeScript interfaces (Satellite, ConjunctionWarning, etc.)
-│   │   ├── utils/               # Colors, orbit math, formatting, helio helpers
-│   │   └── data/mock/           # Mock data for offline development
-│   ├── .env.example
-│   ├── vite.config.ts
-│   └── package.json
-│
-├── backend/
-│   ├── gateway/
-│   │   └── main.go              # WebSocket server, Kafka consumer, state broadcast
-│   ├── engine/
-│   │   └── main.go              # SGP4 propagation using go-satellite
-│   ├── ingestion/
-│   │   ├── celestrak/
-│   │   │   └── main.go          # TLE fetcher → Kafka producer
-│   │   ├── spacetrack/
-│   │   │   └── main.go          # CDM fetcher → Kafka producer (Space-Track auth)
-│   │   └── noaa/
-│   │       └── main.go          # Space weather → Kafka producer
-│   ├── shared/
-│   │   ├── types.go             # Shared Go types (Satellite, ConjunctionWarning, SpaceWeather)
-│   │   └── kafka.go             # Kafka producer/consumer wrapper
-│   ├── bin/                     # Compiled service binaries
-│   ├── go.mod
-│   ├── go.sum
-│   ├── .env
-│   └── .env.example
-│
-└── infra/
-    ├── docker-compose.yml       # Kafka + Zookeeper + Prometheus + Grafana
-    └── prometheus/
-        └── prometheus.yml       # Scrape config for all Go services
-```
-
----
 
 ## Prerequisites
 
-| Tool | Version | Install |
-|------|---------|---------|
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
-| Go | 1.21+ | [golang.org/dl](https://golang.org/dl) |
-| Docker Desktop | 24+ | [docker.com](https://docker.com/products/docker-desktop) |
-| Git | 2.40+ | [git-scm.com](https://git-scm.com) |
+| Tool | Version |
+| --- | --- |
+| Node.js | 18+ |
+| npm | current Node LTS |
+| Go | 1.21+ |
+| Rust | stable |
+| Docker Desktop | recent |
+| Git | recent |
 
----
+If you want to build the Rust engine on Windows, you also need:
 
-## Environment Variables
+- the Rust target `x86_64-pc-windows-gnu`
+- MinGW-w64 `gcc`
+- CMake
+
+The current [backend/engine-rust/.cargo/config.toml](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/backend/engine-rust/.cargo/config.toml) and [backend/Makefile](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/backend/Makefile) use local Windows paths for `gcc` and `cmake`. Update those paths if your install lives somewhere else.
+
+## Environment Setup
 
 ### Frontend
 
-Copy `frontend/.env.example` to `frontend/.env`:
+Copy [frontend/.env.example](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/frontend/.env.example) to `frontend/.env`.
 
 ```env
-VITE_CESIUM_ION_TOKEN=        # ion.cesium.com (free account)
-VITE_NASA_API_KEY=             # api.nasa.gov (free, instant)
-VITE_SPACETRACK_USERNAME=      # space-track.org (free account)
-VITE_SPACETRACK_PASSWORD=      # space-track.org password
+VITE_CESIUM_ION_TOKEN=your_real_cesium_ion_token
+VITE_NASA_API_KEY=
+VITE_SPACETRACK_USERNAME=
+VITE_SPACETRACK_PASSWORD=
 VITE_WS_URL=ws://localhost:8080/ws
 ```
 
+Notes:
+
+- `VITE_CESIUM_ION_TOKEN` is required.
+- `VITE_WS_URL` is optional. If the backend is not running, the frontend still boots with mock data.
+- The frontend env currently includes Space-Track values, but the live conjunction ingestion is handled by the backend service.
+
 ### Backend
 
-Copy `backend/.env.example` to `backend/.env`:
+Copy [backend/.env.example](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/backend/.env.example) to `backend/.env`.
 
 ```env
 KAFKA_BROKERS=localhost:9092
-SPACETRACK_USERNAME=           # space-track.org login
-SPACETRACK_PASSWORD=           # space-track.org password
+SPACETRACK_USERNAME=
+SPACETRACK_PASSWORD=
 METRICS_PORT_GATEWAY=2112
 METRICS_PORT_NOAA=2113
 METRICS_PORT_ENGINE=2114
 METRICS_PORT_CELESTRAK=2115
 METRICS_PORT_SPACETRACK=2116
 WS_PORT=8080
+
+# Required by backend/engine-rust
+METRICS_PORT=2114
 ```
 
-All keys are free. No paid APIs.
+Notes:
 
----
+- `SPACETRACK_USERNAME` and `SPACETRACK_PASSWORD` are only needed if you run the Space-Track ingestion service.
+- The Rust engine reads `METRICS_PORT`.
+- The legacy Go engine reads `METRICS_PORT_ENGINE`.
 
-## Getting Started
+## Quick Start
 
 ### 1. Clone the repo
 
 ```powershell
-git clone https://github.com/sripadsirik/aurora_space.git
-cd aurora_space
+git clone https://github.com/sripadsirik/Aurora_Space.git
+cd Aurora_Space
 ```
 
-### 2. Start the frontend (works standalone with mock data)
+### 2. Start the frontend
 
 ```powershell
 cd frontend
 npm install
-copy .env.example .env
-# Fill in your Cesium Ion token in .env
+Copy-Item .env.example .env
+```
+
+Set a real `VITE_CESIUM_ION_TOKEN` in `frontend/.env`, then run:
+
+```powershell
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`. It works immediately with built-in mock data — no backend required for development.
+Frontend URL:
 
-### 3. Start infrastructure (Kafka + Prometheus + Grafana)
+- `http://localhost:5173`
+
+This works immediately with mock data. Live data appears once the backend WebSocket is available.
+
+### 3. Start infrastructure
 
 ```powershell
-cd infra
+cd ..\infra
 docker compose up -d
 ```
 
-| Service | URL |
-|---------|-----|
-| Kafka | `localhost:9092` |
-| Prometheus | `http://localhost:9090` |
-| Grafana | `http://localhost:3001` (admin/admin) |
+Local infra URLs:
 
-### 4. Build the backend
+- Kafka: `localhost:9092`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001`
+
+Grafana anonymous access is enabled. If you need admin access, use `admin / aurora`.
+
+### 4. Prepare backend env
 
 ```powershell
-cd backend
+cd ..\backend
+Copy-Item .env.example .env
+```
+
+Add `METRICS_PORT=2114` to `backend/.env` if it is not already there.
+
+### 5. Build the Go services
+
+From `backend/`:
+
+```powershell
 go build -o .\bin\gateway.exe .\gateway
-go build -o .\bin\engine.exe .\engine
-go build -o .\bin\noaa.exe .\ingestion\noaa
 go build -o .\bin\celestrak.exe .\ingestion\celestrak
+go build -o .\bin\noaa.exe .\ingestion\noaa
 go build -o .\bin\spacetrack.exe .\ingestion\spacetrack
 ```
 
-Or run directly with `go run .` from each service directory.
+### 6. Build the Rust engine
 
-### 5. Start the backend services
+From `backend/`:
 
-Open separate terminals for each service. Start them in this order:
+```powershell
+cd engine-rust
+rustup target add x86_64-pc-windows-gnu
+cargo build --release
+Copy-Item .\target\x86_64-pc-windows-gnu\release\engine-rust.exe ..\bin\engine-rust.exe
+cd ..
+```
 
-**Terminal 1 — Gateway** (must start first, serves WebSocket to frontend)
+If you already have `make` and your local paths match the repo config, you can also use:
+
+```powershell
+make engine-rust
+```
+
+### 7. Run the live stack
+
+Use separate terminals, all from `backend/`.
+
+Terminal 1 - gateway
+
 ```powershell
 cd backend
 .\bin\gateway.exe
 ```
 
-**Terminal 2 — Engine** (SGP4 propagation, needs Kafka + TLE data)
-```powershell
-cd backend
-.\bin\engine.exe
-```
+Terminal 2 - CelesTrak ingestion
 
-**Terminal 3 — CelesTrak Ingestion** (satellite TLEs)
 ```powershell
 cd backend
 .\bin\celestrak.exe
 ```
 
-**Terminal 4 — NOAA Ingestion** (space weather)
+Terminal 3 - NOAA ingestion
+
 ```powershell
 cd backend
 .\bin\noaa.exe
 ```
 
-**Terminal 5 — Space-Track Ingestion** (conjunction CDMs, optional)
+Terminal 4 - Rust engine
+
 ```powershell
 cd backend
-$env:SPACETRACK_USERNAME="your@email.com"
-$env:SPACETRACK_PASSWORD="your_password"
+$env:METRICS_PORT="2114"
+.\bin\engine-rust.exe
+```
+
+Terminal 5 - Space-Track ingestion (optional)
+
+```powershell
+cd backend
 .\bin\spacetrack.exe
 ```
 
-The frontend automatically switches from mock data to live data when the WebSocket connects.
+Recommended startup order for live data:
 
-### Startup Order
-
-```
-Docker (Kafka) → Gateway → Engine → CelesTrak → NOAA → Space-Track (optional)
+```text
+docker compose -> gateway -> celestrak -> noaa -> engine-rust -> spacetrack -> frontend
 ```
 
-The gateway must be running before ingestion services so it can consume from Kafka. The engine needs CelesTrak TLEs to propagate positions.
+The frontend can be started earlier, but that order gives the live feeds time to populate.
 
----
+## Fastest Dev Loop
 
-## Keyboard Shortcuts
+If you only want to work on the UI:
 
-| Key | Action |
-|-----|--------|
-| `1` | OPS Mode (default) |
-| `2` | STORM Mode |
-| `3` | INTEL Mode (CRT aesthetic) |
-| `4` | HELIO Mode (solar system view) |
-| `0` | Earth-only mode (no HUD, slow rotation) |
-| `Left drag` | Pan camera |
-| `Right drag` | Orbit/rotate globe |
-| `Scroll` | Zoom in/out |
-| `Click satellite` | Open satellite detail panel |
-| `Click alert` | Open conjunction detail panel |
+1. Start the frontend.
+2. Set a valid Cesium Ion token.
+3. Skip Kafka and backend services.
 
----
+The app boots with mock satellites, conjunctions, and space weather until `VITE_WS_URL` connects.
 
-## Why This Is Different From WorldView
+## Backend Services
 
-WorldView (the viral "vibe-coded Palantir") is a frontend triumph with a backend vacuum. It polls public APIs directly from the browser, crashes when too many particles spawn, and has no data pipeline, no fault tolerance, no entity resolution, and no observability.
+| Service | Path | Runtime | Default Port |
+| --- | --- | --- | --- |
+| Gateway | `backend/gateway/` | Go | `8080` WebSocket, `2112` metrics |
+| CelesTrak ingestion | `backend/ingestion/celestrak/` | Go | `2115` metrics |
+| NOAA ingestion | `backend/ingestion/noaa/` | Go | `2113` metrics |
+| Space-Track ingestion | `backend/ingestion/spacetrack/` | Go | `2116` metrics |
+| Rust engine | `backend/engine-rust/` | Rust | `2114` metrics |
+| Legacy Go engine | `backend/engine/` | Go | `2114` metrics |
 
-AURORA is what WorldView would look like if it had a real engineering team behind it:
+## Kafka Topics
 
-| Feature | WorldView | AURORA |
-|---------|-----------|--------|
-| Data ingestion | Browser polling | Go services with retry/backoff |
-| Stream processing | None | Apache Kafka, 4 topics |
-| Orbital mechanics | None (static positions) | SGP4 engine (go-satellite) |
-| Collision risk | Visual only | Real Pc calculation from CDMs |
-| Observability | None | Prometheus + Grafana dashboards |
-| Fault tolerance | "network error retry 9s" in UI | Per-service error handling + reconnect |
-| Solar system view | None | Full heliocentric CME visualization |
-| Timeline/playback | None | Historical event replay system |
-| Production ready | No | Docker Compose with monitoring |
+| Topic | Producer | Consumer |
+| --- | --- | --- |
+| `aurora.satellites.tle` | CelesTrak ingestion | Rust engine / Go engine |
+| `aurora.satellites.positions` | Rust engine / Go engine | Gateway |
+| `aurora.conjunctions.raw` | Space-Track ingestion | internal processing |
+| `aurora.conjunctions.alerts` | Space-Track ingestion | Gateway |
+| `aurora.spaceweather.raw` | NOAA ingestion | internal processing |
+| `aurora.spaceweather.processed` | NOAA ingestion | Gateway |
 
----
+## Useful URLs
 
-## Roadmap
+- Frontend: `http://localhost:5173`
+- WebSocket: `ws://localhost:8080/ws`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001`
 
-- [x] Phase 1: Frontend globe foundation (CesiumJS, all visual layers, HUD)
-- [x] Phase 2: Interactive panels (satellite detail, conjunction, space weather)
-- [x] Phase 3: Visual modes (OPS, STORM, INTEL, HELIO) + timeline scrubber
-- [x] Phase 4: Backend ingestion services (Go — CelesTrak, NOAA, Space-Track)
-- [x] Phase 5: Go orbital engine (SGP4 propagation via go-satellite)
-- [x] Phase 6: Go WebSocket gateway
-- [x] Phase 7: Frontend ↔ backend integration (WebSocket replaces mock data)
-- [ ] Phase 8: AWS deployment (MSK, ECS Fargate)
-- [ ] Phase 9: Entity resolution (link satellites to operators, missions)
-- [ ] Phase 10: Predictive storm impact modeling
+## Current Notes
 
----
-
-## Credits & Data Attribution
-
-- Orbital data: [CelesTrak](https://celestrak.org) — Dr. T.S. Kelso
-- Conjunction data: [18th Space Defense Squadron](https://space-track.org) via Space-Track.org
-- Space weather: [NOAA Space Weather Prediction Center](https://swpc.noaa.gov)
-- Globe rendering: [CesiumJS](https://cesium.com) + Cesium ion
-
----
+- The README now documents the Rust engine as the default propagation path.
+- The old Go engine is still present in the repo but is not the recommended startup path.
+- Rust engine builds on Windows depend on your local MinGW/CMake install paths.
+- `backend/bin/` holds local binaries and should stay local-only.
 
 ## License
 
-MIT — build on it, fork it, show it off.
-
----
-
-*Built by Sripapa — CS @ UIC + Georgia Tech M.S. CS or UIUC MCS (IDK which one to pick)*
-*"If you've got domain expertise, this is the time to put it to work."*
+MIT
