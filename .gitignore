@@ -2,5 +2,9 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 backend/.env
+backend/*.exe
+backend/*.exe~
+backend/bin/*.exe
+backend/bin/*.exe~
 backend/engine-rust/target/
 backend/bin/engine-rust.exe
