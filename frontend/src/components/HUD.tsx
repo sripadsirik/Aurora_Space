@@ -21,13 +21,19 @@ interface LayerRow {
 }
 
 const getFeedFreshness = (lastUpdated: Date | null, now: Date): { label: string; status: FreshnessStatus } => {
-  if (!lastUpdated) return { label: "NO DATA", status: "error" };
-  const ageMs = now.getTime() - lastUpdated.getTime();
-  const ageMinutes = ageMs / 60_000;
-  if (ageMinutes > 15) return { label: `${Math.round(ageMinutes)}m ago`, status: "error" };
-  if (ageMinutes > 5) return { label: `${Math.round(ageMinutes)}m ago`, status: "stale" };
-  if (ageMs < 60_000) return { label: `${Math.round(ageMs / 1000)}s ago`, status: "live" };
-  return { label: `${Math.round(ageMinutes)}m ago`, status: "live" };
+  try {
+    if (!lastUpdated) return { label: "NO DATA", status: "error" };
+    const d = lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated as unknown as string);
+    if (isNaN(d.getTime())) return { label: "unknown", status: "error" };
+    const ageMs = now.getTime() - d.getTime();
+    const ageMinutes = ageMs / 60_000;
+    if (ageMinutes > 15) return { label: `${Math.round(ageMinutes)}m ago`, status: "error" };
+    if (ageMinutes > 5) return { label: `${Math.round(ageMinutes)}m ago`, status: "stale" };
+    if (ageMs < 60_000) return { label: `${Math.round(ageMs / 1000)}s ago`, status: "live" };
+    return { label: `${Math.round(ageMinutes)}m ago`, status: "live" };
+  } catch {
+    return { label: "unknown", status: "error" };
+  }
 };
 
 export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element | null => {

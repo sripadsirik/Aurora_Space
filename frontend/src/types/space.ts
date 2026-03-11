@@ -36,9 +36,12 @@ export interface ConjunctionWarning {
   object1: ConjunctionObjectRef;
   object2: ConjunctionObjectRef;
   tca: Date;
+  missDistanceKm: number;
   missDistanceM: number;
+  pc: number;
   probability: number;
   relativeVelocityKms: number;
+  riskLevel: RiskLevel;
 }
 
 export type Conjunction = ConjunctionWarning;

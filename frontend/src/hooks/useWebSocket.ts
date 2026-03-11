@@ -66,7 +66,12 @@ export const useWebSocket = (): void => {
               useAuroraStore.getState().recordFeedUpdate("satellites");
               break;
             case "conjunctions":
-              useAuroraStore.setState({ conjunctions: message.payload });
+              useAuroraStore.setState({
+                conjunctions: message.payload.map((c) => ({
+                  ...c,
+                  tca: new Date(c.tca)
+                }))
+              });
               useAuroraStore.getState().recordFeedUpdate("conjunctions");
               break;
             case "spaceWeather":

@@ -2,8 +2,7 @@ package shared
 
 import "encoding/json"
 
-// ── Satellite matches frontend/src/types/space.ts Satellite ─────────────────
-
+// Satellite matches frontend/src/types/space.ts Satellite.
 type Satellite struct {
 	NoradID          int     `json:"noradId"`
 	Name             string  `json:"name"`
@@ -24,8 +23,7 @@ type SatelliteBatch struct {
 	Satellites []Satellite `json:"satellites"`
 }
 
-// ── ConjunctionWarning matches frontend ConjunctionWarning ──────────────────
-
+// ConjunctionWarning matches frontend ConjunctionWarning.
 type ConjunctionObjectRef struct {
 	NoradID int    `json:"noradId"`
 	Name    string `json:"name"`
@@ -35,14 +33,16 @@ type ConjunctionWarning struct {
 	ID                  string               `json:"id"`
 	Object1             ConjunctionObjectRef `json:"object1"`
 	Object2             ConjunctionObjectRef `json:"object2"`
-	TCA                 string               `json:"tca"` // ISO8601 — frontend does new Date(tca)
+	TCA                 string               `json:"tca"` // ISO8601; frontend does new Date(tca)
+	MissDistanceKm      float64              `json:"missDistanceKm"`
 	MissDistanceM       float64              `json:"missDistanceM"`
+	Pc                  float64              `json:"pc"`
 	Probability         float64              `json:"probability"`
 	RelativeVelocityKms float64              `json:"relativeVelocityKms"`
+	RiskLevel           string               `json:"riskLevel"` // "nominal" | "watch" | "warning" | "critical"
 }
 
-// ── SpaceWeather matches frontend SpaceWeather ──────────────────────────────
-
+// SpaceWeather matches frontend SpaceWeather.
 type SpaceWeather struct {
 	KpIndex          float64 `json:"kpIndex"`
 	SolarWindSpeed   float64 `json:"solarWindSpeed"`
@@ -51,17 +51,14 @@ type SpaceWeather struct {
 	XrayFlux         string  `json:"xrayFlux"`   // e.g. "C2.4"
 	StormLevel       string  `json:"stormLevel"` // "none" | "minor" | "moderate" | "strong" | "severe" | "extreme"
 	AuroraKp         float64 `json:"auroraKp"`
-	LastUpdated      string  `json:"lastUpdated"` // ISO8601 — frontend does new Date(lastUpdated)
+	LastUpdated      string  `json:"lastUpdated"` // ISO8601; frontend does new Date(lastUpdated)
 }
 
-// ── WebSocket message envelope ──────────────────────────────────────────────
-
+// WSMessage is the websocket envelope broadcast by the gateway.
 type WSMessage struct {
 	Type    string          `json:"type"` // "satellites" | "conjunctions" | "spaceWeather" | "connected"
 	Payload json.RawMessage `json:"payload"`
 }
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 // ClassifyOrbit returns "LEO", "MEO", or "GEO" based on altitude in km.
 func ClassifyOrbit(altitudeKm float64) string {
@@ -82,7 +79,7 @@ func ClassifyRisk(probability float64) string {
 	if probability > 0.0001 {
 		return "warning"
 	}
-	if probability > 0.00001 {
+	if probability > 0.000001 {
 		return "watch"
 	}
 	return "nominal"

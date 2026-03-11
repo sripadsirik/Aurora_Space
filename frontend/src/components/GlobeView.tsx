@@ -190,11 +190,15 @@ const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds:
     state.ascendingNode
   );
 
-const getConjunctionRiskLevel = (conjunction: ConjunctionWarning): Satellite["riskLevel"] => {
-  if (conjunction.probability >= 1 / 1000 || conjunction.missDistanceM <= 250) return "critical";
-  if (conjunction.probability >= 1 / 10000 || conjunction.missDistanceM <= 1000) return "warning";
-  if (conjunction.probability > 0 || conjunction.missDistanceM <= 5000) return "watch";
+const classifyConjunctionRisk = (probability: number): Satellite["riskLevel"] => {
+  if (probability > 0.001) return "critical";
+  if (probability > 0.0001) return "warning";
+  if (probability > 0.000001) return "watch";
   return "nominal";
+};
+
+const getConjunctionRiskLevel = (conjunction: ConjunctionWarning): Satellite["riskLevel"] => {
+  return conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability);
 };
 
 const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
@@ -640,10 +644,13 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     };
 
     const syncHelioSimulationState = (force = false): void => {
+      const nextSimulationSeconds = Number(helioSimulationSecondsRef.current.toFixed(2));
       const nowMs = performance.now();
       if (!force && nowMs - lastHelioStoreSyncMs < HELIO_SIM_SYNC_INTERVAL_MS) return;
+      if (!force && nextSimulationSeconds === lastHelioStoreValue) return;
       lastHelioStoreSyncMs = nowMs;
-      setHelioSimulationSeconds(helioSimulationSecondsRef.current);
+      lastHelioStoreValue = nextSimulationSeconds;
+      setHelioSimulationSeconds(nextSimulationSeconds);
     };
     regenerateHelioScenario();
 
@@ -746,6 +753,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     let selectedSatelliteNoradId = useAuroraStore.getState().selectedSatellite?.noradId ?? null;
     let selectedConjunctionId = useAuroraStore.getState().selectedConjunction?.id ?? null;
     let elapsedSceneSeconds = 0;
+    let lastHelioStoreValue = -1;
 
     const applySatelliteToState = (state: SatelliteAnimState, satellite: Satellite, thetaEpochSeconds: number): void => {
       const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
@@ -888,6 +896,12 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         outlineWidth: 2
       }
     });
+    const findSatelliteMatch = (objectRef: ConjunctionWarning["object1"]): Satellite | undefined => {
+      const noradId = Number(objectRef.noradId);
+      return satellitesRef.current.find((satellite) => satellite.noradId === noradId)
+        ?? satellitesRef.current.find((satellite) => satellite.name === objectRef.name);
+    };
+
     const syncConjunctionVisuals = (nextConjunctions: ConjunctionWarning[]): void => {
       conjunctionPolylines.removeAll();
       conjunctionMarkers.removeAll();
@@ -895,34 +909,64 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       conjunctionVisualState.length = 0;
 
       nextConjunctions.forEach((conjunction) => {
+        const missDistanceKm = conjunction.missDistanceKm ?? conjunction.missDistanceM / 1000;
+        if (!conjunction.tca || missDistanceKm === 0 || isNaN(new Date(conjunction.tca).getTime())) {
+          return;
+        }
+
+        const sat1 = findSatelliteMatch(conjunction.object1);
+        const sat2 = findSatelliteMatch(conjunction.object2);
+        console.log(
+          "sat match",
+          String(conjunction.object1.noradId),
+          String(conjunction.object2.noradId),
+          sat1?.noradId,
+          sat2?.noradId,
+          !!sat1,
+          !!sat2
+        );
+        if (!sat1 || !sat2) {
+          return;
+        }
+
         const riskLevel = getConjunctionRiskLevel(conjunction);
         if (riskLevel === "nominal") return;
 
         const color = getConjunctionColor(riskLevel);
         const width = getConjunctionLineWidth(riskLevel);
+        const sat1NoradId = sat1.noradId;
+        const sat2NoradId = sat2.noradId;
+        const object1Arc = conjunctionPolylines.add({
+          positions: [],
+          show: false,
+          width,
+          material: Material.fromType("Color", { color: color.clone() })
+        });
+        const object2Arc = conjunctionPolylines.add({
+          positions: [],
+          show: false,
+          width,
+          material: Material.fromType("Color", { color: color.clone() })
+        });
+        const missDistanceLine = conjunctionPolylines.add({
+          positions: [],
+          show: false,
+          width,
+          material: Material.fromType("Color", { color: color.clone() })
+        });
+        console.log("arc created", {
+          sat1: { lat: sat1.lat, lng: sat1.lon, alt: sat1.altitudeKm },
+          sat2: { lat: sat2.lat, lng: sat2.lon, alt: sat2.altitudeKm },
+          added: viewer.scene.primitives.contains(conjunctionPolylines)
+        });
         conjunctionVisualState.push({
           conjunction,
           riskLevel,
-          sat1NoradId: conjunction.object1.noradId,
-          sat2NoradId: conjunction.object2.noradId,
-          object1Arc: conjunctionPolylines.add({
-            positions: [],
-            show: false,
-            width,
-            material: Material.fromType("Color", { color: color.clone() })
-          }),
-          object2Arc: conjunctionPolylines.add({
-            positions: [],
-            show: false,
-            width,
-            material: Material.fromType("Color", { color: color.clone() })
-          }),
-          missDistanceLine: conjunctionPolylines.add({
-            positions: [],
-            show: false,
-            width,
-            material: Material.fromType("Color", { color: color.clone() })
-          }),
+          sat1NoradId,
+          sat2NoradId,
+          object1Arc,
+          object2Arc,
+          missDistanceLine,
           marker: conjunctionMarkers.add({
             position: Cartesian3.ZERO,
             show: false,
@@ -1662,7 +1706,8 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
 
         const isSelected = selectedConjunctionId === visual.conjunction.id;
         const baseColor = mode === "INTEL" ? RED_COLOR.withAlpha(1) : getConjunctionColor(visual.riskLevel);
-        const timeUntilTcaSeconds = Math.max(0, (visual.conjunction.tca.getTime() - Date.now()) / 1000);
+        const tcaDate = visual.conjunction.tca instanceof Date ? visual.conjunction.tca : new Date(visual.conjunction.tca);
+        const timeUntilTcaSeconds = Math.max(0, (tcaDate.getTime() - Date.now()) / 1000);
         const object1TcaPosition = getSatellitePositionAtOffset(object1State, elapsedSeconds, timeUntilTcaSeconds);
         const object2TcaPosition = getSatellitePositionAtOffset(object2State, elapsedSeconds, timeUntilTcaSeconds);
         const midpoint = Cartesian3.midpoint(object1TcaPosition, object2TcaPosition, new Cartesian3());
@@ -1773,6 +1818,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       ) {
         helioSimulationBaseDate = new Date();
         lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+        lastHelioStoreValue = -1;
         updateHelioVisuals(JulianDate.now(), 0, false);
       }
 
@@ -1783,6 +1829,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         helioSimulationBaseDate = new Date();
         regenerateHelioScenario();
         lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+        lastHelioStoreValue = -1;
         updateHelioVisuals(JulianDate.now(), 0, false);
       }
 
@@ -1811,6 +1858,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           helioSimulationSecondsRef.current = 0;
           helioPlaybackRateRef.current = 0;
           lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+          lastHelioStoreValue = -1;
           resetHelioSimulation();
           updateHelioVisuals(JulianDate.now(), 0, false);
         }
@@ -1842,6 +1890,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       helioSimulationSecondsRef.current = 0;
       helioPlaybackRateRef.current = 0;
       lastHelioStoreSyncMs = -Number.POSITIVE_INFINITY;
+      lastHelioStoreValue = -1;
       resetHelioSimulation();
       updateHelioVisuals(JulianDate.now(), 0, false);
       transitionCameraForMode("HELIO");
@@ -1902,10 +1951,20 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
   useEffect(() => {
     satellitesRef.current = satellites;
     syncSatellitesRef.current?.(satellites);
+    syncConjunctionsRef.current?.(conjunctionsRef.current);
   }, [satellites]);
 
   useEffect(() => {
+    // Intentionally rebuild conjunction visuals only from conjunction updates.
+    // Satellite positions are read from refs and the live scene state.
     conjunctionsRef.current = conjunctions;
+    console.log(
+      "rendering arcs for",
+      conjunctions.length,
+      "conjunctions",
+      conjunctions.filter((c) => c.riskLevel !== "nominal").length,
+      "non-nominal"
+    );
     syncConjunctionsRef.current?.(conjunctions);
   }, [conjunctions]);
 

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GlobeView } from "./components/GlobeView";
 import { HUD } from "./components/HUD";
 import { ModeSelector } from "./components/ModeSelector";
@@ -58,39 +59,41 @@ export const App = (): JSX.Element => {
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[var(--aurora-bg)]">
-      <div className="h-full w-full transition-opacity duration-400">
-        <GlobeView
-          satellites={satellites}
-          conjunctions={conjunctions}
-          spaceWeather={spaceWeather}
-        />
-      </div>
-
-      {!earthOnlyMode && (
-        <>
-          <StormOverlay />
-          <IntelOverlay />
-          <HelioOverlay />
-
-          <HUD
+    <ErrorBoundary>
+      <div className="relative h-screen w-screen overflow-hidden bg-[var(--aurora-bg)]">
+        <div className="h-full w-full transition-opacity duration-400">
+          <GlobeView
             satellites={satellites}
             conjunctions={conjunctions}
             spaceWeather={spaceWeather}
           />
+        </div>
 
-          {currentMode !== "HELIO" && <PanelManager />}
+        {!earthOnlyMode && (
+          <>
+            <StormOverlay />
+            <IntelOverlay />
+            <HelioOverlay />
 
-          <OpsWarningBadge />
-          <ActiveConjunctionsPanel />
-          <StormImpactPanel />
-          <IntelAnalysisPanel />
-          <CmeLibraryPanel />
+            <HUD
+              satellites={satellites}
+              conjunctions={conjunctions}
+              spaceWeather={spaceWeather}
+            />
 
-          <ModeSelector />
-          <Timeline />
-        </>
-      )}
-    </div>
+            {currentMode !== "HELIO" && <PanelManager />}
+
+            <OpsWarningBadge />
+            <ActiveConjunctionsPanel />
+            <StormImpactPanel />
+            <IntelAnalysisPanel />
+            <CmeLibraryPanel />
+
+            <ModeSelector />
+            <Timeline />
+          </>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };

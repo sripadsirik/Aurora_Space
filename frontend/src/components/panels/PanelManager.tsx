@@ -154,9 +154,20 @@ const getGeomagneticGLevel = (kpIndex: number): number => {
   return 0;
 };
 
-const toCountdown = (target: Date): string => {
-  const diffMs = Math.max(0, target.getTime() - Date.now());
-  const totalSeconds = Math.floor(diffMs / 1000);
+const toCountdown = (target: Date | string): string => {
+  const d = target instanceof Date ? target : new Date(target);
+  const rawDiffMs = d.getTime() - Date.now();
+  if (rawDiffMs < 0) {
+    const elapsed = Math.abs(rawDiffMs);
+    const totalSeconds = Math.floor(elapsed / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `PASSED ${days}d ${hours.toString().padStart(2, "0")}h ago`;
+    return `PASSED ${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")} ago`;
+  }
+  const totalSeconds = Math.floor(rawDiffMs / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
@@ -353,7 +364,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">CLOSE APPROACH DATA</p>
           <div className="grid grid-cols-[1.4fr_1fr] gap-y-1">
             <span>TCA (UTC)</span>
-            <span className="text-right text-[11px]">{selectedConjunction.tca.toISOString().replace("T", " ").replace(".000Z", " UTC")}</span>
+            <span className="text-right text-[11px]">{(selectedConjunction.tca instanceof Date ? selectedConjunction.tca : new Date(selectedConjunction.tca)).toISOString().replace("T", " ").replace(".000Z", " UTC")}</span>
             <span>Time until TCA</span>
             <span className="text-right">{toCountdown(selectedConjunction.tca)}</span>
             <span>Miss distance</span>

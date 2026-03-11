@@ -155,18 +155,26 @@ func (s *session) fetch(ctx context.Context, dataURL string) ([]byte, error) {
 // ── CDM record from Space-Track API ─────────────────────────────────────────
 
 type cdmRecord struct {
-	CDM_ID                    string `json:"CDM_ID"`
-	TCA                       string `json:"TCA"`
-	MISS_DISTANCE             string `json:"MISS_DISTANCE"`
-	PROBABILITY_OF_COLLISION  string `json:"PROBABILITY_OF_COLLISION"`
-	SAT1_OBJECT_NAME          string `json:"SAT_1_NAME"`
-	SAT1_NORAD_ID             string `json:"SAT1_CATALOG_NUMBER"`
-	SAT2_OBJECT_NAME          string `json:"SAT_2_NAME"`
-	SAT2_NORAD_ID             string `json:"SAT2_CATALOG_NUMBER"`
-	RELATIVE_SPEED            string `json:"RELATIVE_SPEED"`
+	CDMID    string `json:"CDM_ID"`
+	TCA      string `json:"TCA"`
+	MinRng   string `json:"MIN_RNG"`
+	Pc       string `json:"PC"`
+	Sat1ID   string `json:"SAT_1_ID"`
+	Sat1Name string `json:"SAT_1_NAME"`
+	Sat2ID   string `json:"SAT_2_ID"`
+	Sat2Name string `json:"SAT_2_NAME"`
 }
 
 func parseCDMs(body []byte) ([]shared.ConjunctionWarning, error) {
+	var rawJSON []json.RawMessage
+	if err := json.Unmarshal(body, &rawJSON); err != nil {
+		return nil, err
+	}
+
+	if len(rawJSON) > 0 {
+		slog.Info("raw CDM sample", "first", string(rawJSON[0]))
+	}
+
 	var records []cdmRecord
 	if err := json.Unmarshal(body, &records); err != nil {
 		return nil, err
@@ -174,32 +182,69 @@ func parseCDMs(body []byte) ([]shared.ConjunctionWarning, error) {
 
 	warnings := make([]shared.ConjunctionWarning, 0, len(records))
 	for _, rec := range records {
-		missKm, _ := strconv.ParseFloat(rec.MISS_DISTANCE, 64)
-		pc, _ := strconv.ParseFloat(rec.PROBABILITY_OF_COLLISION, 64)
-		relSpeed, _ := strconv.ParseFloat(rec.RELATIVE_SPEED, 64)
-		norad1, _ := strconv.Atoi(rec.SAT1_NORAD_ID)
-		norad2, _ := strconv.Atoi(rec.SAT2_NORAD_ID)
+		// MIN_RNG from Space-Track is in meters (string), may be empty
+		var missDistanceM float64
+		if rec.MinRng != "" {
+			if m, err := strconv.ParseFloat(rec.MinRng, 64); err == nil {
+				missDistanceM = m
+			} else {
+				slog.Warn("invalid CDM MIN_RNG", "id", rec.CDMID, "value", rec.MinRng, "err", err)
+			}
+		}
+		missDistanceKm := missDistanceM / 1000.0
 
-		// missDistance from Space-Track is in km, frontend expects meters
-		missDistanceM := missKm * 1000
+		// PC comes as a string like "1.23456e-05"
+		var pc float64
+		if rec.Pc != "" {
+			if p, err := strconv.ParseFloat(rec.Pc, 64); err == nil {
+				pc = p
+			} else {
+				slog.Warn("invalid CDM PC", "id", rec.CDMID, "value", rec.Pc, "err", err)
+			}
+		}
 
-		// relativeSpeed from Space-Track is in km/s
-		relativeVelocityKms := relSpeed
+		var norad1 int
+		if rec.Sat1ID != "" {
+			norad1, _ = strconv.Atoi(rec.Sat1ID)
+		}
+		var norad2 int
+		if rec.Sat2ID != "" {
+			norad2, _ = strconv.Atoi(rec.Sat2ID)
+		}
+
+		riskLevel := shared.ClassifyRisk(pc)
+
+		slog.Info(
+			"parsed CDM",
+			"id", rec.CDMID,
+			"pc_raw", rec.Pc,
+			"pc_parsed", pc,
+			"miss_distance_m", missDistanceM,
+			"miss_distance_km", missDistanceKm,
+			"riskLevel", riskLevel,
+			"sat1_id", norad1,
+			"sat1", rec.Sat1Name,
+			"sat2_id", norad2,
+			"sat2", rec.Sat2Name,
+		)
 
 		warnings = append(warnings, shared.ConjunctionWarning{
-			ID: rec.CDM_ID,
+			ID: rec.CDMID,
 			Object1: shared.ConjunctionObjectRef{
 				NoradID: norad1,
-				Name:    rec.SAT1_OBJECT_NAME,
+				Name:    rec.Sat1Name,
 			},
 			Object2: shared.ConjunctionObjectRef{
 				NoradID: norad2,
-				Name:    rec.SAT2_OBJECT_NAME,
+				Name:    rec.Sat2Name,
 			},
 			TCA:                 rec.TCA,
+			MissDistanceKm:      missDistanceKm,
 			MissDistanceM:       missDistanceM,
+			Pc:                  pc,
 			Probability:         pc,
-			RelativeVelocityKms: relativeVelocityKms,
+			RelativeVelocityKms: 0,
+			RiskLevel:           riskLevel,
 		})
 	}
 
@@ -264,8 +309,7 @@ func main() {
 		// Count active (warning + critical)
 		active := 0
 		for _, w := range warnings {
-			risk := shared.ClassifyRisk(w.Probability)
-			if risk == "warning" || risk == "critical" {
+			if w.RiskLevel == "warning" || w.RiskLevel == "critical" {
 				active++
 			}
 		}
