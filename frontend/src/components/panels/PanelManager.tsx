@@ -348,14 +348,14 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-white">{selectedConjunction.object1.name}</p>
             <p className="text-[10px] text-[#9cc2de]">
-              NORAD {selectedConjunction.object1.noradId} | {object1?.owner ?? "UNKNOWN"} | {object1?.orbitType ?? "--"}
+              NORAD {selectedConjunction.object1.noradId} | {object1?.orbitType ?? "LEO"}
             </p>
           </div>
           <p className="text-center text-[10px] text-[#7ca2bf]">vs</p>
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-white">{selectedConjunction.object2.name}</p>
             <p className="text-[10px] text-[#9cc2de]">
-              NORAD {selectedConjunction.object2.noradId} | {object2?.owner ?? "UNKNOWN"} | {object2?.orbitType ?? "--"}
+              NORAD {selectedConjunction.object2.noradId} | {object2?.orbitType ?? "LEO"}
             </p>
           </div>
         </div>

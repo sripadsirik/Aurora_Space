@@ -52,7 +52,7 @@ import {
   positionOnHelioOrbit
 } from "../utils/helio";
 import { env } from "../utils/env";
-import { earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -752,6 +752,8 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const conjunctionVisualState: ConjunctionVisualState[] = [];
     let selectedSatelliteNoradId = useAuroraStore.getState().selectedSatellite?.noradId ?? null;
     let selectedConjunctionId = useAuroraStore.getState().selectedConjunction?.id ?? null;
+    const selectedConjSatIds = new Set<number>();
+    const conjOrbitPolylines = registerEarth(viewer.scene.primitives.add(new PolylineCollection()));
     let elapsedSceneSeconds = 0;
     let lastHelioStoreValue = -1;
 
@@ -1682,6 +1684,20 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         });
       }
 
+      // Highlight conjunction satellites in red
+      if (selectedConjSatIds.size > 0) {
+        const conjPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4);
+        for (const nid of selectedConjSatIds) {
+          const satState = satAnimByNorad.get(nid);
+          if (satState) {
+            satState.point.color = Color.RED.withAlpha(0.8 + conjPulse * 0.2);
+            satState.point.pixelSize = 12;
+            satState.point.outlineColor = Color.RED.withAlpha(0.4);
+            satState.point.outlineWidth = 3;
+          }
+        }
+      }
+
       if (earthOnlyRef.current || currentModeRef.current === "HELIO") {
         selectedSatelliteRing.show = false;
       } else if (selectedSatelliteNoradId !== null) {
@@ -1877,7 +1893,54 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         }
       }
 
+      const prevConjId = selectedConjunctionId;
       selectedConjunctionId = state.selectedConjunction?.id ?? null;
+
+      if (selectedConjunctionId !== prevConjId) {
+        conjOrbitPolylines.removeAll();
+        selectedConjSatIds.clear();
+
+        if (state.selectedConjunction) {
+          const findByRef = (ref: { noradId: number; name: string }): SatelliteAnimState | undefined => {
+            const byId = satAnimByNorad.get(Number(ref.noradId));
+            if (byId) return byId;
+            // Fallback: search by name
+            for (const s of satAnimByNorad.values()) {
+              if (s.satellite.name === ref.name) return s;
+            }
+            return undefined;
+          };
+
+          const match1 = findByRef(state.selectedConjunction.object1);
+          const match2 = findByRef(state.selectedConjunction.object2);
+          if (!match1 && !match2) {
+            console.warn("[AURORA] Conjunction satellites not in feed:",
+              state.selectedConjunction.object1.name, `(${state.selectedConjunction.object1.noradId})`,
+              state.selectedConjunction.object2.name, `(${state.selectedConjunction.object2.noradId})`,
+              "— restart CelesTrak ingestion to load debris/supplemental catalogs"
+            );
+          }
+
+          const conjRed = Color.RED.withAlpha(0.7);
+          let flyTarget: number | null = null;
+
+          for (const match of [match1, match2]) {
+            if (match) {
+              selectedConjSatIds.add(match.satellite.noradId);
+              conjOrbitPolylines.add({
+                positions: createOrbitPositions(match.satellite),
+                width: 2,
+                material: Material.fromType("Color", { color: conjRed.clone() })
+              });
+              if (flyTarget === null) flyTarget = match.satellite.noradId;
+            }
+          }
+
+          if (flyTarget !== null && state.currentMode !== "HELIO" && !state.earthOnlyMode) {
+            flyCameraToSatellite(flyTarget);
+          }
+        }
+      }
     });
 
     applyModeVisibility(currentModeRef.current);
@@ -1916,18 +1979,22 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const dx = event.position.x - mouseDownPosition.x;
       const dy = event.position.y - mouseDownPosition.y;
       if (Math.sqrt(dx * dx + dy * dy) > 5) return;
-      const picked = viewer.scene.pick(event.position);
-      if (!defined(picked)) return;
-      const pickedWithId = picked as { id?: unknown };
-      if (currentModeRef.current === "HELIO") {
-        const helioPlanetId = getPickedHelioPlanetId(pickedWithId.id);
-        if (helioPlanetId) {
-          flyCameraToHelioPlanet(helioPlanetId);
+      const pickedList = viewer.scene.drillPick(event.position);
+      if (!pickedList || pickedList.length === 0) return;
+      for (const picked of pickedList) {
+        const pickedWithId = picked as { id?: unknown };
+        if (currentModeRef.current === "HELIO") {
+          const helioPlanetId = getPickedHelioPlanetId(pickedWithId.id);
+          if (helioPlanetId) {
+            flyCameraToHelioPlanet(helioPlanetId);
+            return;
+          }
+        }
+        if (isSatellitePickPayload(pickedWithId.id)) {
+          setSelectedSatellite(pickedWithId.id.satellite);
           return;
         }
       }
-      if (!isSatellitePickPayload(pickedWithId.id)) return;
-      setSelectedSatellite(pickedWithId.id.satellite);
     }, ScreenSpaceEventType.LEFT_UP);
 
     return () => {
