@@ -176,12 +176,8 @@ fn propagate_satellite(rec: &GpRecord) -> Option<SatellitePosition> {
     let norad_id = rec.norad_id()?;
     let name = rec.OBJECT_NAME.clone().unwrap_or_default();
 
-    let elements = sgp4::Elements::from_tle(
-        Some(name.clone()),
-        line1.as_bytes(),
-        line2.as_bytes(),
-    )
-    .ok()?;
+    let elements =
+        sgp4::Elements::from_tle(Some(name.clone()), line1.as_bytes(), line2.as_bytes()).ok()?;
 
     let constants = sgp4::Constants::from_elements(&elements).ok()?;
 
@@ -253,13 +249,15 @@ impl Metrics {
         )
         .unwrap();
 
-        let propagation_latency_ms = prometheus::Histogram::with_opts(HistogramOpts::new(
-            "aurora_engine_propagation_latency_ms",
-            "Propagation cycle latency in milliseconds",
+        let propagation_latency_ms = prometheus::Histogram::with_opts(
+            HistogramOpts::new(
+                "aurora_engine_propagation_latency_ms",
+                "Propagation cycle latency in milliseconds",
+            )
+            .buckets(vec![
+                10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0,
+            ]),
         )
-        .buckets(vec![
-            10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0,
-        ]))
         .unwrap();
 
         let propagation_errors_total = prometheus::IntCounter::new(
@@ -281,9 +279,7 @@ impl Metrics {
         registry
             .register(Box::new(propagation_errors_total.clone()))
             .unwrap();
-        registry
-            .register(Box::new(tle_cache_size.clone()))
-            .unwrap();
+        registry.register(Box::new(tle_cache_size.clone())).unwrap();
 
         Self {
             satellites_tracked,
@@ -299,27 +295,66 @@ impl Metrics {
 
 type TleCache = Arc<RwLock<HashMap<String, GpRecord>>>;
 
+async fn ingest_tle(payload: &[u8], cache: &TleCache) -> bool {
+    let Ok(rec) = serde_json::from_slice::<GpRecord>(payload) else {
+        return false;
+    };
+    let Some(id) = rec.norad_id() else {
+        return false;
+    };
+    if id <= 0 {
+        return false;
+    }
+
+    cache.write().await.insert(id.to_string(), rec);
+    true
+}
+
 // ── Bulk load TLEs from Kafka ───────────────────────────────────────────────
 
-async fn bulk_load_tles(brokers: &str, cache: &TleCache) {
+async fn bulk_load_tles(brokers: &str, cache: &TleCache) -> Result<(), String> {
     use rdkafka::config::RDKafkaLogLevel;
     use rdkafka::consumer::{BaseConsumer, Consumer as _};
+    use rdkafka::{Offset, TopicPartitionList};
+
+    const TLE_TOPIC: &str = "aurora.satellites.tle";
 
     let consumer: BaseConsumer = ClientConfig::new()
         .set("bootstrap.servers", brokers)
-        .set("group.id", "aurora-engine-bulk-load-temp")
-        .set("auto.offset.reset", "earliest")
+        .set("group.id", "aurora-engine-rust-bulk-load")
         .set("enable.auto.commit", "false")
         .set("fetch.wait.max.ms", "500")
         .set_log_level(RDKafkaLogLevel::Warning)
         .create()
-        .expect("Failed to create bulk load consumer");
+        .map_err(|e| format!("create bulk load consumer: {e}"))?;
 
+    let metadata = consumer
+        .fetch_metadata(Some(TLE_TOPIC), Duration::from_secs(5))
+        .map_err(|e| format!("fetch TLE metadata: {e}"))?;
+    let topic = metadata
+        .topics()
+        .iter()
+        .find(|topic| topic.name() == TLE_TOPIC)
+        .ok_or_else(|| format!("{TLE_TOPIC} metadata missing"))?;
+
+    if topic.partitions().is_empty() {
+        return Err(format!("{TLE_TOPIC} has no partitions yet"));
+    }
+
+    let mut assignment = TopicPartitionList::new();
+    for partition in topic.partitions() {
+        assignment
+            .add_partition_offset(TLE_TOPIC, partition.id(), Offset::Beginning)
+            .map_err(|e| format!("assign TLE partition {}: {e}", partition.id()))?;
+    }
     consumer
-        .subscribe(&["aurora.satellites.tle"])
-        .expect("Failed to subscribe to TLE topic");
+        .assign(&assignment)
+        .map_err(|e| format!("assign TLE partitions: {e}"))?;
 
-    info!("TLE bulk load started");
+    info!(
+        partitions = topic.partitions().len(),
+        "TLE bulk load started"
+    );
 
     let deadline = Instant::now() + Duration::from_secs(10);
     let mut ingested: u64 = 0;
@@ -332,27 +367,22 @@ async fn bulk_load_tles(brokers: &str, cache: &TleCache) {
                 unique = count,
                 "initial TLE load complete (deadline)"
             );
-            break;
+            return Ok(());
         }
 
         match consumer.poll(Duration::from_secs(2)) {
             Some(Ok(msg)) => {
                 if let Some(payload) = msg.payload() {
-                    if let Ok(rec) = serde_json::from_slice::<GpRecord>(payload) {
-                        if let Some(id) = rec.norad_id() {
-                            if id > 0 {
-                                cache.write().await.insert(id.to_string(), rec);
-                                ingested += 1;
+                    if ingest_tle(payload, cache).await {
+                        ingested += 1;
 
-                                if ingested % 5000 == 0 {
-                                    let count = cache.read().await.len();
-                                    info!(
-                                        ingested = ingested,
-                                        unique = count,
-                                        "TLE bulk load progress"
-                                    );
-                                }
-                            }
+                        if ingested % 5000 == 0 {
+                            let count = cache.read().await.len();
+                            info!(
+                                ingested = ingested,
+                                unique = count,
+                                "TLE bulk load progress"
+                            );
                         }
                     }
                 }
@@ -368,9 +398,19 @@ async fn bulk_load_tles(brokers: &str, cache: &TleCache) {
                     unique = count,
                     "initial TLE load complete"
                 );
-                break;
+                return Ok(());
             }
         }
+    }
+}
+
+async fn wait_or_shutdown(
+    shutdown: &mut tokio::sync::watch::Receiver<bool>,
+    duration: Duration,
+) -> bool {
+    tokio::select! {
+        _ = shutdown.changed() => true,
+        _ = tokio::time::sleep(duration) => false,
     }
 }
 
@@ -383,49 +423,59 @@ async fn consume_tle_updates(
 ) {
     use rdkafka::config::RDKafkaLogLevel;
     use rdkafka::consumer::Consumer as _;
-
-    let consumer: StreamConsumer = ClientConfig::new()
-        .set("bootstrap.servers", brokers)
-        .set("group.id", "aurora-engine")
-        .set("auto.offset.reset", "earliest")
-        .set("enable.auto.commit", "true")
-        .set("auto.commit.interval.ms", "1000")
-        .set_log_level(RDKafkaLogLevel::Warning)
-        .create()
-        .expect("Failed to create TLE update consumer");
-
-    consumer
-        .subscribe(&["aurora.satellites.tle"])
-        .expect("Failed to subscribe to TLE topic");
-
-    info!("TLE update consumer started");
-
-    let mut stream = consumer.stream();
-
     loop {
-        tokio::select! {
-            _ = shutdown.changed() => {
+        let consumer: StreamConsumer = match ClientConfig::new()
+            .set("bootstrap.servers", brokers)
+            .set("group.id", "aurora-engine-rust")
+            .set("auto.offset.reset", "earliest")
+            .set("enable.auto.commit", "true")
+            .set("auto.commit.interval.ms", "1000")
+            .set_log_level(RDKafkaLogLevel::Warning)
+            .create()
+        {
+            Ok(consumer) => consumer,
+            Err(e) => {
+                warn!(err = %e, retry_in_seconds = 5, "failed to create TLE update consumer");
+                if wait_or_shutdown(&mut shutdown, Duration::from_secs(5)).await {
+                    info!("TLE update consumer stopping");
+                    return;
+                }
+                continue;
+            }
+        };
+
+        if let Err(e) = consumer.subscribe(&["aurora.satellites.tle"]) {
+            warn!(err = %e, retry_in_seconds = 5, "failed to subscribe to TLE topic");
+            if wait_or_shutdown(&mut shutdown, Duration::from_secs(5)).await {
                 info!("TLE update consumer stopping");
                 return;
             }
-            msg = stream.next() => {
-                match msg {
-                    Some(Ok(msg)) => {
-                        if let Some(payload) = msg.payload() {
-                            if let Ok(rec) = serde_json::from_slice::<GpRecord>(payload) {
-                                if let Some(id) = rec.norad_id() {
-                                    if id > 0 {
-                                        cache.write().await.insert(id.to_string(), rec);
-                                    }
-                                }
+            continue;
+        }
+
+        info!("TLE update consumer started");
+
+        let mut stream = consumer.stream();
+        loop {
+            tokio::select! {
+                _ = shutdown.changed() => {
+                    info!("TLE update consumer stopping");
+                    return;
+                }
+                msg = stream.next() => {
+                    match msg {
+                        Some(Ok(msg)) => {
+                            if let Some(payload) = msg.payload() {
+                                let _ = ingest_tle(payload, &cache).await;
                             }
                         }
-                    }
-                    Some(Err(e)) => {
-                        warn!(err = %e, "TLE read error");
-                    }
-                    None => {
-                        return;
+                        Some(Err(e)) => {
+                            warn!(err = %e, "TLE read error");
+                        }
+                        None => {
+                            warn!("TLE update stream ended unexpectedly; restarting consumer");
+                            break;
+                        }
                     }
                 }
             }
@@ -437,11 +487,7 @@ async fn consume_tle_updates(
 
 const BATCH_SIZE: usize = 2000;
 
-async fn propagate_and_publish(
-    cache: &TleCache,
-    producer: &FutureProducer,
-    metrics: &Metrics,
-) {
+async fn propagate_and_publish(cache: &TleCache, producer: &FutureProducer, metrics: &Metrics) {
     let records: Vec<GpRecord> = {
         let lock = cache.read().await;
         if lock.is_empty() {
@@ -591,7 +637,9 @@ async fn main() {
     info!("aurora rust engine starting");
 
     let brokers = std::env::var("KAFKA_BROKERS").unwrap_or_else(|_| "localhost:9092".to_string());
-    let metrics_port = std::env::var("METRICS_PORT").unwrap_or_else(|_| "2114".to_string());
+    let metrics_port = std::env::var("METRICS_PORT_ENGINE_RUST")
+        .or_else(|_| std::env::var("METRICS_PORT"))
+        .unwrap_or_else(|_| "2117".to_string());
 
     // Kafka producer
     let producer: FutureProducer = ClientConfig::new()
@@ -628,8 +676,24 @@ async fn main() {
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
 
     // Phase 1: Bulk-load TLEs
+    let mut startup_shutdown = shutdown_tx.subscribe();
     info!("bulk loading TLEs");
-    bulk_load_tles(&brokers, &cache).await;
+    loop {
+        match bulk_load_tles(&brokers, &cache).await {
+            Ok(()) => break,
+            Err(err) => {
+                warn!(
+                    err = %err,
+                    retry_in_seconds = 5,
+                    "waiting for Kafka/TLE topic before starting propagation"
+                );
+                if wait_or_shutdown(&mut startup_shutdown, Duration::from_secs(5)).await {
+                    info!("startup stopping before initial TLE load completed");
+                    return;
+                }
+            }
+        }
+    }
 
     let count = cache.read().await.len();
     info!(satellites = count, "TLE load ready, starting propagation");

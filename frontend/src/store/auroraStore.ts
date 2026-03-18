@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { mockConjunctions } from "../data/mock/conjunctions";
 import { mockSatellites } from "../data/mock/satellites";
 import { mockSpaceWeather } from "../data/mock/spaceWeather";
-import type { Conjunction, HistoricalEvent, Satellite, SpaceWeather, VisualMode } from "../types/space";
+import type { Conjunction, HistoricalEvent, Satellite, SourceDiagnostic, SpaceWeather, VisualMode } from "../types/space";
 
 export type FeedKey = "satellites" | "conjunctions" | "spaceWeather";
 
@@ -26,6 +26,7 @@ interface AuroraStoreState {
   conjunctions: Conjunction[];
   isConnectedToBackend: boolean;
   feedLastUpdated: Record<FeedKey, Date | null>;
+  sourceDiagnostics: SourceDiagnostic[];
 
   currentMode: VisualMode;
   earthOnlyMode: boolean;
@@ -61,6 +62,7 @@ interface AuroraStoreState {
   setHelioSelectedCME: (index: number | null) => void;
   closeAllPanels: () => void;
   recordFeedUpdate: (feed: FeedKey) => void;
+  setSourceDiagnostics: (rows: SourceDiagnostic[]) => void;
 }
 
 const openPanelInSet = (panels: Set<PanelType>, panel: PanelType): Set<PanelType> => {
@@ -84,6 +86,7 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   conjunctions: mockConjunctions,
   isConnectedToBackend: false,
   feedLastUpdated: { satellites: null, conjunctions: null, spaceWeather: null },
+  sourceDiagnostics: [],
 
   currentMode: "OPS",
   earthOnlyMode: false,
@@ -178,5 +181,6 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   recordFeedUpdate: (feed) =>
     set((state) => ({
       feedLastUpdated: { ...state.feedLastUpdated, [feed]: new Date() }
-    }))
+    })),
+  setSourceDiagnostics: (rows) => set({ sourceDiagnostics: rows })
 }));

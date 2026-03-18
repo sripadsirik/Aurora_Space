@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { useAuroraStore } from "../store/auroraStore";
-import type { Conjunction, Satellite, SpaceWeather } from "../types/space";
+import type { Conjunction, Satellite, SourceDiagnostic, SpaceWeather } from "../types/space";
 import { env } from "../utils/env";
 
 // ── Typed inbound messages ──────────────────────────────────────────────────
@@ -32,9 +32,28 @@ export type WebSocketMessage =
   | SpaceWeatherUpdateMessage
   | ConnectedMessage;
 
+interface DiagnosticsResponse {
+  generatedAt: string;
+  rows: SourceDiagnostic[];
+}
+
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 const RECONNECT_INTERVAL_MS = 5_000;
+const DIAGNOSTICS_POLL_INTERVAL_MS = 5_000;
+
+const getDiagnosticsUrl = (wsUrl: string): string | null => {
+  try {
+    const url = new URL(wsUrl);
+    url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+    url.pathname = "/diagnostics";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
 
 export const useWebSocket = (): void => {
   const wsRef = useRef<WebSocket | null>(null);
@@ -43,6 +62,32 @@ export const useWebSocket = (): void => {
   useEffect(() => {
     const wsUrl = env.VITE_WS_URL;
     if (!wsUrl) return;
+    const diagnosticsUrl = getDiagnosticsUrl(wsUrl);
+    let diagnosticsTimer: ReturnType<typeof setInterval> | null = null;
+    let diagnosticsAbort: AbortController | null = null;
+
+    const fetchDiagnostics = async (): Promise<void> => {
+      if (!diagnosticsUrl) return;
+
+      diagnosticsAbort?.abort();
+      diagnosticsAbort = new AbortController();
+
+      try {
+        const response = await fetch(diagnosticsUrl, {
+          signal: diagnosticsAbort.signal
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as DiagnosticsResponse;
+        useAuroraStore.getState().setSourceDiagnostics(payload.rows);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+      }
+    };
 
     const connect = (): void => {
       if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
@@ -54,6 +99,7 @@ export const useWebSocket = (): void => {
 
       ws.addEventListener("open", () => {
         useAuroraStore.setState({ isConnectedToBackend: true });
+        void fetchDiagnostics();
       });
 
       ws.addEventListener("message", (event) => {
@@ -104,8 +150,14 @@ export const useWebSocket = (): void => {
     };
 
     connect();
+    void fetchDiagnostics();
+    diagnosticsTimer = setInterval(() => {
+      void fetchDiagnostics();
+    }, DIAGNOSTICS_POLL_INTERVAL_MS);
 
     return () => {
+      diagnosticsAbort?.abort();
+      if (diagnosticsTimer) clearInterval(diagnosticsTimer);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) {
         wsRef.current.close();

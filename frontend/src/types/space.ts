@@ -47,6 +47,18 @@ export interface ConjunctionWarning {
 export type Conjunction = ConjunctionWarning;
 
 export type VisualMode = "OPS" | "STORM" | "INTEL" | "HELIO";
+export type SourceStatus = "LIVE" | "STALE" | "ERROR";
+
+export interface SourceDiagnostic {
+  key: string;
+  name: string;
+  url: string;
+  status: SourceStatus;
+  lastEvent: string;
+  records: string;
+  frequency: string;
+  detail?: string;
+}
 
 export type CmeImpactStatus = "DIRECT HIT" | "GLANCING BLOW" | "NO IMPACT — MISS";
 

@@ -1,5 +1,17 @@
 [build]
 target = "x86_64-pc-windows-gnu"
+rustflags = ["-C", "dlltool=C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\dlltool.exe"]
+rustc-wrapper = "C:\\Users\\sripa\\OneDrive\\Documents\\GitHub\\Aurora_Space\\backend\\engine-rust\\.cargo\\rustc-wrapper.cmd"
 
 [target.x86_64-pc-windows-gnu]
 linker = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\gcc.exe"
+
+[env]
+AR = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\ar.exe"
+CC = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\gcc.exe"
+CMAKE = "C:\\Users\\sripa\\OneDrive\\Documents\\GitHub\\Aurora_Space\\backend\\engine-rust\\.cargo\\cmake-wrapper.cmd"
+CMAKE_GENERATOR = "MinGW Makefiles"
+CXX = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\g++.exe"
+PATH = { value = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin;C:\\Users\\sripa\\cmake-install\\cmake-3.31.6-windows-x86_64\\bin;%PATH%", force = true }
+RANLIB = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\ranlib.exe"
+WINDRES = "C:\\Users\\sripa\\mingw64-install\\mingw64\\bin\\windres.exe"

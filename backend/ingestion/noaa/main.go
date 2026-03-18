@@ -374,6 +374,9 @@ func publishIfDirty(ctx context.Context, state *weatherState, producer *shared.P
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	if err := shared.LoadDotEnv(".env"); err != nil {
+		slog.Warn("dotenv load failed", "path", ".env", "err", err)
+	}
 
 	brokers := strings.Split(envOr("KAFKA_BROKERS", "localhost:9092"), ",")
 	metricsPort := envOr("METRICS_PORT_NOAA", "2113")

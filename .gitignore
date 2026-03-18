@@ -8,3 +8,4 @@ backend/bin/*.exe
 backend/bin/*.exe~
 backend/engine-rust/target/
 backend/bin/engine-rust.exe
+.aurora/

@@ -116,18 +116,16 @@ SPACETRACK_PASSWORD=
 METRICS_PORT_GATEWAY=2112
 METRICS_PORT_NOAA=2113
 METRICS_PORT_ENGINE=2114
+METRICS_PORT_ENGINE_RUST=2117
 METRICS_PORT_CELESTRAK=2115
 METRICS_PORT_SPACETRACK=2116
 WS_PORT=8080
-
-# Required by backend/engine-rust
-METRICS_PORT=2114
 ```
 
 Notes:
 
 - `SPACETRACK_USERNAME` and `SPACETRACK_PASSWORD` are only needed if you run the Space-Track ingestion service.
-- The Rust engine reads `METRICS_PORT`.
+- The Rust engine reads `METRICS_PORT_ENGINE_RUST` and falls back to `METRICS_PORT`.
 - The legacy Go engine reads `METRICS_PORT_ENGINE`.
 
 ## Quick Start
@@ -181,7 +179,7 @@ cd ..\backend
 Copy-Item .env.example .env
 ```
 
-Add `METRICS_PORT=2114` to `backend/.env` if it is not already there.
+Add `METRICS_PORT_ENGINE_RUST=2117` to `backend/.env` if it is not already there.
 
 ### 5. Build the Go services
 
@@ -241,7 +239,7 @@ Terminal 4 - Rust engine
 
 ```powershell
 cd backend
-$env:METRICS_PORT="2114"
+$env:METRICS_PORT_ENGINE_RUST="2117"
 .\bin\engine-rust.exe
 ```
 

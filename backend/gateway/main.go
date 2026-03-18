@@ -107,11 +107,17 @@ func (h *hub) broadcast(msgType string, payload json.RawMessage) {
 
 // ── State cache (last known state for new connections) ──────────────────────
 
+type feedSnapshot struct {
+	payload     json.RawMessage
+	count       int
+	lastUpdated time.Time
+}
+
 type stateCache struct {
 	mu           sync.RWMutex
-	satellites   json.RawMessage
-	conjunctions json.RawMessage
-	spaceWeather json.RawMessage
+	satellites   feedSnapshot
+	conjunctions feedSnapshot
+	spaceWeather feedSnapshot
 }
 
 type pendingSatelliteBatch struct {
@@ -194,13 +200,31 @@ func (a *satelliteBatchAssembler) ingest(data []byte) (json.RawMessage, bool, er
 func (sc *stateCache) set(msgType string, payload json.RawMessage) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+
+	snapshot := feedSnapshot{
+		payload:     payload,
+		count:       payloadCount(msgType, payload),
+		lastUpdated: time.Now().UTC(),
+	}
+
 	switch msgType {
 	case "satellites":
-		sc.satellites = payload
+		sc.satellites = snapshot
 	case "conjunctions":
-		sc.conjunctions = payload
+		sc.conjunctions = snapshot
 	case "spaceWeather":
-		sc.spaceWeather = payload
+		sc.spaceWeather = snapshot
+	}
+}
+
+func (sc *stateCache) snapshot() stateCache {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	return stateCache{
+		satellites:   sc.satellites,
+		conjunctions: sc.conjunctions,
+		spaceWeather: sc.spaceWeather,
 	}
 }
 
@@ -223,9 +247,31 @@ func (sc *stateCache) sendAll(c *client) {
 		}
 	}
 
-	send("satellites", sc.satellites)
-	send("conjunctions", sc.conjunctions)
-	send("spaceWeather", sc.spaceWeather)
+	send("satellites", sc.satellites.payload)
+	send("conjunctions", sc.conjunctions.payload)
+	send("spaceWeather", sc.spaceWeather.payload)
+}
+
+func payloadCount(msgType string, payload json.RawMessage) int {
+	switch msgType {
+	case "spaceWeather":
+		if len(payload) > 0 {
+			return 1
+		}
+		return 0
+	case "satellites":
+		var satellites []shared.Satellite
+		if err := json.Unmarshal(payload, &satellites); err == nil {
+			return len(satellites)
+		}
+	case "conjunctions":
+		var conjunctions []shared.ConjunctionWarning
+		if err := json.Unmarshal(payload, &conjunctions); err == nil {
+			return len(conjunctions)
+		}
+	}
+
+	return 0
 }
 
 // ── WebSocket handler ───────────────────────────────────────────────────────
@@ -365,6 +411,9 @@ func consumeAndBroadcast(
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	if err := shared.LoadDotEnv(".env"); err != nil {
+		slog.Warn("dotenv load failed", "path", ".env", "err", err)
+	}
 
 	brokers := strings.Split(envOr("KAFKA_BROKERS", "localhost:9092"), ",")
 	wsPort := envOr("WS_PORT", "8080")
@@ -396,7 +445,9 @@ func main() {
 	// WebSocket server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", wsHandler(h, cache))
+	mux.HandleFunc("/diagnostics", diagnosticsHandler(cache))
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})

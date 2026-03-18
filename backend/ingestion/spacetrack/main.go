@@ -259,6 +259,9 @@ const cdmURL = "https://www.space-track.org/basicspacedata/query/class/cdm_publi
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	if err := shared.LoadDotEnv(".env"); err != nil {
+		slog.Warn("dotenv load failed", "path", ".env", "err", err)
+	}
 
 	user := os.Getenv("SPACETRACK_USERNAME")
 	pass := os.Getenv("SPACETRACK_PASSWORD")

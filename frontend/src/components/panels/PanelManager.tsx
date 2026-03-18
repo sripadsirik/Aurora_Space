@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import type { Conjunction, Satellite } from "../../types/space";
+import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
@@ -14,64 +14,6 @@ interface PanelCardProps {
   onClose: () => void;
   children: ReactNode;
 }
-
-interface SourceStatusRow {
-  name: string;
-  url: string;
-  status: "LIVE" | "STALE" | "ERROR";
-  lastFetch: string;
-  count: number;
-  frequency: string;
-  latency: string;
-}
-
-const SOURCE_STATUS_ROWS: SourceStatusRow[] = [
-  {
-    name: "CelesTrak TLE Feed",
-    url: "https://celestrak.org",
-    status: "LIVE",
-    lastFetch: "2026-03-08 18:21:02 UTC",
-    count: 150,
-    frequency: "60s",
-    latency: "380ms"
-  },
-  {
-    name: "Space-Track CDMs",
-    url: "https://space-track.org",
-    status: "LIVE",
-    lastFetch: "2026-03-08 18:21:01 UTC",
-    count: 3,
-    frequency: "120s",
-    latency: "620ms"
-  },
-  {
-    name: "NOAA SWPC Solar Wind",
-    url: "https://swpc.noaa.gov",
-    status: "LIVE",
-    lastFetch: "2026-03-08 18:20:52 UTC",
-    count: 1,
-    frequency: "30s",
-    latency: "290ms"
-  },
-  {
-    name: "NOAA Ovation Aurora",
-    url: "https://swpc.noaa.gov",
-    status: "STALE",
-    lastFetch: "2026-03-08 18:17:44 UTC",
-    count: 2,
-    frequency: "180s",
-    latency: "2.3s"
-  },
-  {
-    name: "NASA DONKI CME",
-    url: "https://api.nasa.gov",
-    status: "ERROR",
-    lastFetch: "2026-03-08 18:15:27 UTC",
-    count: 0,
-    frequency: "300s",
-    latency: "timeout"
-  }
-];
 
 const ORBIT_LABELS: Record<Satellite["orbitType"], string> = {
   LEO: "160-2,000 km",
@@ -183,7 +125,7 @@ const normalizeProbability = (probability: number): number => {
   return Math.max(0, Math.min(1, normalized));
 };
 
-const getStatusClass = (status: SourceStatusRow["status"]): string => {
+const getStatusClass = (status: SourceDiagnostic["status"]): string => {
   if (status === "ERROR") return "text-[#ff7d7d]";
   if (status === "STALE") return "text-[#ffcd73]";
   return "text-[#7df0b2]";
@@ -528,25 +470,35 @@ const SpaceWeatherPanel = (): JSX.Element => {
 const DataLayerStatusPanel = (): JSX.Element => {
   const closePanel = useAuroraStore((state) => state.closePanel);
   const isConnectedToBackend = useAuroraStore((state) => state.isConnectedToBackend);
+  const sourceDiagnostics = useAuroraStore((state) => state.sourceDiagnostics);
 
   return (
     <PanelCard title="Data Sources" closeLabel="Close data source panel" onClose={() => closePanel("data-layers")}>
       <div className="space-y-2">
-        {SOURCE_STATUS_ROWS.map((row) => (
-          <div key={row.name} className="rounded-sm border border-white/10 px-2 py-1">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] text-white">{row.name}</p>
-              <span className={`text-[10px] font-semibold ${getStatusClass(row.status)}`}>{row.status}</span>
-            </div>
-            <p className="text-[10px] text-[#6fb4df]">{row.url}</p>
-            <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-[#9cc2de]">
-              <span>Last fetch: {row.lastFetch}</span>
-              <span className="text-right">Records: {row.count}</span>
-              <span>Frequency: {row.frequency}</span>
-              <span className="text-right">Latency: {row.latency}</span>
-            </div>
+        {sourceDiagnostics.length === 0 ? (
+          <div className="rounded-sm border border-white/10 px-2 py-2 text-[11px] text-[#9cc2de]">
+            Waiting for backend diagnostics...
           </div>
-        ))}
+        ) : (
+          sourceDiagnostics.map((row) => (
+            <div key={row.key} className="rounded-sm border border-white/10 px-2 py-1">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-white">{row.name}</p>
+                <span className={`text-[10px] font-semibold ${getStatusClass(row.status)}`}>{row.status}</span>
+              </div>
+              <p className="text-[10px] text-[#6fb4df]">{row.url}</p>
+              <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-[#9cc2de]">
+                <span>Last event: {row.lastEvent}</span>
+                <span className="text-right">Records: {row.records}</span>
+                <span>Expected cadence: {row.frequency}</span>
+                <span className="text-right">{row.key === "engine-rust" ? "Pipeline: positions" : "Pipeline: source"}</span>
+              </div>
+              {row.detail ? (
+                <p className={`mt-1 text-[10px] ${row.status === "ERROR" ? "text-[#ff9a9a]" : "text-[#b6d4eb]"}`}>{row.detail}</p>
+              ) : null}
+            </div>
+          ))
+        )}
 
         <div className="rounded-sm border border-white/10 px-2 py-2">
           <p className="text-[10px] tracking-[0.12em] text-[var(--aurora-accent)]">BACKEND CONNECTION</p>
