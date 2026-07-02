@@ -1,6 +1,11 @@
 # ── Aurora SSA — Build & Run ─────────────────────────────────────────────────
 
-.PHONY: all build build-go infra infra-down run-gateway run-celestrak run-noaa run-spacetrack run-engine stop clean
+.PHONY: all build build-go infra infra-down run run-gateway run-celestrak run-noaa run-spacetrack run-engine stop clean
+
+# ── One-command launcher (macOS/Linux) ───────────────────────────────────────
+
+run:
+	./aurora.sh start
 
 # ── Build ────────────────────────────────────────────────────────────────────
 
