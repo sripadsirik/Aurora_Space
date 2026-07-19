@@ -1,0 +1,52 @@
+name: Daily Autopilot
+
+on:
+  schedule:
+    # Slot 3: 14:30 UTC daily
+    - cron: "30 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  autopilot:
+    if: ${{ vars.AUTOPILOT_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude autopilot
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are the daily autopilot for this repository. Work autonomously:
+
+            1. List open issues labeled "autopilot:claude". Pick the highest-value
+               ones and implement them. When an issue is done, reference it in the
+               PR so it auto-closes on merge.
+            2. If there are no labeled issues (or you finish them), improve the
+               project on your own judgment: fix bugs, add tests, improve docs,
+               refactor rough spots, extend existing features. Read the README and
+               recent commits first to stay aligned with the project's direction.
+
+            Rules:
+            - Never commit directly to main. Create a branch named
+              autopilot/<date>-<short-topic> and open a pull request when the
+              work is ready.
+            - Make a MINIMUM of 20 commits per day. Achieve this by working in
+              small, granular, meaningful commits (one logical change per
+              commit) across one or more branches/PRs — never padding with
+              empty or trivial filler commits.
+            - Run whatever build/tests exist before opening each PR and report
+              the results in the PR description.
+            - Write clear commit messages and a PR summary of what changed and
+              why.
+          claude_args: "--max-turns 250"
