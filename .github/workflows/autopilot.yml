@@ -94,10 +94,10 @@ jobs:
                 distinct changes, that is three separate commits to that file, made one at a
                 time as you go — not one commit at the end covering all of them. The branch's
                 history should read as a fine-grained, chronological trail of small commits.
-              - Aim for a MINIMUM of 20 commits in this run. Reach that through genuinely
+              - Aim for a MINIMUM of 15 commits in this run. Reach that through genuinely
                 granular commits of real work as described above — never by padding with
                 empty or trivial filler commits. If the day's task is honestly too small to
-                yield 20 meaningful commits, pick up additional cleanup work until it does.
+                yield 15 meaningful commits, pick up additional cleanup work until it does.
               - Run any existing tests/linters relevant to the change before opening the PR.
               - Push the branch and open a pull request against the default branch using
                 `gh pr create` (GH_TOKEN is available). Never push directly to the default
