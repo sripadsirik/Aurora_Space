@@ -1,52 +1,107 @@
 name: Daily Autopilot
 
+# Runs once a day. Toggle on/off any time in:
+#   Settings -> Secrets and variables -> Actions -> Variables -> AUTOPILOT_ENABLED (true/false)
+# You can also trigger it manually from the Actions tab (workflow_dispatch).
+#
+# MULTI-PROJECT NOTE: this same file goes in every project's repo. Claude Pro's
+# rate limit is per-account, not per-repo, and resets on a rolling ~5 hour
+# window. If two projects' autopilot runs land in the same window, they compete
+# for the same quota. Stagger the cron time in each repo by 5 hours so only one
+# project is ever using the window at once. See AUTOPILOT.md for a schedule
+# table. THIS REPO'S SLOT: 1
+
 on:
   schedule:
-    # Slot 3: 14:30 UTC daily
-    - cron: "30 14 * * *"
-  workflow_dispatch:
+    - cron: '0 13 * * *'   # Slot 1 (UTC). See AUTOPILOT.md.
+  workflow_dispatch: {}
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+concurrency:
+  group: autopilot-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  autopilot:
-    if: ${{ vars.AUTOPILOT_ENABLED == 'true' }}
+  gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - id: check
+        run: echo "enabled=${{ vars.AUTOPILOT_ENABLED }}" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # CLAUDE: tests, cleanup, docs, frontend, light backend.
+  # Uses your Claude Pro subscription via OAuth — no per-token API billing.
+  # ---------------------------------------------------------------------------
+  claude-agent:
+    needs: gate
+    if: needs.gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Run Claude autopilot
-        uses: anthropics/claude-code-action@v1
+      - name: Decide today's mode
+        id: mode
+        run: |
+          doy=$(date -u +%j)
+          if [ $(( 10#$doy % 4 )) -eq 0 ]; then
+            echo "mode=feature" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=cleanup" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@beta
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            You are the daily autopilot for this repository. Work autonomously:
+          allowed_tools: "Bash,Edit,Read,Write,Grep,Glob"
+          max_turns: 40
+          direct_prompt: |
+            You are an autonomous daily contributor to this repo. No human is watching this run.
 
-            1. List open issues labeled "autopilot:claude". Pick the highest-value
-               ones and implement them. When an issue is done, reference it in the
-               PR so it auto-closes on merge.
-            2. If there are no labeled issues (or you finish them), improve the
-               project on your own judgment: fix bugs, add tests, improve docs,
-               refactor rough spots, extend existing features. Read the README and
-               recent commits first to stay aligned with the project's direction.
+            Your scope: tests, cleanup, documentation, frontend code, and backend work of any
+            size — you own the whole codebase for this project.
 
-            Rules:
-            - Never commit directly to main. Create a branch named
-              autopilot/<date>-<short-topic> and open a pull request when the
-              work is ready.
-            - Make a MINIMUM of 20 commits per day. Achieve this by working in
-              small, granular, meaningful commits (one logical change per
-              commit) across one or more branches/PRs — never padding with
-              empty or trivial filler commits.
-            - Run whatever build/tests exist before opening each PR and report
-              the results in the PR description.
-            - Write clear commit messages and a PR summary of what changed and
-              why.
-          claude_args: "--max-turns 250"
+            Decide what to work on today, in this priority order:
+              1. If the latest CI run on the default branch is failing, fix the underlying
+                 test or build failure.
+              2. Otherwise, if there is an open issue labeled "autopilot:claude", implement it.
+                 Pick the oldest one if there are several.
+              3. Otherwise, today's mode is: ${{ steps.mode.outputs.mode }}
+                 - If mode is "feature": pick ONE small, well-scoped feature or genuine
+                   improvement to add. Keep it modest and self-contained — this runs
+                   unsupervised, so a feature that's too large or touches too much at once is
+                   not appropriate. Prefer something clearly useful and low-risk over something
+                   ambitious.
+                 - If mode is "cleanup": do small, low-risk improvement work: fix lint/type
+                   warnings, improve or fill in missing docs, add missing test coverage, tidy
+                   up frontend components, or small refactors.
+
+            Process:
+              - Create a new branch (e.g. autopilot/claude-<short-topic>-<date>).
+              - Never make one commit that bundles multiple changes together, even within a
+                single file. Break work into the smallest logical pieces (one function, one
+                fix, one section at a time) and commit after each piece, immediately, with a
+                message describing just that piece. If a single file ends up with three
+                distinct changes, that is three separate commits to that file, made one at a
+                time as you go — not one commit at the end covering all of them. The branch's
+                history should read as a fine-grained, chronological trail of small commits.
+              - Aim for a MINIMUM of 20 commits in this run. Reach that through genuinely
+                granular commits of real work as described above — never by padding with
+                empty or trivial filler commits. If the day's task is honestly too small to
+                yield 20 meaningful commits, pick up additional cleanup work until it does.
+              - Run any existing tests/linters relevant to the change before opening the PR.
+              - Push the branch and open a pull request against the default branch using
+                `gh pr create` (GH_TOKEN is available). Never push directly to the default
+                branch.
+              - In the PR description, state what you changed, why, and how you verified it.
+              - If you truly find nothing safe to do, do nothing and exit cleanly — don't
+                force a change just to have one.
