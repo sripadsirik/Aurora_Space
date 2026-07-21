@@ -1,4 +1,4 @@
-import { Cartesian3 } from "cesium";
+import { Cartesian3, Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import {
@@ -39,6 +39,16 @@ describe("getOrbitParams", () => {
     const { ascendingNode } = getOrbitParams(makeSatellite({ noradId: 99999 }));
     expect(ascendingNode).toBeGreaterThanOrEqual(0);
     expect(ascendingNode).toBeLessThan(2 * Math.PI);
+  });
+
+  it("uses a distinct inclination band for each orbit type", () => {
+    // noradId 0 removes the modulo term so each band starts at its base angle.
+    const leo = getOrbitParams(makeSatellite({ noradId: 0, orbitType: "LEO" }));
+    const meo = getOrbitParams(makeSatellite({ noradId: 0, orbitType: "MEO" }));
+    const geo = getOrbitParams(makeSatellite({ noradId: 0, orbitType: "GEO" }));
+    expect(leo.inclination).toBeCloseTo(CesiumMath.toRadians(40), 6);
+    expect(meo.inclination).toBeCloseTo(CesiumMath.toRadians(50), 6);
+    expect(geo.inclination).toBeCloseTo(CesiumMath.toRadians(2), 6);
   });
 });
 
