@@ -92,8 +92,15 @@ merge like any other PR.
   The staggering above avoids project-vs-project collisions, but doesn't
   protect against your own concurrent usage — keep that in mind if you code
   heavily right when a run is due.
-- `max_turns: 40` in the workflow caps how long a single run can go. Lower it
-  if a project's runs are eating too much of the window.
-- `anthropics/claude-code-action` is actively developed — if a run errors on
-  inputs, check the current README for any renamed parameters:
+- `--max-turns` in the workflow's `claude_args` caps how long a single run can
+  go. It's set to 250, because the 15-commit-per-run minimum needs a lot of
+  turns — the template's original 40 wasn't enough to even reach the first
+  push. Lower it if a project's runs are eating too much of the window, but
+  lower the commit minimum alongside it.
+- `anthropics/claude-code-action` is actively developed and inputs have already
+  been renamed once (v1 replaced `direct_prompt` with `prompt`, and folded
+  `allowed_tools`/`max_turns` into `claude_args`; `@beta` now points at that v1
+  code). If a run errors on inputs, check the current README:
   https://github.com/anthropics/claude-code-action
+- The job needs `id-token: write` permission — the action fetches a GitHub OIDC
+  token at startup and fails immediately without it.

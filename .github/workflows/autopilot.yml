@@ -65,7 +65,8 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # v1 renamed the old inputs: allowed_tools/max_turns now live in claude_args,
           # and direct_prompt is now prompt.
-          claude_args: "--allowed-tools Bash,Edit,Read,Write,Grep,Glob --max-turns 40"
+          # 15 granular commits needs far more than the template's original 40 turns.
+          claude_args: "--model claude-opus-4-8 --allowed-tools Bash,Edit,Read,Write,Grep,Glob --max-turns 250"
           prompt: |
             You are an autonomous daily contributor to this repo. No human is watching this run.
 
@@ -88,7 +89,11 @@ jobs:
                    up frontend components, or small refactors.
 
             Process:
-              - Create a new branch (e.g. autopilot/claude-<short-topic>-<date>).
+              - Create a new branch (e.g. autopilot/claude-<short-topic>-<date>) and push it to
+                the remote as soon as you have your FIRST commit, then open the pull request
+                right away as a draft and keep pushing to it as you go. Do not save pushing and
+                PR-opening for the end — this run can be cut off at any point by its turn limit,
+                and anything unpushed is lost. Mark the PR ready for review when you finish.
               - Never make one commit that bundles multiple changes together, even within a
                 single file. Break work into the smallest logical pieces (one function, one
                 fix, one section at a time) and commit after each piece, immediately, with a
@@ -101,9 +106,8 @@ jobs:
                 empty or trivial filler commits. If the day's task is honestly too small to
                 yield 15 meaningful commits, pick up additional cleanup work until it does.
               - Run any existing tests/linters relevant to the change before opening the PR.
-              - Push the branch and open a pull request against the default branch using
-                `gh pr create` (GH_TOKEN is available). Never push directly to the default
-                branch.
+              - The pull request targets the default branch and is opened with `gh pr create`
+                (GH_TOKEN is available). Never push directly to the default branch.
               - In the PR description, state what you changed, why, and how you verified it.
               - If you truly find nothing safe to do, do nothing and exit cleanly — don't
                 force a change just to have one.
