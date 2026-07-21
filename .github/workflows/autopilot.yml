@@ -65,6 +65,10 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Suppresses the automatic "Co-Authored-By: Claude" commit trailer.
           settings: '{"includeCoAuthoredBy": false}'
+          # Author commits as the repo owner so they count on the contribution graph.
+          # (claude[bot] authorship is not linked to any account and never counts.)
+          bot_name: sripadsirik
+          bot_id: "145507373"
           # v1 renamed the old inputs: allowed_tools/max_turns now live in claude_args,
           # and direct_prompt is now prompt.
           # 15 granular commits needs far more than the template's original 40 turns.
