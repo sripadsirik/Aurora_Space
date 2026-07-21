@@ -268,6 +268,21 @@ If you only want to work on the UI:
 
 The app boots with mock satellites, conjunctions, and space weather until `VITE_WS_URL` connects.
 
+## Frontend Tests
+
+The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
+pure utility modules (`format`, `env`, `colors`, `orbit`, `helio`) and the Zustand store.
+
+```powershell
+cd frontend
+npm install
+npm test          # run once
+npm run test:watch  # re-run on change
+```
+
+Tests live alongside the code they exercise in `__tests__/` directories and run in a
+Node environment with Cesium available through `vite-plugin-cesium`.
+
 ## Backend Services
 
 | Service | Path | Runtime | Default Port |
