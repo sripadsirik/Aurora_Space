@@ -41,6 +41,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: read
+      id-token: write   # required — claude-code-action fetches an OIDC token at startup
     steps:
       - uses: actions/checkout@v4
         with:
