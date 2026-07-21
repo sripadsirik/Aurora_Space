@@ -63,6 +63,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Suppresses the automatic "Co-Authored-By: Claude" commit trailer.
+          settings: '{"includeCoAuthoredBy": false}'
           # v1 renamed the old inputs: allowed_tools/max_turns now live in claude_args,
           # and direct_prompt is now prompt.
           # 15 granular commits needs far more than the template's original 40 turns.
@@ -105,6 +107,10 @@ jobs:
                 granular commits of real work as described above — never by padding with
                 empty or trivial filler commits. If the day's task is honestly too small to
                 yield 15 meaningful commits, pick up additional cleanup work until it does.
+              - Commit messages must contain NO attribution to Claude, Anthropic, or any AI
+                tooling: no "Co-Authored-By: Claude" trailer, no "Generated with Claude Code",
+                no emoji-robot signature, nothing of the kind. Write them exactly as a human
+                contributor would. The same goes for the PR title and description.
               - Run any existing tests/linters relevant to the change before opening the PR.
               - The pull request targets the default branch and is opened with `gh pr create`
                 (GH_TOKEN is available). Never push directly to the default branch.
