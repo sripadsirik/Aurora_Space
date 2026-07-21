@@ -58,14 +58,15 @@ jobs:
           fi
 
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ github.token }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: "Bash,Edit,Read,Write,Grep,Glob"
-          max_turns: 40
-          direct_prompt: |
+          # v1 renamed the old inputs: allowed_tools/max_turns now live in claude_args,
+          # and direct_prompt is now prompt.
+          claude_args: "--allowed-tools Bash,Edit,Read,Write,Grep,Glob --max-turns 40"
+          prompt: |
             You are an autonomous daily contributor to this repo. No human is watching this run.
 
             Your scope: tests, cleanup, documentation, frontend code, and backend work of any
