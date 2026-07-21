@@ -1,0 +1,88 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ConjunctionWarning } from "../../types/space";
+import {
+  formatDurationToTca,
+  formatProbability,
+  formatUtcTime,
+  isCriticalConjunction
+} from "../format";
+
+const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
+  id: "c-1",
+  object1: { noradId: 1, name: "A" },
+  object2: { noradId: 2, name: "B" },
+  tca: new Date("2026-01-01T00:00:00Z"),
+  missDistanceKm: 1,
+  missDistanceM: 1000,
+  pc: 0.0001,
+  probability: 0.0001,
+  relativeVelocityKms: 7,
+  riskLevel: "nominal",
+  ...overrides
+});
+
+describe("formatUtcTime", () => {
+  it("zero-pads hours, minutes and seconds and appends UTC", () => {
+    expect(formatUtcTime(new Date("2026-07-21T04:05:09Z"))).toBe("04:05:09 UTC");
+  });
+
+  it("renders midday times without padding loss", () => {
+    expect(formatUtcTime(new Date("2026-07-21T23:59:59Z"))).toBe("23:59:59 UTC");
+  });
+});
+
+describe("formatProbability", () => {
+  it("renders in exponential notation with one fraction digit", () => {
+    expect(formatProbability(0.0012)).toBe("1.2e-3");
+  });
+
+  it("handles zero", () => {
+    expect(formatProbability(0)).toBe("0.0e+0");
+  });
+});
+
+describe("isCriticalConjunction", () => {
+  it("flags high collision probability", () => {
+    expect(isCriticalConjunction(makeConjunction({ probability: 0.006, missDistanceM: 5000 }))).toBe(true);
+  });
+
+  it("flags very small miss distance", () => {
+    expect(isCriticalConjunction(makeConjunction({ probability: 0, missDistanceM: 200 }))).toBe(true);
+  });
+
+  it("treats the thresholds as inclusive", () => {
+    expect(isCriticalConjunction(makeConjunction({ probability: 0.005, missDistanceM: 10000 }))).toBe(true);
+    expect(isCriticalConjunction(makeConjunction({ probability: 0, missDistanceM: 250 }))).toBe(true);
+  });
+
+  it("returns false for nominal conjunctions", () => {
+    expect(isCriticalConjunction(makeConjunction({ probability: 0.001, missDistanceM: 5000 }))).toBe(false);
+  });
+});
+
+describe("formatDurationToTca", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-21T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("counts down hours and minutes for a future TCA", () => {
+    expect(formatDurationToTca(new Date("2026-07-21T02:30:00Z"))).toBe("2h 30m");
+  });
+
+  it("accepts an ISO string as input", () => {
+    expect(formatDurationToTca("2026-07-21T01:15:00Z")).toBe("1h 15m");
+  });
+
+  it("reports a recently passed TCA in hours and minutes", () => {
+    expect(formatDurationToTca(new Date("2026-07-20T22:30:00Z"))).toBe("PASSED 1h 30m ago");
+  });
+
+  it("reports a long-passed TCA in days and hours", () => {
+    expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
+  });
+});
