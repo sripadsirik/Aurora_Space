@@ -50,11 +50,11 @@ Cron format is `minute hour * * *`.
 
 | Project        | Cron (UTC)     |
 |----------------|----------------|
-| Aurora_Space   | `0 20 * * *` *(3 PM Central during CDT)* |
-| Project 2      | `0 1 * * *`    |
-| Project 3      | `0 6 * * *`    |
-| Project 4      | `0 11 * * *`   |
-| Project 5      | `0 16 * * *` *(wraps back near Aurora_Space — 5 projects is about the practical limit in a day)* |
+| Aurora_Space   | `30 10 * * *` *(5:30 AM Central during CDT)* |
+| Project 2      | `30 15 * * *`  |
+| Project 3      | `30 20 * * *`  |
+| Project 4      | `30 1 * * *`   |
+| Project 5      | `30 6 * * *` *(wraps back near Aurora_Space — 5 projects is about the practical limit in a day)* |
 
 Add new projects down this table as you create them; just keep adding 5 hours
 and wrapping around midnight.

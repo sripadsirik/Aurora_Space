@@ -13,7 +13,7 @@ name: Daily Autopilot
 
 on:
   schedule:
-    - cron: '0 20 * * *'   # 3:00 PM Central (CDT). GitHub cron is UTC and ignores DST — in winter (CST) this fires at 2:00 PM; switch to '0 21 * * *' then if 3 PM matters. See AUTOPILOT.md.
+    - cron: '30 10 * * *'  # 5:30 AM Central (CDT). GitHub cron is UTC and ignores DST — in winter (CST) this fires at 4:30 AM; switch to '30 11 * * *' then if 5:30 matters. See AUTOPILOT.md.
   workflow_dispatch: {}
 
 concurrency:
