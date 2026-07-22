@@ -113,12 +113,15 @@ export const createHelioBandHierarchy = (
   ]);
 };
 
+/** Scene-space radius of the expanding CME front, wrapping at the outer bound. */
 export const getHelioCmeRadius = (elapsedSeconds: number): number =>
   (elapsedSeconds * HELIO_CME_SPEED) % HELIO_CME_MAX_RADIUS;
 
+/** Seconds left until the CME reaches Earth, clamped at zero once it arrives. */
 export const getHelioRemainingSeconds = (elapsedSeconds: number): number =>
   Math.max(0, HELIO_CME_DURATION_SECONDS - elapsedSeconds);
 
+/** Formats the CME's remaining time-to-arrival as `Hh MMm SSs`. */
 export const formatHelioArrivalLabel = (elapsedSeconds: number): string => {
   const remainingSeconds = getHelioRemainingSeconds(elapsedSeconds);
   const hours = Math.floor(remainingSeconds / 3600);
