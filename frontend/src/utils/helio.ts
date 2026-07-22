@@ -24,9 +24,17 @@ const HELIO_REFERENCE_EPOCH_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
 
 const getUtcElapsedDays = (date: Date): number => (date.getTime() - HELIO_REFERENCE_EPOCH_MS) / 86_400_000;
 
+/**
+ * Angle of a body on its heliocentric orbit at `date`, advancing from `phase`
+ * at a rate set by its orbital period in days, measured from the J2000 epoch.
+ */
 export const getHelioOrbitAngle = (date: Date, orbitalPeriodDays: number, phase = -CesiumMath.PI_OVER_TWO): number =>
   phase + (getUtcElapsedDays(date) / orbitalPeriodDays) * CesiumMath.TWO_PI;
 
+/**
+ * Position on a flat (z = 0) heliocentric orbit at the given radius and angle.
+ * An optional `result` Cartesian is reused to avoid per-frame allocation.
+ */
 export const positionOnHelioOrbit = (radius: number, angle: number, result?: Cartesian3): Cartesian3 => {
   const target = result ?? new Cartesian3();
   target.x = Math.cos(angle) * radius;
@@ -35,6 +43,7 @@ export const positionOnHelioOrbit = (radius: number, angle: number, result?: Car
   return target;
 };
 
+/** Samples a full closed heliocentric orbit ring as `segments + 1` points. */
 export const createOrbitRingPositions = (radius: number, segments = 192): Cartesian3[] => {
   const positions: Cartesian3[] = [];
 
@@ -46,6 +55,7 @@ export const createOrbitRingPositions = (radius: number, segments = 192): Cartes
   return positions;
 };
 
+/** Samples an arc of a heliocentric orbit spanning `centralAngle ± halfAngle`. */
 export const createOrbitArcPositions = (
   radius: number,
   centralAngle: number,
