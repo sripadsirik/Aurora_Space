@@ -22,3 +22,11 @@ describe("setTimelineActive", () => {
     expect(useAuroraStore.getState().timelineActive).toBe(false);
   });
 });
+
+describe("setTimelinePosition", () => {
+  it("stores the scrubbed timeline date", () => {
+    const target = new Date("2003-10-29T06:00:00Z");
+    useAuroraStore.getState().setTimelinePosition(target);
+    expect(useAuroraStore.getState().timelinePosition).toBe(target);
+  });
+});
