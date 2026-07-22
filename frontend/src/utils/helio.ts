@@ -73,6 +73,10 @@ export const createOrbitArcPositions = (
   return positions;
 };
 
+/**
+ * Builds a pie-slice polygon from the Sun's centre out to `radius`, spanning
+ * `centralAngle ± halfAngle` — used to shade a CME's angular sector.
+ */
 export const createSectorHierarchy = (radius: number, centralAngle: number, halfAngle: number, segments = 48): PolygonHierarchy => {
   const positions: Cartesian3[] = [new Cartesian3(0, 0, 0)];
 
@@ -85,6 +89,11 @@ export const createSectorHierarchy = (radius: number, centralAngle: number, half
   return new PolygonHierarchy(positions);
 };
 
+/**
+ * Builds a tapering quadrilateral band running radially from `startRadius` to
+ * `endRadius` along `centralAngle`, narrowing toward the outer edge — used to
+ * draw a directed CME travel corridor.
+ */
 export const createHelioBandHierarchy = (
   centralAngle: number,
   startRadius: number,
