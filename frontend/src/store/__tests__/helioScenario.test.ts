@@ -28,3 +28,18 @@ describe("setStormAutoTriggered", () => {
     expect(useAuroraStore.getState().stormAutoTriggered).toBe(false);
   });
 });
+
+describe("setHelioSelectedCME", () => {
+  it("selects a CME by index", () => {
+    expect(useAuroraStore.getState().helioSelectedCME).toBeNull();
+    useAuroraStore.getState().setHelioSelectedCME(3);
+    expect(useAuroraStore.getState().helioSelectedCME).toBe(3);
+  });
+
+  it("clears the selection when passed null", () => {
+    const store = useAuroraStore.getState();
+    store.setHelioSelectedCME(3);
+    store.setHelioSelectedCME(null);
+    expect(useAuroraStore.getState().helioSelectedCME).toBeNull();
+  });
+});
