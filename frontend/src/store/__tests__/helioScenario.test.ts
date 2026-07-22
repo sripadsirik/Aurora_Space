@@ -7,6 +7,13 @@ beforeEach(() => {
   useAuroraStore.setState(initialState, true);
 });
 
+describe("setHelioSimulationSeconds", () => {
+  it("stores the current simulation clock in seconds", () => {
+    useAuroraStore.getState().setHelioSimulationSeconds(3600);
+    expect(useAuroraStore.getState().helioSimulationSeconds).toBe(3600);
+  });
+});
+
 describe("setHelioBurstIntensity", () => {
   it("stores the requested burst intensity", () => {
     useAuroraStore.getState().setHelioBurstIntensity(2.5);
