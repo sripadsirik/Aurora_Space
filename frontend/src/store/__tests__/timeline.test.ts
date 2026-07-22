@@ -30,3 +30,26 @@ describe("setTimelinePosition", () => {
     expect(useAuroraStore.getState().timelinePosition).toBe(target);
   });
 });
+
+const halloweenStorm: HistoricalEvent = {
+  id: "2003-halloween",
+  name: "Halloween Storms",
+  date: new Date("2003-10-29T06:00:00Z"),
+  description: "Severe geomagnetic storm sequence",
+  type: "solar_storm",
+  kpIndex: 9
+};
+
+describe("setTimelineEvent", () => {
+  it("selects a historical event", () => {
+    useAuroraStore.getState().setTimelineEvent(halloweenStorm);
+    expect(useAuroraStore.getState().timelineEvent).toBe(halloweenStorm);
+  });
+
+  it("clears the selected event when passed null", () => {
+    const store = useAuroraStore.getState();
+    store.setTimelineEvent(halloweenStorm);
+    store.setTimelineEvent(null);
+    expect(useAuroraStore.getState().timelineEvent).toBeNull();
+  });
+});
