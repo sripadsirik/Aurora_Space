@@ -353,14 +353,6 @@ const SpaceWeatherPanel = (): JSX.Element => {
     [spaceWeather.kpIndex]
   );
 
-  const stormRows = [
-    { level: "G1", code: 1, impact: "Minor grid fluctuations, weak HF degradation." },
-    { level: "G2", code: 2, impact: "Moderate spacecraft charging and auroral expansion." },
-    { level: "G3", code: 3, impact: "Surface charging possible, navigation warnings." },
-    { level: "G4", code: 4, impact: "Widespread HF/radio impacts and control errors." },
-    { level: "G5", code: 5, impact: "Severe infrastructure impacts, major geomagnetic storm." }
-  ];
-
   return (
     <PanelCard title="Space Weather" closeLabel="Close space weather panel" onClose={() => closePanel("space-weather")}>
       <div className="space-y-3">
@@ -407,7 +399,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
 
         <div className="space-y-1 border-t border-white/10 pt-2">
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">STORM LEVELS (NOAA)</p>
-          {stormRows.map((row) => (
+          {geomagneticStormScale.map((row) => (
             <div
               key={row.level}
               className={`rounded-sm border px-2 py-1 ${gLevel === row.code ? "border-[#00d4ff]/60 bg-[#0f2b46]/50" : "border-white/10"}`}
