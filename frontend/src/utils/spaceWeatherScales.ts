@@ -121,3 +121,12 @@ export const xrayFluxToRScale = (fluxWpm2: number): RScaleLevel => {
   if (fluxWpm2 >= 1e-5) return "R1";
   return "R0";
 };
+
+/**
+ * Resolves an X-ray flux class string (for example "M5" or "X1.2") straight to
+ * its NOAA radio blackout level. Unparseable strings fall back to R0.
+ */
+export const xrayClassToRScale = (flux: string): RScaleLevel => {
+  const parsed = parseXrayFlux(flux);
+  return parsed === null ? "R0" : xrayFluxToRScale(parsed);
+};
