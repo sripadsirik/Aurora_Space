@@ -37,3 +37,37 @@ const gScaleColorMap: Record<GScaleLevel, string> = {
  */
 export const gScaleColor = (level: string): string =>
   gScaleColorMap[level as GScaleLevel] ?? gScaleColorMap.G0;
+
+/** Descriptive metadata for a single NOAA geomagnetic storm level. */
+export interface GScaleInfo {
+  level: GScaleLevel;
+  /** NOAA numeric severity code (0 for quiet, 1-5 for G1-G5). */
+  code: number;
+  /** Short human label for the level. */
+  label: string;
+  /** One-line summary of the expected operational impact. */
+  impact: string;
+}
+
+/**
+ * The five active NOAA storm levels (G1-G5) with their severity codes and a
+ * concise impact summary each. Ordered from least to most severe.
+ */
+export const geomagneticStormScale: GScaleInfo[] = [
+  { level: "G1", code: 1, label: "Minor", impact: "Minor grid fluctuations, weak HF degradation." },
+  { level: "G2", code: 2, label: "Moderate", impact: "Moderate spacecraft charging and auroral expansion." },
+  { level: "G3", code: 3, label: "Strong", impact: "Surface charging possible, navigation warnings." },
+  { level: "G4", code: 4, label: "Severe", impact: "Widespread HF/radio impacts and control errors." },
+  { level: "G5", code: 5, label: "Extreme", impact: "Severe infrastructure impacts, major geomagnetic storm." }
+];
+
+const quietConditions: GScaleInfo = {
+  level: "G0",
+  code: 0,
+  label: "Quiet",
+  impact: "No significant geomagnetic storm activity."
+};
+
+/** Looks up the full metadata for a G-level, defaulting to quiet conditions. */
+export const gScaleInfo = (level: string): GScaleInfo =>
+  geomagneticStormScale.find((entry) => entry.level === level) ?? quietConditions;
