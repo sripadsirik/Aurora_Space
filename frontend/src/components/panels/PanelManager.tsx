@@ -7,6 +7,7 @@ import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { geomagneticStormScale, kpToGScaleInfo } from "../../utils/spaceWeatherScales";
 
 interface PanelCardProps {
   title: string;
@@ -85,15 +86,6 @@ const getConjunctionAction = (probability: number): { label: string; className: 
     label: "NO ACTION REQUIRED",
     className: "border-[#3bd08c] bg-[#103b29]/60 text-[#7ce8b6]"
   };
-};
-
-const getGeomagneticGLevel = (kpIndex: number): number => {
-  if (kpIndex >= 9) return 5;
-  if (kpIndex >= 8) return 4;
-  if (kpIndex >= 7) return 3;
-  if (kpIndex >= 6) return 2;
-  if (kpIndex >= 5) return 1;
-  return 0;
 };
 
 const toCountdown = (target: Date | string): string => {
@@ -345,7 +337,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
 const SpaceWeatherPanel = (): JSX.Element => {
   const spaceWeather = useAuroraStore((state) => state.spaceWeather);
   const closePanel = useAuroraStore((state) => state.closePanel);
-  const gLevel = getGeomagneticGLevel(spaceWeather.kpIndex);
+  const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
   const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
   const auroraLatitude = Math.max(35, Math.min(90, 90 - spaceWeather.kpIndex * 5.5));
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
