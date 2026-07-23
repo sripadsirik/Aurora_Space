@@ -4,7 +4,10 @@ import {
   gScaleColor,
   gScaleInfo,
   kpToGScale,
-  kpToGScaleInfo
+  kpToGScaleInfo,
+  parseXrayFlux,
+  xrayClassToRScale,
+  xrayFluxToRScale
 } from "../spaceWeatherScales";
 
 describe("kpToGScale", () => {
@@ -83,5 +86,55 @@ describe("kpToGScaleInfo", () => {
   it("resolves a Kp index straight to its metadata", () => {
     expect(kpToGScaleInfo(8.2).level).toBe("G4");
     expect(kpToGScaleInfo(2).code).toBe(0);
+  });
+});
+
+describe("parseXrayFlux", () => {
+  it("converts a class string to peak flux in W/m^2", () => {
+    expect(parseXrayFlux("C2.4")).toBeCloseTo(2.4e-6, 12);
+    expect(parseXrayFlux("M5")).toBeCloseTo(5e-5, 12);
+    expect(parseXrayFlux("X10")).toBeCloseTo(1e-3, 12);
+  });
+
+  it("treats a bare class letter as magnitude 1", () => {
+    expect(parseXrayFlux("X")).toBeCloseTo(1e-4, 12);
+  });
+
+  it("is case-insensitive and tolerates surrounding whitespace", () => {
+    expect(parseXrayFlux("  m2  ")).toBeCloseTo(2e-5, 12);
+  });
+
+  it("returns null for strings that are not a valid class", () => {
+    expect(parseXrayFlux("Z1")).toBeNull();
+    expect(parseXrayFlux("")).toBeNull();
+    expect(parseXrayFlux("none")).toBeNull();
+  });
+});
+
+describe("xrayFluxToRScale", () => {
+  it("maps NOAA flux thresholds to radio blackout levels", () => {
+    expect(xrayFluxToRScale(1e-5)).toBe("R1");
+    expect(xrayFluxToRScale(5e-5)).toBe("R2");
+    expect(xrayFluxToRScale(1e-4)).toBe("R3");
+    expect(xrayFluxToRScale(1e-3)).toBe("R4");
+    expect(xrayFluxToRScale(2e-3)).toBe("R5");
+  });
+
+  it("treats sub-blackout flux as R0", () => {
+    expect(xrayFluxToRScale(9e-6)).toBe("R0");
+    expect(xrayFluxToRScale(0)).toBe("R0");
+  });
+});
+
+describe("xrayClassToRScale", () => {
+  it("resolves a class string straight to a radio blackout level", () => {
+    expect(xrayClassToRScale("C2.4")).toBe("R0");
+    expect(xrayClassToRScale("M1")).toBe("R1");
+    expect(xrayClassToRScale("X1")).toBe("R3");
+    expect(xrayClassToRScale("X20")).toBe("R5");
+  });
+
+  it("falls back to R0 for unparseable input", () => {
+    expect(xrayClassToRScale("n/a")).toBe("R0");
   });
 });
