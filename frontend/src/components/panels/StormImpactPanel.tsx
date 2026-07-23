@@ -2,26 +2,7 @@ import { useEffect, useMemo } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
-
-const getGLevel = (kp: number): string => {
-  if (kp >= 9) return "G5";
-  if (kp >= 8) return "G4";
-  if (kp >= 7) return "G3";
-  if (kp >= 6) return "G2";
-  if (kp >= 5) return "G1";
-  return "G0";
-};
-
-const getGLevelColor = (gLevel: string): string => {
-  switch (gLevel) {
-    case "G5": return "#ff0000";
-    case "G4": return "#ff3300";
-    case "G3": return "#ff6600";
-    case "G2": return "#ff9900";
-    case "G1": return "#ffcc00";
-    default: return "#7dff6a";
-  }
-};
+import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
 
 interface ImpactRow {
   system: string;
@@ -92,8 +73,8 @@ export const StormImpactPanel = (): JSX.Element | null => {
 
   if (currentMode !== "STORM") return null;
 
-  const gLevel = getGLevel(kp);
-  const gColor = getGLevelColor(gLevel);
+  const gLevel = kpToGScale(kp);
+  const gColor = gScaleColor(gLevel);
   const impacts = getImpacts(kp);
 
   // KP Sparkline
