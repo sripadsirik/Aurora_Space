@@ -74,3 +74,31 @@ export const gScaleInfo = (level: string): GScaleInfo =>
 
 /** Resolves a Kp index straight to its full G-level metadata. */
 export const kpToGScaleInfo = (kp: number): GScaleInfo => gScaleInfo(kpToGScale(kp));
+
+/**
+ * Base peak flux (W/m^2, GOES 0.1-0.8 nm long band) for each solar X-ray class
+ * letter. A magnitude of `1` in a class corresponds to its base flux, so "M5"
+ * is 5x the M base and "X10" is 10x the X base.
+ */
+const xrayClassBase: Record<string, number> = {
+  A: 1e-8,
+  B: 1e-7,
+  C: 1e-6,
+  M: 1e-5,
+  X: 1e-4
+};
+
+const xrayFluxPattern = /^\s*([ABCMX])\s*([0-9]+(?:\.[0-9]+)?)?\s*$/i;
+
+/**
+ * Parses a GOES X-ray flux class string (for example "C2.4", "M5", or "X10")
+ * into its peak flux in W/m^2. A missing magnitude is treated as `1` (so "X"
+ * means "X1"). Returns `null` for strings that are not a valid class.
+ */
+export const parseXrayFlux = (flux: string): number | null => {
+  const match = xrayFluxPattern.exec(flux);
+  if (!match) return null;
+  const base = xrayClassBase[match[1].toUpperCase()];
+  const magnitude = match[2] === undefined ? 1 : Number(match[2]);
+  return base * magnitude;
+};
