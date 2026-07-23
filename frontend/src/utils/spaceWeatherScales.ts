@@ -71,3 +71,6 @@ const quietConditions: GScaleInfo = {
 /** Looks up the full metadata for a G-level, defaulting to quiet conditions. */
 export const gScaleInfo = (level: string): GScaleInfo =>
   geomagneticStormScale.find((entry) => entry.level === level) ?? quietConditions;
+
+/** Resolves a Kp index straight to its full G-level metadata. */
+export const kpToGScaleInfo = (kp: number): GScaleInfo => gScaleInfo(kpToGScale(kp));
