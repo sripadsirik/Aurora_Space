@@ -102,3 +102,22 @@ export const parseXrayFlux = (flux: string): number | null => {
   const magnitude = match[2] === undefined ? 1 : Number(match[2]);
   return base * magnitude;
 };
+
+/**
+ * NOAA radio blackout scale (R-scale), driven by peak solar X-ray flux. Runs
+ * from R1 (minor) to R5 (extreme), with R0 for sub-blackout conditions.
+ */
+export type RScaleLevel = "R0" | "R1" | "R2" | "R3" | "R4" | "R5";
+
+/**
+ * Maps a peak X-ray flux in W/m^2 to its NOAA radio blackout level using NOAA's
+ * thresholds: R1 at M1, R2 at M5, R3 at X1, R4 at X10, and R5 at X20.
+ */
+export const xrayFluxToRScale = (fluxWpm2: number): RScaleLevel => {
+  if (fluxWpm2 >= 2e-3) return "R5";
+  if (fluxWpm2 >= 1e-3) return "R4";
+  if (fluxWpm2 >= 1e-4) return "R3";
+  if (fluxWpm2 >= 5e-5) return "R2";
+  if (fluxWpm2 >= 1e-5) return "R1";
+  return "R0";
+};
