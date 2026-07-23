@@ -1,18 +1,8 @@
 import { useAuroraStore } from "../../store/auroraStore";
 import { mockCMEs } from "../../data/mock/cmeLibrary";
 import { getKpColor } from "../../utils/colors";
+import { gScaleColor } from "../../utils/spaceWeatherScales";
 import type { MockCME } from "../../types/space";
-
-const getStormLevelColor = (level: string): string => {
-  switch (level) {
-    case "G5": return "#ff0000";
-    case "G4": return "#ff3300";
-    case "G3": return "#ff6600";
-    case "G2": return "#ff9900";
-    case "G1": return "#ffcc00";
-    default: return "#7dff6a";
-  }
-};
 
 const CmeCard = ({ cme, isSelected, onSelect }: {
   cme: MockCME;
@@ -53,9 +43,9 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
           <span
             className="rounded border px-1.5 py-0.5 text-[9px] font-bold"
             style={{
-              borderColor: getStormLevelColor(cme.stormLevel),
-              color: getStormLevelColor(cme.stormLevel),
-              backgroundColor: `${getStormLevelColor(cme.stormLevel)}15`
+              borderColor: gScaleColor(cme.stormLevel),
+              color: gScaleColor(cme.stormLevel),
+              backgroundColor: `${gScaleColor(cme.stormLevel)}15`
             }}
           >
             {cme.stormLevel}
@@ -101,7 +91,7 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
           </div>
           <div className="flex justify-between">
             <span className="text-[#7d9cb5]">Storm Level</span>
-            <span style={{ color: getStormLevelColor(cme.stormLevel) }}>{cme.stormLevel}</span>
+            <span style={{ color: gScaleColor(cme.stormLevel) }}>{cme.stormLevel}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-[#7d9cb5]">Expected Duration</span>
