@@ -1,6 +1,7 @@
 import { Color } from "cesium";
 import type { RiskLevel } from "../types/space";
 
+/** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
   nominal: Color.fromCssColorString("#00ff88"),
   watch: Color.fromCssColorString("#ffcc00"),
@@ -8,6 +9,10 @@ export const riskColorMap: Record<RiskLevel, Color> = {
   critical: Color.fromCssColorString("#ff0000")
 };
 
+/**
+ * Maps a planetary Kp index (0-9) to a CSS hex colour, escalating from quiet
+ * green through storm orange to severe red as geomagnetic activity increases.
+ */
 export const getKpColor = (kp: number): string => {
   if (kp < 3) {
     return "#7dff6a";
@@ -21,6 +26,10 @@ export const getKpColor = (kp: number): string => {
   return "#ff2a2a";
 };
 
+/**
+ * Maps solar wind speed in km/s to a Cesium colour: calm below 400, elevated
+ * through the 400-600 band, and high-speed above 600.
+ */
 export const getSolarWindColor = (solarWindSpeed: number): Color => {
   if (solarWindSpeed < 400) {
     return Color.fromCssColorString("#fff6b3");

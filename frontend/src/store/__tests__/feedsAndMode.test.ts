@@ -32,6 +32,14 @@ describe("visual mode", () => {
     expect(useAuroraStore.getState().currentMode).toBe("HELIO");
   });
 
+  it("setEarthOnlyMode sets the flag explicitly", () => {
+    const store = useAuroraStore.getState();
+    store.setEarthOnlyMode(true);
+    expect(useAuroraStore.getState().earthOnlyMode).toBe(true);
+    store.setEarthOnlyMode(false);
+    expect(useAuroraStore.getState().earthOnlyMode).toBe(false);
+  });
+
   it("toggleEarthOnlyMode flips the flag", () => {
     const store = useAuroraStore.getState();
     expect(useAuroraStore.getState().earthOnlyMode).toBe(false);

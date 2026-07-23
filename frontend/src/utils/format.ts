@@ -2,9 +2,15 @@ import type { ConjunctionWarning } from "../types/space";
 
 const pad = (value: number): string => value.toString().padStart(2, "0");
 
+/** Formats a date as a zero-padded `HH:MM:SS UTC` wall-clock string. */
 export const formatUtcTime = (date: Date): string =>
   `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;
 
+/**
+ * Renders the time until (or since) a time of closest approach. Future TCAs
+ * count down as `Hh Mm`; past TCAs read as `PASSED …ago`, switching to days and
+ * hours once more than a day has elapsed. Accepts a `Date` or ISO string.
+ */
 export const formatDurationToTca = (tca: Date | string): string => {
   const tcaDate = tca instanceof Date ? tca : new Date(tca);
   const rawDiffMs = tcaDate.getTime() - Date.now();
@@ -23,7 +29,12 @@ export const formatDurationToTca = (tca: Date | string): string => {
   return `${hours}h ${minutes}m`;
 };
 
+/** Formats a collision probability in exponential notation with one fraction digit. */
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
+/**
+ * A conjunction is treated as critical when the collision probability is at
+ * least 0.005 or the miss distance is 250 m or less.
+ */
 export const isCriticalConjunction = (conjunction: ConjunctionWarning): boolean =>
   conjunction.probability >= 0.005 || conjunction.missDistanceM <= 250;

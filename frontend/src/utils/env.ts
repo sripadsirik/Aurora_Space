@@ -36,6 +36,10 @@ export const env = readEnv();
 
 const CESIUM_TOKEN_PLACEHOLDER = "your_cesium_ion_token_here";
 
+/**
+ * True when the given Cesium Ion token is usable: non-empty after trimming and
+ * not the `.env.example` placeholder value.
+ */
 export const hasValidCesiumIonToken = (token: string): boolean => {
   const normalized = token.trim();
   return normalized.length > 0 && normalized !== CESIUM_TOKEN_PLACEHOLDER;
