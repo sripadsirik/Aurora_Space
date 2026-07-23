@@ -20,3 +20,20 @@ export const kpToGScale = (kp: number): GScaleLevel => {
   if (kp >= 5) return "G1";
   return "G0";
 };
+
+/** CSS hex colour for each G-level, escalating from quiet green to extreme red. */
+const gScaleColorMap: Record<GScaleLevel, string> = {
+  G0: "#7dff6a",
+  G1: "#ffcc00",
+  G2: "#ff9900",
+  G3: "#ff6600",
+  G4: "#ff3300",
+  G5: "#ff0000"
+};
+
+/**
+ * Returns the CSS hex colour for a G-level. Unknown values (for example the
+ * literal "None") fall back to the quiet-conditions green.
+ */
+export const gScaleColor = (level: string): string =>
+  gScaleColorMap[level as GScaleLevel] ?? gScaleColorMap.G0;
