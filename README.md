@@ -271,7 +271,8 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 ## Frontend Tests
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
-pure utility modules (`format`, `env`, `colors`, `orbit`, `helio`) and the Zustand store.
+pure utility modules (`format`, `env`, `colors`, `orbit`, `helio`, `spaceWeatherScales`)
+and the Zustand store.
 
 ```powershell
 cd frontend
