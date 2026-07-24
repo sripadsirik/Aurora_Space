@@ -158,3 +158,22 @@ export interface RScaleInfo {
   /** One-line summary of the expected operational impact. */
   impact: string;
 }
+
+/**
+ * The five active NOAA radio blackout levels (R1-R5) with their severity codes
+ * and a concise impact summary each. Ordered from least to most severe.
+ */
+export const radioBlackoutScale: RScaleInfo[] = [
+  { level: "R1", code: 1, label: "Minor", impact: "Weak HF radio degradation on the sunlit side." },
+  { level: "R2", code: 2, label: "Moderate", impact: "Limited HF blackout, low-frequency navigation degraded." },
+  { level: "R3", code: 3, label: "Strong", impact: "Wide-area HF blackout for about an hour on the sunlit side." },
+  { level: "R4", code: 4, label: "Severe", impact: "HF blackout across most of the sunlit side for one to two hours." },
+  { level: "R5", code: 5, label: "Extreme", impact: "Complete HF blackout on the entire sunlit side for hours." }
+];
+
+const noBlackout: RScaleInfo = {
+  level: "R0",
+  code: 0,
+  label: "Quiet",
+  impact: "No significant radio blackout activity."
+};
