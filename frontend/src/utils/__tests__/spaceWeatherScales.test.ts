@@ -6,8 +6,13 @@ import {
   kpToGScale,
   kpToGScaleInfo,
   parseXrayFlux,
+  radioBlackoutScale,
+  rScaleColor,
+  rScaleInfo,
   xrayClassToRScale,
-  xrayFluxToRScale
+  xrayClassToRScaleInfo,
+  xrayFluxToRScale,
+  xrayFluxToRScaleInfo
 } from "../spaceWeatherScales";
 
 describe("kpToGScale", () => {
@@ -136,5 +141,22 @@ describe("xrayClassToRScale", () => {
 
   it("falls back to R0 for unparseable input", () => {
     expect(xrayClassToRScale("n/a")).toBe("R0");
+  });
+});
+
+describe("rScaleColor", () => {
+  it("returns a distinct colour for each active blackout level", () => {
+    const colors = new Set(radioBlackoutScale.map((entry) => rScaleColor(entry.level)));
+    expect(colors.size).toBe(radioBlackoutScale.length);
+  });
+
+  it("escalates from quiet green to extreme red", () => {
+    expect(rScaleColor("R0")).toBe("#7dff6a");
+    expect(rScaleColor("R5")).toBe("#ff0000");
+  });
+
+  it("falls back to quiet green for unknown levels", () => {
+    expect(rScaleColor("None")).toBe("#7dff6a");
+    expect(rScaleColor("")).toBe("#7dff6a");
   });
 });
