@@ -147,3 +147,14 @@ const rScaleColorMap: Record<RScaleLevel, string> = {
  */
 export const rScaleColor = (level: string): string =>
   rScaleColorMap[level as RScaleLevel] ?? rScaleColorMap.R0;
+
+/** Descriptive metadata for a single NOAA radio blackout level. */
+export interface RScaleInfo {
+  level: RScaleLevel;
+  /** NOAA numeric severity code (0 for quiet, 1-5 for R1-R5). */
+  code: number;
+  /** Short human label for the level. */
+  label: string;
+  /** One-line summary of the expected operational impact. */
+  impact: string;
+}
