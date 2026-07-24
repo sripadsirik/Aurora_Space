@@ -7,7 +7,12 @@ import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
-import { geomagneticStormScale, kpToGScaleInfo, xrayClassToRScale } from "../../utils/spaceWeatherScales";
+import {
+  geomagneticStormScale,
+  kpToGScaleInfo,
+  rScaleColor,
+  xrayClassToRScaleInfo
+} from "../../utils/spaceWeatherScales";
 
 interface PanelCardProps {
   title: string;
@@ -338,7 +343,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const spaceWeather = useAuroraStore((state) => state.spaceWeather);
   const closePanel = useAuroraStore((state) => state.closePanel);
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
-  const rLevel = xrayClassToRScale(spaceWeather.xrayFlux);
+  const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
   const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
   const auroraLatitude = Math.max(35, Math.min(90, 90 - spaceWeather.kpIndex * 5.5));
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
@@ -395,8 +400,10 @@ const SpaceWeatherPanel = (): JSX.Element => {
             <p className="text-lg">
               Class {spaceWeather.xrayFlux.charAt(0).toUpperCase()} ({spaceWeather.xrayFlux})
             </p>
-            {rLevel !== "R0" && (
-              <p className="text-[10px] text-[#ffaf5e]">Radio blackout {rLevel}</p>
+            {rInfo.level !== "R0" && (
+              <p className="text-[10px]" style={{ color: rScaleColor(rInfo.level) }}>
+                Radio blackout {rInfo.level} · {rInfo.label}
+              </p>
             )}
           </div>
         </div>
