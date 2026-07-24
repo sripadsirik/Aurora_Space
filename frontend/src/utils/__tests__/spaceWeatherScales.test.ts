@@ -6,8 +6,13 @@ import {
   kpToGScale,
   kpToGScaleInfo,
   parseXrayFlux,
+  radioBlackoutScale,
+  rScaleColor,
+  rScaleInfo,
   xrayClassToRScale,
-  xrayFluxToRScale
+  xrayClassToRScaleInfo,
+  xrayFluxToRScale,
+  xrayFluxToRScaleInfo
 } from "../spaceWeatherScales";
 
 describe("kpToGScale", () => {
@@ -124,17 +129,91 @@ describe("xrayFluxToRScale", () => {
     expect(xrayFluxToRScale(9e-6)).toBe("R0");
     expect(xrayFluxToRScale(0)).toBe("R0");
   });
+
+  it("steps down one level just below each threshold", () => {
+    expect(xrayFluxToRScale(4.9e-5)).toBe("R1");
+    expect(xrayFluxToRScale(9.9e-5)).toBe("R2");
+    expect(xrayFluxToRScale(9.9e-4)).toBe("R3");
+    expect(xrayFluxToRScale(1.9e-3)).toBe("R4");
+  });
 });
 
 describe("xrayClassToRScale", () => {
   it("resolves a class string straight to a radio blackout level", () => {
     expect(xrayClassToRScale("C2.4")).toBe("R0");
     expect(xrayClassToRScale("M1")).toBe("R1");
+    expect(xrayClassToRScale("M5")).toBe("R2");
+    expect(xrayClassToRScale("M9.9")).toBe("R2");
     expect(xrayClassToRScale("X1")).toBe("R3");
     expect(xrayClassToRScale("X20")).toBe("R5");
   });
 
   it("falls back to R0 for unparseable input", () => {
     expect(xrayClassToRScale("n/a")).toBe("R0");
+  });
+});
+
+describe("rScaleColor", () => {
+  it("returns a distinct colour for each active blackout level", () => {
+    const colors = new Set(radioBlackoutScale.map((entry) => rScaleColor(entry.level)));
+    expect(colors.size).toBe(radioBlackoutScale.length);
+  });
+
+  it("escalates from quiet green to extreme red", () => {
+    expect(rScaleColor("R0")).toBe("#7dff6a");
+    expect(rScaleColor("R5")).toBe("#ff0000");
+  });
+
+  it("falls back to quiet green for unknown levels", () => {
+    expect(rScaleColor("None")).toBe("#7dff6a");
+    expect(rScaleColor("")).toBe("#7dff6a");
+  });
+});
+
+describe("radioBlackoutScale", () => {
+  it("lists the five active levels in ascending severity", () => {
+    expect(radioBlackoutScale.map((entry) => entry.level)).toEqual([
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5"
+    ]);
+    const codes = radioBlackoutScale.map((entry) => entry.code);
+    expect(codes).toEqual([...codes].sort((a, b) => a - b));
+  });
+});
+
+describe("rScaleInfo", () => {
+  it("returns matching metadata for an active level", () => {
+    const info = rScaleInfo("R3");
+    expect(info.code).toBe(3);
+    expect(info.label).toBe("Strong");
+    expect(info.impact.length).toBeGreaterThan(0);
+  });
+
+  it("defaults to quiet conditions for unknown levels", () => {
+    const info = rScaleInfo("None");
+    expect(info.level).toBe("R0");
+    expect(info.code).toBe(0);
+  });
+});
+
+describe("xrayFluxToRScaleInfo", () => {
+  it("resolves a peak flux straight to its metadata", () => {
+    expect(xrayFluxToRScaleInfo(1e-4).level).toBe("R3");
+    expect(xrayFluxToRScaleInfo(9e-6).code).toBe(0);
+  });
+});
+
+describe("xrayClassToRScaleInfo", () => {
+  it("resolves a class string straight to its metadata", () => {
+    const info = xrayClassToRScaleInfo("X1");
+    expect(info.level).toBe("R3");
+    expect(info.label).toBe("Strong");
+  });
+
+  it("falls back to quiet conditions for unparseable input", () => {
+    expect(xrayClassToRScaleInfo("n/a").level).toBe("R0");
   });
 });

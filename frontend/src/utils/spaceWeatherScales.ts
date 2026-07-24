@@ -130,3 +130,65 @@ export const xrayClassToRScale = (flux: string): RScaleLevel => {
   const parsed = parseXrayFlux(flux);
   return parsed === null ? "R0" : xrayFluxToRScale(parsed);
 };
+
+/** CSS hex colour for each R-level, escalating from quiet green to extreme red. */
+const rScaleColorMap: Record<RScaleLevel, string> = {
+  R0: "#7dff6a",
+  R1: "#ffcc00",
+  R2: "#ff9900",
+  R3: "#ff6600",
+  R4: "#ff3300",
+  R5: "#ff0000"
+};
+
+/**
+ * Returns the CSS hex colour for an R-level. Unknown values (for example the
+ * literal "None") fall back to the quiet-conditions green.
+ */
+export const rScaleColor = (level: string): string =>
+  rScaleColorMap[level as RScaleLevel] ?? rScaleColorMap.R0;
+
+/** Descriptive metadata for a single NOAA radio blackout level. */
+export interface RScaleInfo {
+  level: RScaleLevel;
+  /** NOAA numeric severity code (0 for quiet, 1-5 for R1-R5). */
+  code: number;
+  /** Short human label for the level. */
+  label: string;
+  /** One-line summary of the expected operational impact. */
+  impact: string;
+}
+
+/**
+ * The five active NOAA radio blackout levels (R1-R5) with their severity codes
+ * and a concise impact summary each. Ordered from least to most severe.
+ */
+export const radioBlackoutScale: RScaleInfo[] = [
+  { level: "R1", code: 1, label: "Minor", impact: "Weak HF radio degradation on the sunlit side." },
+  { level: "R2", code: 2, label: "Moderate", impact: "Limited HF blackout, low-frequency navigation degraded." },
+  { level: "R3", code: 3, label: "Strong", impact: "Wide-area HF blackout for about an hour on the sunlit side." },
+  { level: "R4", code: 4, label: "Severe", impact: "HF blackout across most of the sunlit side for one to two hours." },
+  { level: "R5", code: 5, label: "Extreme", impact: "Complete HF blackout on the entire sunlit side for hours." }
+];
+
+const noBlackout: RScaleInfo = {
+  level: "R0",
+  code: 0,
+  label: "Quiet",
+  impact: "No significant radio blackout activity."
+};
+
+/** Looks up the full metadata for an R-level, defaulting to quiet conditions. */
+export const rScaleInfo = (level: string): RScaleInfo =>
+  radioBlackoutScale.find((entry) => entry.level === level) ?? noBlackout;
+
+/** Resolves a peak X-ray flux (W/m^2) straight to its full R-level metadata. */
+export const xrayFluxToRScaleInfo = (fluxWpm2: number): RScaleInfo =>
+  rScaleInfo(xrayFluxToRScale(fluxWpm2));
+
+/**
+ * Resolves an X-ray flux class string (for example "M5" or "X1.2") straight to
+ * its full R-level metadata. Unparseable strings fall back to quiet conditions.
+ */
+export const xrayClassToRScaleInfo = (flux: string): RScaleInfo =>
+  rScaleInfo(xrayClassToRScale(flux));

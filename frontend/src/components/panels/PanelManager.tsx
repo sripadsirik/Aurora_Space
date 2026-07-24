@@ -7,7 +7,13 @@ import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
-import { geomagneticStormScale, kpToGScaleInfo, xrayClassToRScale } from "../../utils/spaceWeatherScales";
+import {
+  geomagneticStormScale,
+  kpToGScaleInfo,
+  radioBlackoutScale,
+  rScaleColor,
+  xrayClassToRScaleInfo
+} from "../../utils/spaceWeatherScales";
 
 interface PanelCardProps {
   title: string;
@@ -338,7 +344,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const spaceWeather = useAuroraStore((state) => state.spaceWeather);
   const closePanel = useAuroraStore((state) => state.closePanel);
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
-  const rLevel = xrayClassToRScale(spaceWeather.xrayFlux);
+  const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
   const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
   const auroraLatitude = Math.max(35, Math.min(90, 90 - spaceWeather.kpIndex * 5.5));
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
@@ -395,8 +401,10 @@ const SpaceWeatherPanel = (): JSX.Element => {
             <p className="text-lg">
               Class {spaceWeather.xrayFlux.charAt(0).toUpperCase()} ({spaceWeather.xrayFlux})
             </p>
-            {rLevel !== "R0" && (
-              <p className="text-[10px] text-[#ffaf5e]">Radio blackout {rLevel}</p>
+            {rInfo.level !== "R0" && (
+              <p className="text-[10px]" style={{ color: rScaleColor(rInfo.level) }}>
+                Radio blackout {rInfo.level} · {rInfo.label}
+              </p>
             )}
           </div>
         </div>
@@ -410,6 +418,21 @@ const SpaceWeatherPanel = (): JSX.Element => {
             >
               <p className="text-[11px] text-white">
                 {row.level} {gLevel === row.code ? "(CURRENT)" : ""}
+              </p>
+              <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-1 border-t border-white/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">RADIO BLACKOUT LEVELS (NOAA)</p>
+          {radioBlackoutScale.map((row) => (
+            <div
+              key={row.level}
+              className={`rounded-sm border px-2 py-1 ${rInfo.code === row.code ? "border-[#00d4ff]/60 bg-[#0f2b46]/50" : "border-white/10"}`}
+            >
+              <p className="text-[11px] text-white">
+                {row.level} {rInfo.code === row.code ? "(CURRENT)" : ""}
               </p>
               <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
             </div>
