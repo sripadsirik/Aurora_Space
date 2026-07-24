@@ -142,6 +142,8 @@ describe("xrayClassToRScale", () => {
   it("resolves a class string straight to a radio blackout level", () => {
     expect(xrayClassToRScale("C2.4")).toBe("R0");
     expect(xrayClassToRScale("M1")).toBe("R1");
+    expect(xrayClassToRScale("M5")).toBe("R2");
+    expect(xrayClassToRScale("M9.9")).toBe("R2");
     expect(xrayClassToRScale("X1")).toBe("R3");
     expect(xrayClassToRScale("X20")).toBe("R5");
   });
