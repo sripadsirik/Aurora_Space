@@ -189,3 +189,22 @@ describe("rScaleInfo", () => {
     expect(info.code).toBe(0);
   });
 });
+
+describe("xrayFluxToRScaleInfo", () => {
+  it("resolves a peak flux straight to its metadata", () => {
+    expect(xrayFluxToRScaleInfo(1e-4).level).toBe("R3");
+    expect(xrayFluxToRScaleInfo(9e-6).code).toBe(0);
+  });
+});
+
+describe("xrayClassToRScaleInfo", () => {
+  it("resolves a class string straight to its metadata", () => {
+    const info = xrayClassToRScaleInfo("X1");
+    expect(info.level).toBe("R3");
+    expect(info.label).toBe("Strong");
+  });
+
+  it("falls back to quiet conditions for unparseable input", () => {
+    expect(xrayClassToRScaleInfo("n/a").level).toBe("R0");
+  });
+});
