@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
+import { kpToGScale } from "../../utils/spaceWeatherScales";
 
 export const StormOverlay = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -69,7 +70,7 @@ export const StormOverlay = (): JSX.Element | null => {
             animation: "storm-pulse 2s ease-in-out infinite"
           }}
         >
-          GEOMAGNETIC STORM ACTIVE - {stormLevel.toUpperCase()} - Kp {kp.toFixed(1)}
+          GEOMAGNETIC STORM ACTIVE - {stormLevel.toUpperCase()} ({kpToGScale(kp)}) - Kp {kp.toFixed(1)}
         </div>
       </div>
 
