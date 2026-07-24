@@ -129,6 +129,13 @@ describe("xrayFluxToRScale", () => {
     expect(xrayFluxToRScale(9e-6)).toBe("R0");
     expect(xrayFluxToRScale(0)).toBe("R0");
   });
+
+  it("steps down one level just below each threshold", () => {
+    expect(xrayFluxToRScale(4.9e-5)).toBe("R1");
+    expect(xrayFluxToRScale(9.9e-5)).toBe("R2");
+    expect(xrayFluxToRScale(9.9e-4)).toBe("R3");
+    expect(xrayFluxToRScale(1.9e-3)).toBe("R4");
+  });
 });
 
 describe("xrayClassToRScale", () => {
