@@ -45,6 +45,21 @@ Current backend split:
 | NOAA SWPC | Space weather feed | Yes |
 | Space-Track | Conjunction/CDM feed | Optional |
 
+## Space Weather Scales
+
+The Space Weather panel renders two of NOAA SWPC's
+[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), both derived
+in `frontend/src/utils/spaceWeatherScales.ts`:
+
+| Scale | Driver | Levels | Helpers |
+| --- | --- | --- | --- |
+| G (geomagnetic storm) | Planetary Kp index | G1–G5 | `kpToGScale`, `kpToGScaleInfo`, `gScaleColor` |
+| R (radio blackout) | Peak GOES X-ray flux | R1–R5 | `xrayClassToRScale`, `xrayClassToRScaleInfo`, `rScaleColor` |
+
+Both scales expose a metadata table (`geomagneticStormScale` / `radioBlackoutScale`) with a
+severity code, short label, and one-line operational impact, plus a colour map that escalates
+from quiet green to extreme red. `G0`/`R0` denote sub-storm quiet conditions.
+
 ## Repo Layout
 
 ```text
