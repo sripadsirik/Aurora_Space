@@ -185,3 +185,10 @@ export const rScaleInfo = (level: string): RScaleInfo =>
 /** Resolves a peak X-ray flux (W/m^2) straight to its full R-level metadata. */
 export const xrayFluxToRScaleInfo = (fluxWpm2: number): RScaleInfo =>
   rScaleInfo(xrayFluxToRScale(fluxWpm2));
+
+/**
+ * Resolves an X-ray flux class string (for example "M5" or "X1.2") straight to
+ * its full R-level metadata. Unparseable strings fall back to quiet conditions.
+ */
+export const xrayClassToRScaleInfo = (flux: string): RScaleInfo =>
+  rScaleInfo(xrayClassToRScale(flux));
