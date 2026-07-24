@@ -181,3 +181,7 @@ const noBlackout: RScaleInfo = {
 /** Looks up the full metadata for an R-level, defaulting to quiet conditions. */
 export const rScaleInfo = (level: string): RScaleInfo =>
   radioBlackoutScale.find((entry) => entry.level === level) ?? noBlackout;
+
+/** Resolves a peak X-ray flux (W/m^2) straight to its full R-level metadata. */
+export const xrayFluxToRScaleInfo = (fluxWpm2: number): RScaleInfo =>
+  rScaleInfo(xrayFluxToRScale(fluxWpm2));
