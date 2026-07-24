@@ -130,3 +130,20 @@ export const xrayClassToRScale = (flux: string): RScaleLevel => {
   const parsed = parseXrayFlux(flux);
   return parsed === null ? "R0" : xrayFluxToRScale(parsed);
 };
+
+/** CSS hex colour for each R-level, escalating from quiet green to extreme red. */
+const rScaleColorMap: Record<RScaleLevel, string> = {
+  R0: "#7dff6a",
+  R1: "#ffcc00",
+  R2: "#ff9900",
+  R3: "#ff6600",
+  R4: "#ff3300",
+  R5: "#ff0000"
+};
+
+/**
+ * Returns the CSS hex colour for an R-level. Unknown values (for example the
+ * literal "None") fall back to the quiet-conditions green.
+ */
+export const rScaleColor = (level: string): string =>
+  rScaleColorMap[level as RScaleLevel] ?? rScaleColorMap.R0;
