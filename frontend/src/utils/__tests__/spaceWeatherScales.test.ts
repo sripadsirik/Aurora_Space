@@ -160,3 +160,32 @@ describe("rScaleColor", () => {
     expect(rScaleColor("")).toBe("#7dff6a");
   });
 });
+
+describe("radioBlackoutScale", () => {
+  it("lists the five active levels in ascending severity", () => {
+    expect(radioBlackoutScale.map((entry) => entry.level)).toEqual([
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5"
+    ]);
+    const codes = radioBlackoutScale.map((entry) => entry.code);
+    expect(codes).toEqual([...codes].sort((a, b) => a - b));
+  });
+});
+
+describe("rScaleInfo", () => {
+  it("returns matching metadata for an active level", () => {
+    const info = rScaleInfo("R3");
+    expect(info.code).toBe(3);
+    expect(info.label).toBe("Strong");
+    expect(info.impact.length).toBeGreaterThan(0);
+  });
+
+  it("defaults to quiet conditions for unknown levels", () => {
+    const info = rScaleInfo("None");
+    expect(info.level).toBe("R0");
+    expect(info.code).toBe(0);
+  });
+});
