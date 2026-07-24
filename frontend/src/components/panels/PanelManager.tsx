@@ -10,6 +10,7 @@ import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
+  radioBlackoutScale,
   rScaleColor,
   xrayClassToRScaleInfo
 } from "../../utils/spaceWeatherScales";
@@ -417,6 +418,21 @@ const SpaceWeatherPanel = (): JSX.Element => {
             >
               <p className="text-[11px] text-white">
                 {row.level} {gLevel === row.code ? "(CURRENT)" : ""}
+              </p>
+              <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-1 border-t border-white/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">RADIO BLACKOUT LEVELS (NOAA)</p>
+          {radioBlackoutScale.map((row) => (
+            <div
+              key={row.level}
+              className={`rounded-sm border px-2 py-1 ${rInfo.code === row.code ? "border-[#00d4ff]/60 bg-[#0f2b46]/50" : "border-white/10"}`}
+            >
+              <p className="text-[11px] text-white">
+                {row.level} {rInfo.code === row.code ? "(CURRENT)" : ""}
               </p>
               <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
             </div>
