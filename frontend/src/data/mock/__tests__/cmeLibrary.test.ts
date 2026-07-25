@@ -7,4 +7,11 @@ describe("mockCMEs dataset", () => {
       expect(cme.id).toBe(index);
     });
   });
+
+  it("gives every CME a positive speed", () => {
+    for (const cme of mockCMEs) {
+      expect(cme.speed).toBeGreaterThan(0);
+    }
+  });
+
 });
