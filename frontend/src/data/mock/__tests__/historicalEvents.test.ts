@@ -20,4 +20,14 @@ describe("historicalEvents dataset", () => {
       expect(types.has(event.type)).toBe(true);
     }
   });
+
+  it("keeps any recorded Kp index within the 0-9 planetary range", () => {
+    for (const event of historicalEvents) {
+      if (event.kpIndex === undefined) {
+        continue;
+      }
+      expect(event.kpIndex).toBeGreaterThanOrEqual(0);
+      expect(event.kpIndex).toBeLessThanOrEqual(9);
+    }
+  });
 });
