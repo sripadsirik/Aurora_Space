@@ -8,4 +8,9 @@ describe("mockSpaceWeather snapshot", () => {
       expect(kp).toBeLessThanOrEqual(9);
     }
   });
+
+  it("reports a positive solar wind speed and density", () => {
+    expect(mockSpaceWeather.solarWindSpeed).toBeGreaterThan(0);
+    expect(mockSpaceWeather.solarWindDensity).toBeGreaterThan(0);
+  });
 });
