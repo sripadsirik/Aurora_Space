@@ -6,4 +6,10 @@ describe("mockConjunctions dataset", () => {
     const ids = mockConjunctions.map((conjunction) => conjunction.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("keeps the metre miss distance consistent with the kilometre value", () => {
+    for (const conjunction of mockConjunctions) {
+      expect(conjunction.missDistanceM).toBeCloseTo(conjunction.missDistanceKm * 1000, 3);
+    }
+  });
 });
