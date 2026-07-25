@@ -10,4 +10,13 @@ describe("mockSatellites dataset", () => {
     const ids = mockSatellites.map((satellite) => satellite.noradId);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("keeps every latitude and longitude within valid geographic bounds", () => {
+    for (const satellite of mockSatellites) {
+      expect(satellite.lat).toBeGreaterThanOrEqual(-90);
+      expect(satellite.lat).toBeLessThanOrEqual(90);
+      expect(satellite.lon).toBeGreaterThanOrEqual(-180);
+      expect(satellite.lon).toBeLessThanOrEqual(180);
+    }
+  });
 });
