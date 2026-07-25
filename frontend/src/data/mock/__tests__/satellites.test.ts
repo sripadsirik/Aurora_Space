@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockSatellites } from "../satellites";
+import { mockSatellites, satelliteRiskSummary } from "../satellites";
 
 describe("mockSatellites dataset", () => {
   it("contains exactly 150 satellites", () => {
@@ -60,5 +60,20 @@ describe("mockSatellites dataset", () => {
       expect(satellite.conjunctionCount).toBeGreaterThanOrEqual(min);
       expect(satellite.conjunctionCount).toBeLessThanOrEqual(max);
     }
+  });
+});
+
+describe("satelliteRiskSummary", () => {
+  it("counts each risk level to match the satellite list", () => {
+    const expected = { nominal: 0, watch: 0, warning: 0, critical: 0 };
+    for (const satellite of mockSatellites) {
+      expected[satellite.riskLevel] += 1;
+    }
+    expect(satelliteRiskSummary).toEqual(expected);
+  });
+
+  it("totals every satellite in the dataset", () => {
+    const total = Object.values(satelliteRiskSummary).reduce((sum, count) => sum + count, 0);
+    expect(total).toBe(mockSatellites.length);
   });
 });
