@@ -38,4 +38,13 @@ describe("mockSatellites dataset", () => {
       expect(satellite.velocityKms).toBeLessThanOrEqual(max);
     }
   });
+
+  it("only uses known orbit types and risk levels", () => {
+    const orbitTypes = new Set(["LEO", "MEO", "GEO"]);
+    const riskLevels = new Set(["nominal", "watch", "warning", "critical"]);
+    for (const satellite of mockSatellites) {
+      expect(orbitTypes.has(satellite.orbitType)).toBe(true);
+      expect(riskLevels.has(satellite.riskLevel)).toBe(true);
+    }
+  });
 });
