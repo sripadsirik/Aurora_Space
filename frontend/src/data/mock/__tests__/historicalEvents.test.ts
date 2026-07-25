@@ -13,4 +13,11 @@ describe("historicalEvents dataset", () => {
       expect(Number.isNaN(event.date.getTime())).toBe(false);
     }
   });
+
+  it("only uses known event types", () => {
+    const types = new Set(["solar_storm", "conjunction", "satellite_loss"]);
+    for (const event of historicalEvents) {
+      expect(types.has(event.type)).toBe(true);
+    }
+  });
 });
