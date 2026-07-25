@@ -20,4 +20,11 @@ describe("mockCMEs dataset", () => {
       expect(cme.confidence).toBeLessThanOrEqual(100);
     }
   });
+
+  it("only uses known impact statuses", () => {
+    const statuses = new Set(["DIRECT HIT", "GLANCING BLOW", "NO IMPACT — MISS"]);
+    for (const cme of mockCMEs) {
+      expect(statuses.has(cme.impactStatus)).toBe(true);
+    }
+  });
 });
