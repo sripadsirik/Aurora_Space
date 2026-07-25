@@ -27,4 +27,13 @@ describe("mockCMEs dataset", () => {
       expect(statuses.has(cme.impactStatus)).toBe(true);
     }
   });
+
+  it("carries an off-axis azimuth for every non-impacting CME", () => {
+    const misses = mockCMEs.filter((cme) => cme.impactStatus === "NO IMPACT — MISS");
+    expect(misses.length).toBeGreaterThan(0);
+    for (const cme of misses) {
+      expect(cme.azimuthFromEarth).toBeTypeOf("number");
+      expect(cme.note).toBeTypeOf("string");
+    }
+  });
 });
