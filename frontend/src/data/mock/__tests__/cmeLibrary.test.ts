@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { kpToGScale } from "../../../utils/spaceWeatherScales";
 import { mockCMEs } from "../cmeLibrary";
 
 describe("mockCMEs dataset", () => {
@@ -34,6 +35,14 @@ describe("mockCMEs dataset", () => {
     for (const cme of misses) {
       expect(cme.azimuthFromEarth).toBeTypeOf("number");
       expect(cme.note).toBeTypeOf("string");
+    }
+  });
+
+  it("labels impacting CMEs with the G-level implied by their predicted Kp", () => {
+    const impacting = mockCMEs.filter((cme) => cme.impactStatus !== "NO IMPACT — MISS");
+    expect(impacting.length).toBeGreaterThan(0);
+    for (const cme of impacting) {
+      expect(cme.stormLevel).toBe(kpToGScale(cme.predictedKp));
     }
   });
 });
