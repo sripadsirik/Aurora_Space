@@ -14,4 +14,10 @@ describe("mockCMEs dataset", () => {
     }
   });
 
+  it("keeps forecast confidence within a 0-100 percentage", () => {
+    for (const cme of mockCMEs) {
+      expect(cme.confidence).toBeGreaterThanOrEqual(0);
+      expect(cme.confidence).toBeLessThanOrEqual(100);
+    }
+  });
 });
