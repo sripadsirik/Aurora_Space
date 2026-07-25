@@ -12,4 +12,10 @@ describe("mockConjunctions dataset", () => {
       expect(conjunction.missDistanceM).toBeCloseTo(conjunction.missDistanceKm * 1000, 3);
     }
   });
+
+  it("mirrors the collision probability in both pc and probability fields", () => {
+    for (const conjunction of mockConjunctions) {
+      expect(conjunction.pc).toBe(conjunction.probability);
+    }
+  });
 });
