@@ -26,4 +26,16 @@ describe("mockSatellites dataset", () => {
     }
   });
 
+  it("keeps orbital velocity within the clamp band for each orbit type", () => {
+    const bounds: Record<string, [number, number]> = {
+      LEO: [7.2, 8.0],
+      MEO: [3.5, 4.5],
+      GEO: [2.95, 3.1]
+    };
+    for (const satellite of mockSatellites) {
+      const [min, max] = bounds[satellite.orbitType];
+      expect(satellite.velocityKms).toBeGreaterThanOrEqual(min);
+      expect(satellite.velocityKms).toBeLessThanOrEqual(max);
+    }
+  });
 });
