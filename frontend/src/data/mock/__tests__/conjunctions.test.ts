@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isCriticalConjunction } from "../../../utils/format";
 import { mockConjunctions } from "../conjunctions";
 
 describe("mockConjunctions dataset", () => {
@@ -16,6 +17,14 @@ describe("mockConjunctions dataset", () => {
   it("mirrors the collision probability in both pc and probability fields", () => {
     for (const conjunction of mockConjunctions) {
       expect(conjunction.pc).toBe(conjunction.probability);
+    }
+  });
+
+  it("classifies every critical-risk conjunction as critical", () => {
+    const critical = mockConjunctions.filter((conjunction) => conjunction.riskLevel === "critical");
+    expect(critical.length).toBeGreaterThan(0);
+    for (const conjunction of critical) {
+      expect(isCriticalConjunction(conjunction)).toBe(true);
     }
   });
 });
