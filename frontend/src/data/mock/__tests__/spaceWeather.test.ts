@@ -13,4 +13,9 @@ describe("mockSpaceWeather snapshot", () => {
     expect(mockSpaceWeather.solarWindSpeed).toBeGreaterThan(0);
     expect(mockSpaceWeather.solarWindDensity).toBeGreaterThan(0);
   });
+
+  it("uses a known storm level", () => {
+    const levels = new Set(["none", "minor", "moderate", "strong", "severe", "extreme"]);
+    expect(levels.has(mockSpaceWeather.stormLevel)).toBe(true);
+  });
 });
