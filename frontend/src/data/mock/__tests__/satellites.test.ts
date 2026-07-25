@@ -47,4 +47,18 @@ describe("mockSatellites dataset", () => {
       expect(riskLevels.has(satellite.riskLevel)).toBe(true);
     }
   });
+
+  it("keeps the conjunction count in the range implied by each risk level", () => {
+    const ranges: Record<string, [number, number]> = {
+      critical: [3, 3],
+      warning: [2, 3],
+      watch: [1, 2],
+      nominal: [0, 1]
+    };
+    for (const satellite of mockSatellites) {
+      const [min, max] = ranges[satellite.riskLevel];
+      expect(satellite.conjunctionCount).toBeGreaterThanOrEqual(min);
+      expect(satellite.conjunctionCount).toBeLessThanOrEqual(max);
+    }
+  });
 });
