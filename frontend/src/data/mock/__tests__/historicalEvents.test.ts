@@ -6,4 +6,11 @@ describe("historicalEvents dataset", () => {
     const ids = historicalEvents.map((event) => event.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("gives every event a valid date", () => {
+    for (const event of historicalEvents) {
+      expect(event.date).toBeInstanceOf(Date);
+      expect(Number.isNaN(event.date.getTime())).toBe(false);
+    }
+  });
 });
