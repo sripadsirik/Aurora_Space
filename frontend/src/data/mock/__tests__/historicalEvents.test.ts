@@ -30,4 +30,13 @@ describe("historicalEvents dataset", () => {
       expect(event.kpIndex).toBeLessThanOrEqual(9);
     }
   });
+
+  it("keeps any recorded solar wind speed positive", () => {
+    for (const event of historicalEvents) {
+      if (event.solarWindSpeed === undefined) {
+        continue;
+      }
+      expect(event.solarWindSpeed).toBeGreaterThan(0);
+    }
+  });
 });
