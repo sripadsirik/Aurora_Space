@@ -19,4 +19,11 @@ describe("mockSatellites dataset", () => {
       expect(satellite.lon).toBeLessThanOrEqual(180);
     }
   });
+
+  it("gives every satellite a positive altitude", () => {
+    for (const satellite of mockSatellites) {
+      expect(satellite.altitudeKm).toBeGreaterThan(0);
+    }
+  });
+
 });
