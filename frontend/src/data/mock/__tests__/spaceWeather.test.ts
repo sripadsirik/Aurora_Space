@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parseXrayFlux } from "../../../utils/spaceWeatherScales";
 import { mockSpaceWeather } from "../spaceWeather";
 
 describe("mockSpaceWeather snapshot", () => {
@@ -17,5 +18,11 @@ describe("mockSpaceWeather snapshot", () => {
   it("uses a known storm level", () => {
     const levels = new Set(["none", "minor", "moderate", "strong", "severe", "extreme"]);
     expect(levels.has(mockSpaceWeather.stormLevel)).toBe(true);
+  });
+
+  it("carries an X-ray flux class that parses to a positive flux", () => {
+    const flux = parseXrayFlux(mockSpaceWeather.xrayFlux);
+    expect(flux).not.toBeNull();
+    expect(flux as number).toBeGreaterThan(0);
   });
 });
