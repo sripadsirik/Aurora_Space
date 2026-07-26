@@ -6,7 +6,7 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
-import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
   geomagneticStormScale,
@@ -28,9 +28,6 @@ const ORBIT_LABELS: Record<Satellite["orbitType"], string> = {
   MEO: "2,000-35,786 km",
   GEO: "~35,786 km"
 };
-
-const GM_EARTH = 3.986e14;
-const EARTH_RADIUS_METERS = 6_378_137;
 
 const riskBadgeClass = (label: "LOW" | "MEDIUM" | "HIGH"): string => {
   if (label === "HIGH") {
@@ -103,11 +100,8 @@ const getStatusClass = (status: SourceDiagnostic["status"]): string => {
 const findConjunctionPeerName = (satellite: Satellite, conjunction: Conjunction): string =>
   conjunction.object1.noradId === satellite.noradId ? conjunction.object2.name : conjunction.object1.name;
 
-const getOrbitPeriodMinutes = (altitudeKm: number): number => {
-  const radius = EARTH_RADIUS_METERS + altitudeKm * 1000;
-  const periodSeconds = 2 * Math.PI * Math.sqrt((radius ** 3) / GM_EARTH);
-  return periodSeconds / 60;
-};
+const getOrbitPeriodMinutes = (altitudeKm: number): number =>
+  getOrbitalPeriod(earthRadiusMeters + altitudeKm * 1000) / 60;
 
 const PanelCard = ({ title, closeLabel, onClose, children }: PanelCardProps): JSX.Element => (
   <section className="aurora-slide-panel pointer-events-auto flex min-h-[180px] w-full flex-col overflow-hidden">
