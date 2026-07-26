@@ -7,6 +7,7 @@ import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
   geomagneticStormScale,
@@ -80,15 +81,6 @@ const toCountdown = (target: Date | string): string => {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-};
-
-const normalizeProbability = (probability: number): number => {
-  if (probability <= 0) {
-    return 0;
-  }
-
-  const normalized = (Math.log10(probability) + 6) / 3;
-  return Math.max(0, Math.min(1, normalized));
 };
 
 const getStatusClass = (status: SourceDiagnostic["status"]): string => {
