@@ -6,7 +6,9 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
-import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { normalizeProbability } from "../../utils/probability";
+import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
@@ -28,9 +30,6 @@ const ORBIT_LABELS: Record<Satellite["orbitType"], string> = {
   GEO: "~35,786 km"
 };
 
-const GM_EARTH = 3.986e14;
-const EARTH_RADIUS_METERS = 6_378_137;
-
 const riskBadgeClass = (label: "LOW" | "MEDIUM" | "HIGH"): string => {
   if (label === "HIGH") {
     return "border-[#ff5a5a] bg-[#5c1515]/60 text-[#ff7f7f]";
@@ -41,36 +40,6 @@ const riskBadgeClass = (label: "LOW" | "MEDIUM" | "HIGH"): string => {
   }
 
   return "border-[#4ecf8f] bg-[#113d2a]/60 text-[#72e3ab]";
-};
-
-const getSpaceWeatherImpact = (satellite: Satellite, kpIndex: number): { label: "LOW" | "MEDIUM" | "HIGH"; description: string } => {
-  if (satellite.orbitType === "LEO") {
-    if (kpIndex >= 6) {
-      return { label: "HIGH", description: "Elevated atmospheric drag and orbital decay risk." };
-    }
-    if (kpIndex >= 4.5) {
-      return { label: "MEDIUM", description: "Moderate drag increase from thermospheric heating." };
-    }
-    return { label: "LOW", description: "Low drag variability expected for current geomagnetic conditions." };
-  }
-
-  if (satellite.orbitType === "GEO") {
-    if (kpIndex >= 7) {
-      return { label: "HIGH", description: "High charging risk from geomagnetic disturbance." };
-    }
-    if (kpIndex >= 5) {
-      return { label: "MEDIUM", description: "Moderate surface charging risk." };
-    }
-    return { label: "LOW", description: "Charging environment remains relatively stable." };
-  }
-
-  if (kpIndex >= 6.5) {
-    return { label: "HIGH", description: "Increased radiation environment at MEO altitude." };
-  }
-  if (kpIndex >= 4.5) {
-    return { label: "MEDIUM", description: "Some increased radiation noise possible." };
-  }
-  return { label: "LOW", description: "Nominal environmental impact expected." };
 };
 
 const getConjunctionAction = (probability: number): { label: string; className: string } => {
@@ -114,15 +83,6 @@ const toCountdown = (target: Date | string): string => {
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const normalizeProbability = (probability: number): number => {
-  if (probability <= 0) {
-    return 0;
-  }
-
-  const normalized = (Math.log10(probability) + 6) / 3;
-  return Math.max(0, Math.min(1, normalized));
-};
-
 const getStatusClass = (status: SourceDiagnostic["status"]): string => {
   if (status === "ERROR") return "text-[#ff7d7d]";
   if (status === "STALE") return "text-[#ffcd73]";
@@ -132,11 +92,8 @@ const getStatusClass = (status: SourceDiagnostic["status"]): string => {
 const findConjunctionPeerName = (satellite: Satellite, conjunction: Conjunction): string =>
   conjunction.object1.noradId === satellite.noradId ? conjunction.object2.name : conjunction.object1.name;
 
-const getOrbitPeriodMinutes = (altitudeKm: number): number => {
-  const radius = EARTH_RADIUS_METERS + altitudeKm * 1000;
-  const periodSeconds = 2 * Math.PI * Math.sqrt((radius ** 3) / GM_EARTH);
-  return periodSeconds / 60;
-};
+const getOrbitPeriodMinutes = (altitudeKm: number): number =>
+  getOrbitalPeriod(earthRadiusMeters + altitudeKm * 1000) / 60;
 
 const PanelCard = ({ title, closeLabel, onClose, children }: PanelCardProps): JSX.Element => (
   <section className="aurora-slide-panel pointer-events-auto flex min-h-[180px] w-full flex-col overflow-hidden">

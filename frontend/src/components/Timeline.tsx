@@ -3,27 +3,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { historicalEvents } from "../data/mock/historicalEvents";
 import { useAuroraStore } from "../store/auroraStore";
 import type { HistoricalEvent } from "../types/space";
+import {
+  dateToFraction as dateToFractionInWindow,
+  formatTimelineDate,
+  fractionToDate as fractionToDateInWindow
+} from "../utils/timelineScale";
 
 const TIMELINE_START = new Date("2003-01-01T00:00:00Z");
 const TIMELINE_END = new Date();
 
-const dateToFraction = (date: Date): number => {
-  const total = TIMELINE_END.getTime() - TIMELINE_START.getTime();
-  const offset = date.getTime() - TIMELINE_START.getTime();
-  return Math.max(0, Math.min(1, offset / total));
-};
+const dateToFraction = (date: Date): number => dateToFractionInWindow(date, TIMELINE_START, TIMELINE_END);
 
-const fractionToDate = (fraction: number): Date => {
-  const total = TIMELINE_END.getTime() - TIMELINE_START.getTime();
-  return new Date(TIMELINE_START.getTime() + fraction * total);
-};
-
-const formatTimelineDate = (date: Date): string => {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
+const fractionToDate = (fraction: number): Date => fractionToDateInWindow(fraction, TIMELINE_START, TIMELINE_END);
 
 const getMarkerColor = (event: HistoricalEvent): string => {
   if (event.type === "solar_storm") return "#ff6622";
