@@ -2,6 +2,8 @@ import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getKpColor } from "../utils/colors";
+import { describeFeedFreshness } from "../utils/feedFreshness";
+import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
 
 interface HUDProps {
@@ -10,8 +12,6 @@ interface HUDProps {
   spaceWeather: SpaceWeather;
 }
 
-type FreshnessStatus = "live" | "stale" | "error";
-
 interface LayerRow {
   name: string;
   source: string;
@@ -19,22 +19,6 @@ interface LayerRow {
   count: number;
   status: FreshnessStatus;
 }
-
-const getFeedFreshness = (lastUpdated: Date | null, now: Date): { label: string; status: FreshnessStatus } => {
-  try {
-    if (!lastUpdated) return { label: "NO DATA", status: "error" };
-    const d = lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated as unknown as string);
-    if (isNaN(d.getTime())) return { label: "unknown", status: "error" };
-    const ageMs = now.getTime() - d.getTime();
-    const ageMinutes = ageMs / 60_000;
-    if (ageMinutes > 15) return { label: `${Math.round(ageMinutes)}m ago`, status: "error" };
-    if (ageMinutes > 5) return { label: `${Math.round(ageMinutes)}m ago`, status: "stale" };
-    if (ageMs < 60_000) return { label: `${Math.round(ageMs / 1000)}s ago`, status: "live" };
-    return { label: `${Math.round(ageMinutes)}m ago`, status: "live" };
-  } catch {
-    return { label: "unknown", status: "error" };
-  }
-};
 
 export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element | null => {
   const now = useUtcClock();
@@ -59,9 +43,9 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   const accentColor = isIntel ? "#ff6600" : isStorm ? "#ff8844" : "var(--aurora-accent)";
   const subTextColor = isIntel ? "#cccccc" : isStorm ? "#ffccaa" : "#cde4f6";
 
-  const satFresh = getFeedFreshness(feedLastUpdated.satellites, now);
-  const conjFresh = getFeedFreshness(feedLastUpdated.conjunctions, now);
-  const wxFresh = getFeedFreshness(feedLastUpdated.spaceWeather, now);
+  const satFresh = describeFeedFreshness(feedLastUpdated.satellites, now);
+  const conjFresh = describeFeedFreshness(feedLastUpdated.conjunctions, now);
+  const wxFresh = describeFeedFreshness(feedLastUpdated.spaceWeather, now);
 
   const layers: LayerRow[] = [
     {
