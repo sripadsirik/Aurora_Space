@@ -7,6 +7,7 @@ import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space
 import { getKpColor } from "../../utils/colors";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
@@ -41,36 +42,6 @@ const riskBadgeClass = (label: "LOW" | "MEDIUM" | "HIGH"): string => {
   }
 
   return "border-[#4ecf8f] bg-[#113d2a]/60 text-[#72e3ab]";
-};
-
-const getSpaceWeatherImpact = (satellite: Satellite, kpIndex: number): { label: "LOW" | "MEDIUM" | "HIGH"; description: string } => {
-  if (satellite.orbitType === "LEO") {
-    if (kpIndex >= 6) {
-      return { label: "HIGH", description: "Elevated atmospheric drag and orbital decay risk." };
-    }
-    if (kpIndex >= 4.5) {
-      return { label: "MEDIUM", description: "Moderate drag increase from thermospheric heating." };
-    }
-    return { label: "LOW", description: "Low drag variability expected for current geomagnetic conditions." };
-  }
-
-  if (satellite.orbitType === "GEO") {
-    if (kpIndex >= 7) {
-      return { label: "HIGH", description: "High charging risk from geomagnetic disturbance." };
-    }
-    if (kpIndex >= 5) {
-      return { label: "MEDIUM", description: "Moderate surface charging risk." };
-    }
-    return { label: "LOW", description: "Charging environment remains relatively stable." };
-  }
-
-  if (kpIndex >= 6.5) {
-    return { label: "HIGH", description: "Increased radiation environment at MEO altitude." };
-  }
-  if (kpIndex >= 4.5) {
-    return { label: "MEDIUM", description: "Some increased radiation noise possible." };
-  }
-  return { label: "LOW", description: "Nominal environmental impact expected." };
 };
 
 const getConjunctionAction = (probability: number): { label: string; className: string } => {
