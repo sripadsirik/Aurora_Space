@@ -3,45 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
-
-interface ImpactRow {
-  system: string;
-  status: string;
-  color: string;
-}
-
-const getImpacts = (kp: number): ImpactRow[] => {
-  if (kp > 8) {
-    return [
-      { system: "HF Radio", status: "BLACKOUT — R4", color: "#ff2a2a" },
-      { system: "GPS Accuracy", status: "DEGRADED ±15m", color: "#ff6600" },
-      { system: "Power Grids", status: "ELEVATED RISK — High latitudes", color: "#ffcc00" },
-      { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff6600" }
-    ];
-  }
-  if (kp >= 7) {
-    return [
-      { system: "HF Radio", status: "BLACKOUT — R3", color: "#ff6600" },
-      { system: "GPS Accuracy", status: "DEGRADED ±8m", color: "#ff8b38" },
-      { system: "Power Grids", status: "ELEVATED RISK — Northern regions", color: "#ffcc00" },
-      { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff8b38" }
-    ];
-  }
-  if (kp >= 5) {
-    return [
-      { system: "HF Radio", status: "MINOR DEGRADATION — R1", color: "#ffcc00" },
-      { system: "GPS Accuracy", status: "SLIGHT DEGRADATION ±3m", color: "#ffcc00" },
-      { system: "Power Grids", status: "NOMINAL", color: "#7dff6a" },
-      { system: "Aviation", status: "MONITORING", color: "#ffcc00" }
-    ];
-  }
-  return [
-    { system: "HF Radio", status: "NOMINAL", color: "#7dff6a" },
-    { system: "GPS Accuracy", status: "NOMINAL", color: "#7dff6a" },
-    { system: "Power Grids", status: "NOMINAL", color: "#7dff6a" },
-    { system: "Aviation", status: "NOMINAL", color: "#7dff6a" }
-  ];
-};
+import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 
 const mockKpHistory = [
   2.3, 2.1, 2.5, 2.8, 3.0, 3.2, 3.1, 2.9,
@@ -75,7 +37,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
 
   const gLevel = kpToGScale(kp);
   const gColor = gScaleColor(gLevel);
-  const impacts = getImpacts(kp);
+  const impacts = getStormSystemImpacts(kp);
 
   // KP Sparkline
   const sparklineWidth = 240;
