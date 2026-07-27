@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { getOrbitalPeriodMinutes, getRevolutionsPerDay } from "../orbitSummary";
+import {
+  getGroundTrackShiftDegrees,
+  getOrbitalPeriodMinutes,
+  getRevolutionsPerDay
+} from "../orbitSummary";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -53,5 +57,25 @@ describe("getRevolutionsPerDay", () => {
     const satellite = makeSatellite({ altitudeKm: 800 });
     const periodDays = getOrbitalPeriodMinutes(satellite) / (60 * 24);
     expect(getRevolutionsPerDay(satellite)).toBeCloseTo(1 / periodDays, 6);
+  });
+});
+
+describe("getGroundTrackShiftDegrees", () => {
+  it("shifts a geostationary track by close to a full 360 degrees per orbit", () => {
+    const shift = getGroundTrackShiftDegrees(makeSatellite({ altitudeKm: 35_786, orbitType: "GEO" }));
+    expect(shift).toBeGreaterThan(350);
+    expect(shift).toBeLessThan(370);
+  });
+
+  it("shifts a low Earth orbit track by roughly 22-24 degrees per orbit", () => {
+    const shift = getGroundTrackShiftDegrees(makeSatellite({ altitudeKm: 420 }));
+    expect(shift).toBeGreaterThan(22);
+    expect(shift).toBeLessThan(24);
+  });
+
+  it("scales with the revolutions-per-day figure to cover 360 degrees per day", () => {
+    const satellite = makeSatellite({ altitudeKm: 550 });
+    const perDay = getGroundTrackShiftDegrees(satellite) * getRevolutionsPerDay(satellite);
+    expect(perDay).toBeCloseTo(360, 6);
   });
 });
