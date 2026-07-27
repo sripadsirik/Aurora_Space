@@ -1,5 +1,5 @@
 import type { OrbitType, Satellite } from "../types/space";
-import { getOrbitParams, getOrbitalPeriod } from "./orbit";
+import { circularOrbitalVelocityKms, getOrbitParams, getOrbitalPeriod } from "./orbit";
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -63,3 +63,30 @@ const orbitRegimes: Record<OrbitType, OrbitRegimeInfo> = {
 
 /** Returns the descriptive metadata for an orbit regime. */
 export const describeOrbitRegime = (type: OrbitType): OrbitRegimeInfo => orbitRegimes[type];
+
+/** Derived orbital characteristics for a single satellite. */
+export interface OrbitSummary {
+  periodMinutes: number;
+  revolutionsPerDay: number;
+  groundTrackShiftDegrees: number;
+  velocityKms: number;
+  regime: OrbitRegimeInfo;
+}
+
+/**
+ * Bundles the derived orbital figures for a satellite into a single summary:
+ * period, revolutions per day, ground-track shift, circular orbital speed, and
+ * regime metadata. All values come from the same deterministic orbit radius so
+ * they stay mutually consistent.
+ */
+export const summarizeOrbit = (satellite: Satellite): OrbitSummary => {
+  const { radius } = getOrbitParams(satellite);
+  const periodSeconds = getOrbitalPeriod(radius);
+  return {
+    periodMinutes: periodSeconds / 60,
+    revolutionsPerDay: SECONDS_PER_DAY / periodSeconds,
+    groundTrackShiftDegrees: (periodSeconds / SECONDS_PER_DAY) * 360,
+    velocityKms: circularOrbitalVelocityKms(radius),
+    regime: describeOrbitRegime(satellite.orbitType)
+  };
+};
