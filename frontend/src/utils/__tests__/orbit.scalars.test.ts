@@ -2,6 +2,7 @@ import { Ellipsoid } from "cesium";
 import { describe, expect, it } from "vitest";
 import {
   auroraRadiusMeters,
+  circularOrbitalVelocityKms,
   earthRadiusMeters,
   getOrbitalPeriod,
   kpToAuroraRadiusDegrees
@@ -23,6 +24,24 @@ describe("getOrbitalPeriod", () => {
 
   it("increases monotonically with orbital radius", () => {
     expect(getOrbitalPeriod(8_000_000)).toBeGreaterThan(getOrbitalPeriod(7_000_000));
+  });
+});
+
+describe("circularOrbitalVelocityKms", () => {
+  it("matches the ~7.66 km/s speed of a low Earth orbit", () => {
+    const speed = circularOrbitalVelocityKms(earthRadiusMeters + 420_000);
+    expect(speed).toBeGreaterThan(7.5);
+    expect(speed).toBeLessThan(7.8);
+  });
+
+  it("matches the ~3.07 km/s speed of a geostationary orbit", () => {
+    const speed = circularOrbitalVelocityKms(42_164_000);
+    expect(speed).toBeGreaterThan(3.0);
+    expect(speed).toBeLessThan(3.15);
+  });
+
+  it("decreases as orbital radius grows", () => {
+    expect(circularOrbitalVelocityKms(8_000_000)).toBeLessThan(circularOrbitalVelocityKms(7_000_000));
   });
 });
 
