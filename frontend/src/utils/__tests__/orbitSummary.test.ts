@@ -5,7 +5,8 @@ import {
   describeOrbitRegime,
   getGroundTrackShiftDegrees,
   getOrbitalPeriodMinutes,
-  getRevolutionsPerDay
+  getRevolutionsPerDay,
+  summarizeOrbit
 } from "../orbitSummary";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -102,5 +103,26 @@ describe("describeOrbitRegime", () => {
       expect(info.altitudeBand.length).toBeGreaterThan(0);
       expect(info.note.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("summarizeOrbit", () => {
+  it("agrees with the individual derivation helpers", () => {
+    const satellite = makeSatellite({ altitudeKm: 700 });
+    const summary = summarizeOrbit(satellite);
+    expect(summary.periodMinutes).toBeCloseTo(getOrbitalPeriodMinutes(satellite), 6);
+    expect(summary.revolutionsPerDay).toBeCloseTo(getRevolutionsPerDay(satellite), 6);
+    expect(summary.groundTrackShiftDegrees).toBeCloseTo(getGroundTrackShiftDegrees(satellite), 6);
+  });
+
+  it("carries the regime metadata for the satellite's orbit type", () => {
+    const summary = summarizeOrbit(makeSatellite({ orbitType: "MEO", altitudeKm: 20_200 }));
+    expect(summary.regime).toEqual(describeOrbitRegime("MEO"));
+  });
+
+  it("reports a positive circular orbital velocity", () => {
+    const summary = summarizeOrbit(makeSatellite({ altitudeKm: 420 }));
+    expect(summary.velocityKms).toBeGreaterThan(7);
+    expect(summary.velocityKms).toBeLessThan(8);
   });
 });
