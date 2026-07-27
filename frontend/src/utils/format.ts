@@ -34,7 +34,7 @@ export const formatProbability = (probability: number): string => probability.to
 
 /**
  * Formats an orbital period given in minutes as a compact wall-clock string.
- * Periods under an hour read as whole minutes (for example `92m`); longer
+ * Periods under an hour read as whole minutes (for example `45m`); longer
  * periods read as hours and minutes (for example `23h 56m`). Negative inputs
  * are clamped to zero.
  */
