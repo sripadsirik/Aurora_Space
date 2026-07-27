@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
+import type { OrbitType } from "../../types/space";
 import {
+  describeOrbitRegime,
   getGroundTrackShiftDegrees,
   getOrbitalPeriodMinutes,
   getRevolutionsPerDay
@@ -77,5 +79,28 @@ describe("getGroundTrackShiftDegrees", () => {
     const satellite = makeSatellite({ altitudeKm: 550 });
     const perDay = getGroundTrackShiftDegrees(satellite) * getRevolutionsPerDay(satellite);
     expect(perDay).toBeCloseTo(360, 6);
+  });
+});
+
+describe("describeOrbitRegime", () => {
+  it("returns metadata whose type matches the requested regime", () => {
+    const types: OrbitType[] = ["LEO", "MEO", "GEO"];
+    for (const type of types) {
+      expect(describeOrbitRegime(type).type).toBe(type);
+    }
+  });
+
+  it("expands each regime abbreviation into a full label", () => {
+    expect(describeOrbitRegime("LEO").label).toBe("Low Earth Orbit");
+    expect(describeOrbitRegime("MEO").label).toBe("Medium Earth Orbit");
+    expect(describeOrbitRegime("GEO").label).toBe("Geostationary Orbit");
+  });
+
+  it("provides a non-empty altitude band and usage note for each regime", () => {
+    for (const type of ["LEO", "MEO", "GEO"] as OrbitType[]) {
+      const info = describeOrbitRegime(type);
+      expect(info.altitudeBand.length).toBeGreaterThan(0);
+      expect(info.note.length).toBeGreaterThan(0);
+    }
   });
 });
