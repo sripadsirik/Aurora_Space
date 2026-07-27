@@ -60,6 +60,25 @@ Both scales expose a metadata table (`geomagneticStormScale` / `radioBlackoutSca
 severity code, short label, and one-line operational impact, plus a colour map that escalates
 from quiet green to extreme red. `G0`/`R0` denote sub-storm quiet conditions.
 
+## Orbit Summary
+
+Derived orbital characteristics for a satellite come from the pure helpers in
+`frontend/src/utils/orbitSummary.ts`, which build on the orbital-mechanics primitives in
+`frontend/src/utils/orbit.ts`:
+
+| Helper | Returns |
+| --- | --- |
+| `getOrbitalPeriodMinutes` | Orbital period in minutes |
+| `getRevolutionsPerDay` | Revolutions completed per 24-hour solar day (mean motion) |
+| `getGroundTrackShiftDegrees` | Westward ground-track longitude shift per orbit |
+| `describeOrbitRegime` | Regime label, altitude band, and usage note for LEO/MEO/GEO |
+| `summarizeOrbit` | All of the above plus circular orbital velocity in one struct |
+
+Circular orbital speed comes from `circularOrbitalVelocityKms` in `orbit.ts` (the vis-viva
+relation `v = sqrt(mu / r)`), and `formatOrbitalPeriod` in `frontend/src/utils/format.ts`
+renders a period in minutes as a compact `Hh Mm` (or bare `Mm`) string. All values are derived
+from the same deterministic orbit radius so they stay mutually consistent.
+
 ## Repo Layout
 
 ```text
@@ -286,9 +305,10 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 ## Frontend Tests
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
-pure utility modules (`format`, `env`, `colors`, `orbit`, `helio`, `spaceWeatherScales`),
-the Zustand store, and the mock datasets under `src/data/mock/` (satellite catalog,
-conjunctions, CME library, historical events, and the space weather snapshot).
+pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `helio`,
+`spaceWeatherScales`), the Zustand store, and the mock datasets under `src/data/mock/`
+(satellite catalog, conjunctions, CME library, historical events, and the space weather
+snapshot).
 
 ```powershell
 cd frontend

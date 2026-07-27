@@ -33,6 +33,20 @@ export const formatDurationToTca = (tca: Date | string): string => {
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
 /**
+ * Formats an orbital period given in minutes as a compact wall-clock string.
+ * Periods under an hour read as whole minutes (for example `45m`); longer
+ * periods read as hours and minutes (for example `23h 56m`). Negative inputs
+ * are clamped to zero.
+ */
+export const formatOrbitalPeriod = (periodMinutes: number): string => {
+  const totalMinutes = Math.max(0, Math.round(periodMinutes));
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+};
+
+/**
  * A conjunction is treated as critical when the collision probability is at
  * least 0.005 or the miss distance is 250 m or less.
  */

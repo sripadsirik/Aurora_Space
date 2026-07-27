@@ -33,6 +33,13 @@ export const getOrbitalPeriod = (radiusMeters: number): number =>
   2 * Math.PI * Math.sqrt((radiusMeters ** 3) / MU_EARTH);
 
 /**
+ * Circular orbital speed in km/s for a given orbit radius, from the vis-viva
+ * relation `v = sqrt(mu / r)`. Faster orbits sit at smaller radii.
+ */
+export const circularOrbitalVelocityKms = (radiusMeters: number): number =>
+  Math.sqrt(MU_EARTH / radiusMeters) / 1000;
+
+/**
  * Computes the ECEF-style position of a point at true anomaly `theta` on a
  * circular orbit with the given radius, inclination, and ascending node.
  */
