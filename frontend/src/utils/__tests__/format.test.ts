@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   formatDurationToTca,
+  formatOrbitalPeriod,
   formatProbability,
   formatUtcTime,
   isCriticalConjunction
@@ -57,6 +58,29 @@ describe("isCriticalConjunction", () => {
 
   it("returns false for nominal conjunctions", () => {
     expect(isCriticalConjunction(makeConjunction({ probability: 0.001, missDistanceM: 5000 }))).toBe(false);
+  });
+});
+
+describe("formatOrbitalPeriod", () => {
+  it("renders a sub-hour period in whole minutes", () => {
+    expect(formatOrbitalPeriod(45)).toBe("45m");
+  });
+
+  it("renders an hour-plus low Earth orbit period as hours and minutes", () => {
+    expect(formatOrbitalPeriod(92)).toBe("1h 32m");
+  });
+
+  it("renders a geostationary period as hours and minutes", () => {
+    expect(formatOrbitalPeriod(1436)).toBe("23h 56m");
+  });
+
+  it("rounds fractional minutes to the nearest minute", () => {
+    expect(formatOrbitalPeriod(59.4)).toBe("59m");
+    expect(formatOrbitalPeriod(59.6)).toBe("1h 0m");
+  });
+
+  it("clamps negative inputs to zero", () => {
+    expect(formatOrbitalPeriod(-5)).toBe("0m");
   });
 });
 
