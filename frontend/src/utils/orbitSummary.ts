@@ -17,3 +17,14 @@ export const getOrbitalPeriodMinutes = (satellite: Satellite): number =>
  */
 export const getRevolutionsPerDay = (satellite: Satellite): number =>
   SECONDS_PER_DAY / getOrbitalPeriod(getOrbitParams(satellite).radius);
+
+/**
+ * Westward longitude shift of a satellite's ground track between successive
+ * ascending passes, in degrees. Over one orbital period the Earth rotates
+ * `period / day * 360` degrees beneath the orbit, so faster (lower) orbits
+ * shift their track further west each revolution.
+ */
+export const getGroundTrackShiftDegrees = (satellite: Satellite): number => {
+  const periodSeconds = getOrbitalPeriod(getOrbitParams(satellite).radius);
+  return (periodSeconds / SECONDS_PER_DAY) * 360;
+};
