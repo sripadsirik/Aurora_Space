@@ -1,4 +1,4 @@
-import type { Satellite } from "../types/space";
+import type { OrbitType, Satellite } from "../types/space";
 import { getOrbitParams, getOrbitalPeriod } from "./orbit";
 
 const SECONDS_PER_DAY = 86_400;
@@ -28,3 +28,38 @@ export const getGroundTrackShiftDegrees = (satellite: Satellite): number => {
   const periodSeconds = getOrbitalPeriod(getOrbitParams(satellite).radius);
   return (periodSeconds / SECONDS_PER_DAY) * 360;
 };
+
+/** Descriptive metadata for an orbit regime (LEO / MEO / GEO). */
+export interface OrbitRegimeInfo {
+  type: OrbitType;
+  /** Expanded name of the regime. */
+  label: string;
+  /** Typical altitude band for the regime. */
+  altitudeBand: string;
+  /** One-line note on how the regime is commonly used. */
+  note: string;
+}
+
+const orbitRegimes: Record<OrbitType, OrbitRegimeInfo> = {
+  LEO: {
+    type: "LEO",
+    label: "Low Earth Orbit",
+    altitudeBand: "160-2000 km",
+    note: "Earth observation, imaging, and crewed stations with short periods."
+  },
+  MEO: {
+    type: "MEO",
+    label: "Medium Earth Orbit",
+    altitudeBand: "2000-35786 km",
+    note: "Navigation constellations such as GPS and Galileo."
+  },
+  GEO: {
+    type: "GEO",
+    label: "Geostationary Orbit",
+    altitudeBand: "~35786 km",
+    note: "Communications and weather satellites fixed over one longitude."
+  }
+};
+
+/** Returns the descriptive metadata for an orbit regime. */
+export const describeOrbitRegime = (type: OrbitType): OrbitRegimeInfo => orbitRegimes[type];
