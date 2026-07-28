@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
+import { classifyConjunctionRisk, sortConjunctionsByProbabilityDesc } from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatProbability } from "../../utils/format";
 
 interface AltitudeBand {
@@ -60,7 +60,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
 
   if (currentMode !== "INTEL") return null;
 
-  const sorted = [...conjunctions].sort((a, b) => b.probability - a.probability);
+  const sorted = sortConjunctionsByProbabilityDesc(conjunctions);
 
   return (
     <div
