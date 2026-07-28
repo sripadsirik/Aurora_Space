@@ -1,5 +1,6 @@
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
+import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatProbability } from "../../utils/format";
 
 export const ActiveConjunctionsPanel = (): JSX.Element | null => {
@@ -38,9 +39,9 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
           </thead>
           <tbody>
             {sorted.map((conj, idx) => {
-              const isCritical = conj.probability > 1 / 1000;
-              const isWarning = conj.probability > 1 / 10000;
-              const rowColor = isCritical ? "text-[#ff7d7d]" : isWarning ? "text-[#ffcd73]" : "text-[#d8ebff]";
+              const risk = classifyConjunctionRisk(conj.probability);
+              const rowColor =
+                risk === "critical" ? "text-[#ff7d7d]" : risk === "warning" ? "text-[#ffcd73]" : "text-[#d8ebff]";
               return (
                 <tr
                   key={conj.id}
