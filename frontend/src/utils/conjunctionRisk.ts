@@ -1,4 +1,4 @@
-import type { RiskLevel } from "../types/space";
+import type { ConjunctionWarning, RiskLevel } from "../types/space";
 
 /**
  * Collision-probability thresholds that separate the conjunction risk tiers.
@@ -31,3 +31,11 @@ export const classifyConjunctionRisk = (probability: number): RiskLevel => {
  */
 export const isActionableConjunctionRisk = (probability: number): boolean =>
   probability > CONJUNCTION_RISK_THRESHOLDS.warning;
+
+/**
+ * Returns a new array of conjunctions ordered most-to-least severe by collision
+ * probability. The input is not mutated, so it is safe to call on store state.
+ */
+export const sortConjunctionsByProbabilityDesc = <T extends Pick<ConjunctionWarning, "probability">>(
+  conjunctions: readonly T[]
+): T[] => [...conjunctions].sort((a, b) => b.probability - a.probability);
