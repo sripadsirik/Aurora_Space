@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CONJUNCTION_RISK_THRESHOLDS,
   classifyConjunctionRisk,
-  isActionableConjunctionRisk
+  isActionableConjunctionRisk,
+  sortConjunctionsByProbabilityDesc
 } from "../conjunctionRisk";
 
 describe("classifyConjunctionRisk", () => {
@@ -44,5 +45,22 @@ describe("isActionableConjunctionRisk", () => {
     expect(isActionableConjunctionRisk(5e-6)).toBe(false);
     expect(isActionableConjunctionRisk(0)).toBe(false);
     expect(isActionableConjunctionRisk(CONJUNCTION_RISK_THRESHOLDS.warning)).toBe(false);
+  });
+});
+
+describe("sortConjunctionsByProbabilityDesc", () => {
+  it("orders conjunctions from highest to lowest probability", () => {
+    const input = [{ probability: 1e-5 }, { probability: 1e-2 }, { probability: 1e-4 }];
+    expect(sortConjunctionsByProbabilityDesc(input).map((c) => c.probability)).toEqual([1e-2, 1e-4, 1e-5]);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = [{ probability: 1e-5 }, { probability: 1e-2 }];
+    sortConjunctionsByProbabilityDesc(input);
+    expect(input.map((c) => c.probability)).toEqual([1e-5, 1e-2]);
+  });
+
+  it("returns an empty array unchanged", () => {
+    expect(sortConjunctionsByProbabilityDesc([])).toEqual([]);
   });
 });
