@@ -1,4 +1,5 @@
 import { useAuroraStore } from "../../store/auroraStore";
+import { isActionableConjunctionRisk } from "../../utils/conjunctionRisk";
 import { isCriticalConjunction } from "../../utils/format";
 
 export const OpsWarningBadge = (): JSX.Element | null => {
@@ -11,7 +12,7 @@ export const OpsWarningBadge = (): JSX.Element | null => {
 
   const activeCount = conjunctions.length;
   const hasCritical = conjunctions.some(isCriticalConjunction);
-  const hasWarning = conjunctions.some((c) => c.probability > 1 / 10000);
+  const hasWarning = conjunctions.some((c) => isActionableConjunctionRisk(c.probability));
   const badgeColor = hasCritical ? "#ff2a2a" : hasWarning ? "#ff8b38" : "#ffcc00";
   const isOpen = activePanels.has("active-conjunctions");
 
