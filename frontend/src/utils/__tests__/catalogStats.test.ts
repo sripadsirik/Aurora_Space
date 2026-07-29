@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OrbitType, RiskLevel, Satellite } from "../../types/space";
-import { countByOrbitType, countByRiskLevel } from "../catalogStats";
+import { averageAltitudeKm, countByOrbitType, countByRiskLevel } from "../catalogStats";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -43,5 +43,20 @@ describe("countByRiskLevel", () => {
 
   it("returns every level at zero for an empty catalog", () => {
     expect(countByRiskLevel([])).toEqual({ nominal: 0, watch: 0, warning: 0, critical: 0 });
+  });
+});
+
+describe("averageAltitudeKm", () => {
+  it("averages the catalog altitude", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, altitudeKm: 500 }),
+      makeSatellite({ noradId: 2, altitudeKm: 700 }),
+      makeSatellite({ noradId: 3, altitudeKm: 1200 })
+    ];
+    expect(averageAltitudeKm(catalog)).toBe(800);
+  });
+
+  it("returns 0 for an empty catalog rather than NaN", () => {
+    expect(averageAltitudeKm([])).toBe(0);
   });
 });
