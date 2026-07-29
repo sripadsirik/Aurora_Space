@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { OrbitType, RiskLevel, Satellite } from "../../types/space";
-import { averageAltitudeKm, countByOrbitType, countByRiskLevel } from "../catalogStats";
+import {
+  averageAltitudeKm,
+  averageVelocityKms,
+  countByOrbitType,
+  countByRiskLevel
+} from "../catalogStats";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -58,5 +63,19 @@ describe("averageAltitudeKm", () => {
 
   it("returns 0 for an empty catalog rather than NaN", () => {
     expect(averageAltitudeKm([])).toBe(0);
+  });
+});
+
+describe("averageVelocityKms", () => {
+  it("averages the catalog velocity", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, velocityKms: 7.4 }),
+      makeSatellite({ noradId: 2, velocityKms: 7.8 })
+    ];
+    expect(averageVelocityKms(catalog)).toBeCloseTo(7.6, 10);
+  });
+
+  it("returns 0 for an empty catalog rather than NaN", () => {
+    expect(averageVelocityKms([])).toBe(0);
   });
 });
