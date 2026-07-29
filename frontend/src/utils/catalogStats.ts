@@ -75,3 +75,36 @@ export const countElevatedRisk = (
     0
   );
 };
+
+/** Aggregate view of a satellite catalog, suitable for a HUD or summary panel. */
+export interface CatalogSummary {
+  /** Total number of tracked objects. */
+  total: number;
+  /** Object counts keyed by orbit regime. */
+  byOrbitType: Record<OrbitType, number>;
+  /** Object counts keyed by risk level. */
+  byRiskLevel: Record<RiskLevel, number>;
+  /** Mean altitude in kilometres. */
+  averageAltitudeKm: number;
+  /** Mean orbital velocity in kilometres per second. */
+  averageVelocityKms: number;
+  /** Sum of per-object active conjunction counts. */
+  totalConjunctions: number;
+  /** Objects flagged at or above the `watch` risk level. */
+  elevatedRisk: number;
+}
+
+/**
+ * Bundles the catalog aggregates into a single struct so a summary display can
+ * derive every figure from one pass over the same list. All members reuse the
+ * individual helpers in this module, so they stay mutually consistent.
+ */
+export const summarizeCatalog = (satellites: Satellite[]): CatalogSummary => ({
+  total: satellites.length,
+  byOrbitType: countByOrbitType(satellites),
+  byRiskLevel: countByRiskLevel(satellites),
+  averageAltitudeKm: averageAltitudeKm(satellites),
+  averageVelocityKms: averageVelocityKms(satellites),
+  totalConjunctions: totalConjunctions(satellites),
+  elevatedRisk: countElevatedRisk(satellites)
+});
