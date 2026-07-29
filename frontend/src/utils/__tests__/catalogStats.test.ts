@@ -5,6 +5,7 @@ import {
   averageVelocityKms,
   countByOrbitType,
   countByRiskLevel,
+  countElevatedRisk,
   totalConjunctions
 } from "../catalogStats";
 
@@ -93,5 +94,27 @@ describe("totalConjunctions", () => {
 
   it("returns 0 for an empty catalog", () => {
     expect(totalConjunctions([])).toBe(0);
+  });
+});
+
+describe("countElevatedRisk", () => {
+  const catalog = [
+    makeSatellite({ noradId: 1, riskLevel: "nominal" }),
+    makeSatellite({ noradId: 2, riskLevel: "watch" }),
+    makeSatellite({ noradId: 3, riskLevel: "warning" }),
+    makeSatellite({ noradId: 4, riskLevel: "critical" })
+  ];
+
+  it("counts satellites above nominal by default", () => {
+    expect(countElevatedRisk(catalog)).toBe(3);
+  });
+
+  it("honours a higher threshold", () => {
+    expect(countElevatedRisk(catalog, "warning")).toBe(2);
+    expect(countElevatedRisk(catalog, "critical")).toBe(1);
+  });
+
+  it("counts the whole catalog at the nominal threshold", () => {
+    expect(countElevatedRisk(catalog, "nominal")).toBe(4);
   });
 });
