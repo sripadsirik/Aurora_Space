@@ -4,7 +4,8 @@ import {
   averageAltitudeKm,
   averageVelocityKms,
   countByOrbitType,
-  countByRiskLevel
+  countByRiskLevel,
+  totalConjunctions
 } from "../catalogStats";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -77,5 +78,20 @@ describe("averageVelocityKms", () => {
 
   it("returns 0 for an empty catalog rather than NaN", () => {
     expect(averageVelocityKms([])).toBe(0);
+  });
+});
+
+describe("totalConjunctions", () => {
+  it("sums per-satellite conjunction counts", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, conjunctionCount: 2 }),
+      makeSatellite({ noradId: 2, conjunctionCount: 0 }),
+      makeSatellite({ noradId: 3, conjunctionCount: 5 })
+    ];
+    expect(totalConjunctions(catalog)).toBe(7);
+  });
+
+  it("returns 0 for an empty catalog", () => {
+    expect(totalConjunctions([])).toBe(0);
   });
 });
