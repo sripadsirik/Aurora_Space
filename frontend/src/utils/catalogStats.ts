@@ -51,3 +51,11 @@ export const averageVelocityKms = (satellites: Satellite[]): number => {
   const total = satellites.reduce((sum, satellite) => sum + satellite.velocityKms, 0);
   return total / satellites.length;
 };
+
+/**
+ * Sum of every satellite's active conjunction count across the catalog. This is
+ * a per-object tally, so a single conjunction shared by two catalogued objects
+ * contributes to both and is counted twice.
+ */
+export const totalConjunctions = (satellites: Satellite[]): number =>
+  satellites.reduce((sum, satellite) => sum + satellite.conjunctionCount, 0);
