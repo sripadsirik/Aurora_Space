@@ -41,3 +41,13 @@ export const averageAltitudeKm = (satellites: Satellite[]): number => {
   const total = satellites.reduce((sum, satellite) => sum + satellite.altitudeKm, 0);
   return total / satellites.length;
 };
+
+/**
+ * Mean orbital velocity of the catalog in kilometres per second. Returns 0 for
+ * an empty catalog so the figure is always a finite number rather than `NaN`.
+ */
+export const averageVelocityKms = (satellites: Satellite[]): number => {
+  if (satellites.length === 0) return 0;
+  const total = satellites.reduce((sum, satellite) => sum + satellite.velocityKms, 0);
+  return total / satellites.length;
+};
