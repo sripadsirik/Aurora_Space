@@ -59,3 +59,19 @@ export const averageVelocityKms = (satellites: Satellite[]): number => {
  */
 export const totalConjunctions = (satellites: Satellite[]): number =>
   satellites.reduce((sum, satellite) => sum + satellite.conjunctionCount, 0);
+
+/**
+ * Counts satellites whose risk level is at or above `threshold` in the
+ * ascending-severity order of {@link RISK_LEVELS}. With the default `"watch"`
+ * threshold this yields the count of objects flagged above nominal.
+ */
+export const countElevatedRisk = (
+  satellites: Satellite[],
+  threshold: RiskLevel = "watch"
+): number => {
+  const floor = RISK_LEVELS.indexOf(threshold);
+  return satellites.reduce(
+    (count, satellite) => (RISK_LEVELS.indexOf(satellite.riskLevel) >= floor ? count + 1 : count),
+    0
+  );
+};
