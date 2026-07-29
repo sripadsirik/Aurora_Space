@@ -6,6 +6,7 @@ import {
   countByOrbitType,
   countByRiskLevel,
   countElevatedRisk,
+  summarizeCatalog,
   totalConjunctions
 } from "../catalogStats";
 
@@ -116,5 +117,36 @@ describe("countElevatedRisk", () => {
 
   it("counts the whole catalog at the nominal threshold", () => {
     expect(countElevatedRisk(catalog, "nominal")).toBe(4);
+  });
+});
+
+describe("summarizeCatalog", () => {
+  const catalog = [
+    makeSatellite({ noradId: 1, orbitType: "LEO", riskLevel: "nominal", altitudeKm: 500, velocityKms: 7.6, conjunctionCount: 1 }),
+    makeSatellite({ noradId: 2, orbitType: "LEO", riskLevel: "watch", altitudeKm: 600, velocityKms: 7.5, conjunctionCount: 2 }),
+    makeSatellite({ noradId: 3, orbitType: "GEO", riskLevel: "critical", altitudeKm: 35786, velocityKms: 3.07, conjunctionCount: 0 })
+  ];
+
+  it("bundles every aggregate consistently with the individual helpers", () => {
+    const summary = summarizeCatalog(catalog);
+    expect(summary.total).toBe(3);
+    expect(summary.byOrbitType).toEqual(countByOrbitType(catalog));
+    expect(summary.byRiskLevel).toEqual(countByRiskLevel(catalog));
+    expect(summary.averageAltitudeKm).toBe(averageAltitudeKm(catalog));
+    expect(summary.averageVelocityKms).toBe(averageVelocityKms(catalog));
+    expect(summary.totalConjunctions).toBe(totalConjunctions(catalog));
+    expect(summary.elevatedRisk).toBe(countElevatedRisk(catalog));
+  });
+
+  it("produces a fully zeroed summary for an empty catalog", () => {
+    expect(summarizeCatalog([])).toEqual({
+      total: 0,
+      byOrbitType: { LEO: 0, MEO: 0, GEO: 0 },
+      byRiskLevel: { nominal: 0, watch: 0, warning: 0, critical: 0 },
+      averageAltitudeKm: 0,
+      averageVelocityKms: 0,
+      totalConjunctions: 0,
+      elevatedRisk: 0
+    });
   });
 });
