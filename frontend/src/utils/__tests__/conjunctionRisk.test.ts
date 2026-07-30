@@ -77,6 +77,14 @@ describe("classifyConjunctionFleetSeverity", () => {
     const fleet = [makeConjunction({ probability: 1e-8, missDistanceM: 200 })];
     expect(classifyConjunctionFleetSeverity(fleet)).toBe("critical");
   });
+
+  it("is warning when the most severe conjunction is actionable but not critical", () => {
+    const fleet = [
+      makeConjunction({ id: "a", probability: 1e-6, missDistanceM: 5000 }),
+      makeConjunction({ id: "b", probability: 5e-4, missDistanceM: 5000 })
+    ];
+    expect(classifyConjunctionFleetSeverity(fleet)).toBe("warning");
+  });
 });
 
 describe("sortConjunctionsByProbabilityDesc", () => {
