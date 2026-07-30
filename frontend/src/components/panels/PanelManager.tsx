@@ -5,6 +5,7 @@ import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
+import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
@@ -43,14 +44,16 @@ const riskBadgeClass = (label: "LOW" | "MEDIUM" | "HIGH"): string => {
 };
 
 const getConjunctionAction = (probability: number): { label: string; className: string } => {
-  if (probability > 1 / 1000) {
+  const risk = classifyConjunctionRisk(probability);
+
+  if (risk === "critical") {
     return {
       label: "MANEUVER RECOMMENDED",
       className: "border-[#ff4d4d] bg-[#591212]/60 text-[#ff7e7e]"
     };
   }
 
-  if (probability > 1 / 10000) {
+  if (risk === "warning") {
     return {
       label: "MONITORING REQUIRED",
       className: "border-[#ff9f43] bg-[#5e3412]/60 text-[#ffbd72]"
@@ -223,10 +226,11 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
       : selectedConjunction.missDistanceM < 1000
         ? "text-[#ffcd73]"
         : "text-[#7de6b1]";
+  const probabilityRisk = classifyConjunctionRisk(selectedConjunction.probability);
   const probabilityClass =
-    selectedConjunction.probability > 1 / 1000
+    probabilityRisk === "critical"
       ? "text-[#ff7d7d]"
-      : selectedConjunction.probability > 1 / 10000
+      : probabilityRisk === "warning"
         ? "text-[#ffcd73]"
         : "text-[#7de6b1]";
   const gaugeValue = normalizeProbability(selectedConjunction.probability);

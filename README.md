@@ -98,6 +98,23 @@ The breakdown helpers always return every regime or risk level (defaulting to ze
 averages return `0` rather than `NaN` for an empty catalog, so summary displays render a stable
 set of rows regardless of the catalog contents.
 
+## Conjunction Risk Tiers
+
+Conjunction warnings are ranked by collision probability into four risk tiers, defined once in
+`frontend/src/utils/conjunctionRisk.ts` and shared by the globe overlays and every conjunction
+panel so the boundaries never drift apart:
+
+| Tier | Collision probability | Operational meaning |
+| --- | --- | --- |
+| `critical` | > 1e-3 | Maneuver recommended |
+| `warning` | > 1e-4 | Monitoring required |
+| `watch` | > 1e-6 | Track, no action yet |
+| `nominal` | ≤ 1e-6 | No action required |
+
+`classifyConjunctionRisk` maps a probability to its tier, and `isActionableConjunctionRisk`
+reports whether it reaches the `warning` band or higher. Thresholds live in the exported
+`CONJUNCTION_RISK_THRESHOLDS` constant.
+
 ## Repo Layout
 
 ```text
@@ -325,7 +342,7 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
-`helio`, `spaceWeatherScales`), the Zustand store, and the mock datasets under `src/data/mock/`
+`helio`, `spaceWeatherScales`, `conjunctionRisk`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
