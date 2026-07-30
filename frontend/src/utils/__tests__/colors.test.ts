@@ -1,6 +1,6 @@
 import { Color } from "cesium";
 import { describe, expect, it } from "vitest";
-import { getKpColor, getSolarWindColor, riskColorMap } from "../colors";
+import { conjunctionFleetSeverityColor, getKpColor, getSolarWindColor, riskColorMap } from "../colors";
 
 describe("getKpColor", () => {
   it("returns the quiet colour below Kp 3", () => {
@@ -36,6 +36,21 @@ describe("getSolarWindColor", () => {
 
   it("uses the high-speed colour above 600 km/s", () => {
     expect(getSolarWindColor(700).equals(Color.fromCssColorString("#ff2a2a"))).toBe(true);
+  });
+});
+
+describe("conjunctionFleetSeverityColor", () => {
+  it("uses severe red for a critical fleet", () => {
+    expect(conjunctionFleetSeverityColor("critical")).toBe("#ff2a2a");
+  });
+
+  it("uses amber for a warning fleet", () => {
+    expect(conjunctionFleetSeverityColor("warning")).toBe("#ff8b38");
+  });
+
+  it("uses quiet yellow for the elevated and clear tiers", () => {
+    expect(conjunctionFleetSeverityColor("elevated")).toBe("#ffcc00");
+    expect(conjunctionFleetSeverityColor("clear")).toBe("#ffcc00");
   });
 });
 
