@@ -1,5 +1,6 @@
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
+import { classifyConjunctionRisk, sortConjunctionsByProbabilityDesc } from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatProbability } from "../../utils/format";
 
 export const ActiveConjunctionsPanel = (): JSX.Element | null => {
@@ -11,7 +12,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
 
   if (!activePanels.has("active-conjunctions")) return null;
 
-  const sorted = [...conjunctions].sort((a, b) => b.probability - a.probability);
+  const sorted = sortConjunctionsByProbabilityDesc(conjunctions);
 
   return (
     <div className="pointer-events-auto fixed left-1/2 top-16 z-[70] w-[520px] -translate-x-1/2 rounded border border-cyan-400/25 bg-[rgba(5,15,30,0.92)] font-mono text-[11px] shadow-[0_0_30px_rgba(0,180,255,0.08)] backdrop-blur-xl">
@@ -38,9 +39,9 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
           </thead>
           <tbody>
             {sorted.map((conj, idx) => {
-              const isCritical = conj.probability > 1 / 1000;
-              const isWarning = conj.probability > 1 / 10000;
-              const rowColor = isCritical ? "text-[#ff7d7d]" : isWarning ? "text-[#ffcd73]" : "text-[#d8ebff]";
+              const risk = classifyConjunctionRisk(conj.probability);
+              const rowColor =
+                risk === "critical" ? "text-[#ff7d7d]" : risk === "warning" ? "text-[#ffcd73]" : "text-[#d8ebff]";
               return (
                 <tr
                   key={conj.id}

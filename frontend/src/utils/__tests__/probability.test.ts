@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CONJUNCTION_RISK_THRESHOLDS } from "../conjunctionRisk";
 import { normalizeProbability } from "../probability";
 
 describe("normalizeProbability", () => {
@@ -25,5 +26,10 @@ describe("normalizeProbability", () => {
 
   it("clamps probabilities above the ceiling to 1", () => {
     expect(normalizeProbability(0.5)).toBe(1);
+  });
+
+  it("anchors the gauge floor and ceiling to the shared risk thresholds", () => {
+    expect(normalizeProbability(CONJUNCTION_RISK_THRESHOLDS.watch)).toBeCloseTo(0, 10);
+    expect(normalizeProbability(CONJUNCTION_RISK_THRESHOLDS.critical)).toBeCloseTo(1, 10);
   });
 });
