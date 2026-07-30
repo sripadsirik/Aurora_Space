@@ -123,6 +123,12 @@ and `clear` for an empty fleet. The ops warning badge derives its colour from th
 `conjunctionFleetSeverityColor` in `frontend/src/utils/colors.ts`, so the escalation logic lives
 in one place instead of being re-derived inline.
 
+The remaining conjunction presentation helpers are shared the same way: `conjunctionRowTextClass`
+(`colors.ts`) returns the Tailwind text-colour class used to shade each row of the active
+conjunctions table by risk level, and `formatConjunctionWarningLabel` (`format.ts`) builds the
+pluralised badge label (for example `1 ACTIVE CONJUNCTION WARNING` versus
+`3 ACTIVE CONJUNCTION WARNINGS`).
+
 ## Repo Layout
 
 ```text
