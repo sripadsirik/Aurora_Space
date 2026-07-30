@@ -79,6 +79,25 @@ relation `v = sqrt(mu / r)`), and `formatOrbitalPeriod` in `frontend/src/utils/f
 renders a period in minutes as a compact `Hh Mm` (or bare `Mm`) string. All values are derived
 from the same deterministic orbit radius so they stay mutually consistent.
 
+## Catalog Statistics
+
+Summary figures for the whole tracked catalog come from the pure helpers in
+`frontend/src/utils/catalogStats.ts`, which aggregate over a `Satellite[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `countByOrbitType` | Object counts per LEO/MEO/GEO regime |
+| `countByRiskLevel` | Object counts per nominal/watch/warning/critical level |
+| `averageAltitudeKm` | Mean catalog altitude in kilometres |
+| `averageVelocityKms` | Mean catalog velocity in kilometres per second |
+| `totalConjunctions` | Sum of per-object active conjunction counts |
+| `countElevatedRisk` | Objects at or above a given risk threshold (default `watch`) |
+| `summarizeCatalog` | All of the above bundled into one `CatalogSummary` struct |
+
+The breakdown helpers always return every regime or risk level (defaulting to zero), and the
+averages return `0` rather than `NaN` for an empty catalog, so summary displays render a stable
+set of rows regardless of the catalog contents.
+
 ## Conjunction Risk Tiers
 
 Conjunction warnings are ranked by collision probability into four risk tiers, defined once in
@@ -322,8 +341,8 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 ## Frontend Tests
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
-pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `helio`,
-`spaceWeatherScales`, `conjunctionRisk`), the Zustand store, and the mock datasets under `src/data/mock/`
+pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
+`helio`, `spaceWeatherScales`, `conjunctionRisk`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
