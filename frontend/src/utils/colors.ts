@@ -11,6 +11,21 @@ export const riskColorMap: Record<RiskLevel, Color> = {
 };
 
 /**
+ * Tailwind text-colour utility class used to shade a conjunction table row by
+ * its {@link RiskLevel}: red for `critical`, amber for `warning`, and a calm
+ * blue-white for the lower `watch`/`nominal` tiers.
+ */
+export const conjunctionRowTextClass = (risk: RiskLevel): string => {
+  if (risk === "critical") {
+    return "text-[#ff7d7d]";
+  }
+  if (risk === "warning") {
+    return "text-[#ffcd73]";
+  }
+  return "text-[#d8ebff]";
+};
+
+/**
  * Maps a planetary Kp index (0-9) to a CSS hex colour, escalating from quiet
  * green through storm orange to severe red as geomagnetic activity increases.
  */
