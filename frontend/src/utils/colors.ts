@@ -1,5 +1,6 @@
 import { Color } from "cesium";
 import type { RiskLevel } from "../types/space";
+import type { ConjunctionFleetSeverity } from "./conjunctionRisk";
 
 /** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
@@ -24,6 +25,21 @@ export const getKpColor = (kp: number): string => {
     return "#ff8b38";
   }
   return "#ff2a2a";
+};
+
+/**
+ * Maps a {@link ConjunctionFleetSeverity} to the CSS hex colour used by the ops
+ * warning badge: severe red for `critical`, amber for `warning`, and quiet
+ * yellow for the lower `elevated`/`clear` tiers.
+ */
+export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity): string => {
+  if (severity === "critical") {
+    return "#ff2a2a";
+  }
+  if (severity === "warning") {
+    return "#ff8b38";
+  }
+  return "#ffcc00";
 };
 
 /**
