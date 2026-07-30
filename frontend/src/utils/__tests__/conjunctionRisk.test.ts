@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
+import type { ConjunctionWarning } from "../../types/space";
 import {
   CONJUNCTION_RISK_THRESHOLDS,
+  classifyConjunctionFleetSeverity,
   classifyConjunctionRisk,
   isActionableConjunctionRisk,
   sortConjunctionsByProbabilityDesc
 } from "../conjunctionRisk";
+
+const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
+  id: "c-1",
+  object1: { noradId: 1, name: "A" },
+  object2: { noradId: 2, name: "B" },
+  tca: new Date("2026-01-01T00:00:00Z"),
+  missDistanceKm: 5,
+  missDistanceM: 5000,
+  pc: 1e-6,
+  probability: 1e-6,
+  relativeVelocityKms: 7,
+  riskLevel: "nominal",
+  ...overrides
+});
 
 describe("classifyConjunctionRisk", () => {
   it("classifies probabilities above the critical threshold as critical", () => {
@@ -45,6 +61,21 @@ describe("isActionableConjunctionRisk", () => {
     expect(isActionableConjunctionRisk(5e-6)).toBe(false);
     expect(isActionableConjunctionRisk(0)).toBe(false);
     expect(isActionableConjunctionRisk(CONJUNCTION_RISK_THRESHOLDS.warning)).toBe(false);
+  });
+});
+
+describe("classifyConjunctionFleetSeverity", () => {
+  it("is critical when any conjunction is individually critical", () => {
+    const fleet = [
+      makeConjunction({ id: "a", probability: 1e-6, missDistanceM: 5000 }),
+      makeConjunction({ id: "b", probability: 0.006, missDistanceM: 5000 })
+    ];
+    expect(classifyConjunctionFleetSeverity(fleet)).toBe("critical");
+  });
+
+  it("is critical from a close miss distance even with a low probability", () => {
+    const fleet = [makeConjunction({ probability: 1e-8, missDistanceM: 200 })];
+    expect(classifyConjunctionFleetSeverity(fleet)).toBe("critical");
   });
 });
 
