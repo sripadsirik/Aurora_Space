@@ -1,6 +1,7 @@
 import { useAuroraStore } from "../../store/auroraStore";
 import { conjunctionFleetSeverityColor } from "../../utils/colors";
 import { classifyConjunctionFleetSeverity } from "../../utils/conjunctionRisk";
+import { formatConjunctionWarningLabel } from "../../utils/format";
 
 export const OpsWarningBadge = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -36,7 +37,7 @@ export const OpsWarningBadge = (): JSX.Element | null => {
           animation: "storm-pulse 3s ease-in-out infinite"
         }}
       >
-        {activeCount} ACTIVE CONJUNCTION WARNING{activeCount !== 1 ? "S" : ""}
+        {formatConjunctionWarningLabel(activeCount)}
       </button>
     </div>
   );
