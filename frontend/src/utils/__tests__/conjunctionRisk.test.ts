@@ -85,6 +85,18 @@ describe("classifyConjunctionFleetSeverity", () => {
     ];
     expect(classifyConjunctionFleetSeverity(fleet)).toBe("warning");
   });
+
+  it("is elevated when conjunctions are tracked but none are actionable", () => {
+    const fleet = [
+      makeConjunction({ id: "a", probability: 1e-6, missDistanceM: 5000 }),
+      makeConjunction({ id: "b", probability: 5e-5, missDistanceM: 5000 })
+    ];
+    expect(classifyConjunctionFleetSeverity(fleet)).toBe("elevated");
+  });
+
+  it("is clear when the fleet is empty", () => {
+    expect(classifyConjunctionFleetSeverity([])).toBe("clear");
+  });
 });
 
 describe("sortConjunctionsByProbabilityDesc", () => {
