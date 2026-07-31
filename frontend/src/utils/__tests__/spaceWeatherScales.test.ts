@@ -246,3 +246,22 @@ describe("protonFluxToSScale", () => {
     expect(protonFluxToSScale(5_000_000)).toBe("S5");
   });
 });
+
+describe("sScaleColor", () => {
+  it("returns a distinct colour for each active storm level", () => {
+    const colors = new Set(
+      solarRadiationStormScale.map((entry) => sScaleColor(entry.level))
+    );
+    expect(colors.size).toBe(solarRadiationStormScale.length);
+  });
+
+  it("escalates from quiet green to extreme red", () => {
+    expect(sScaleColor("S0")).toBe("#7dff6a");
+    expect(sScaleColor("S5")).toBe("#ff0000");
+  });
+
+  it("falls back to quiet green for unknown levels", () => {
+    expect(sScaleColor("None")).toBe("#7dff6a");
+    expect(sScaleColor("")).toBe("#7dff6a");
+  });
+});
