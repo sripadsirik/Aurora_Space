@@ -214,3 +214,20 @@ export const protonFluxToSScale = (fluxPfu: number): SScaleLevel => {
   if (fluxPfu >= 10) return "S1";
   return "S0";
 };
+
+/** CSS hex colour for each S-level, escalating from quiet green to extreme red. */
+const sScaleColorMap: Record<SScaleLevel, string> = {
+  S0: "#7dff6a",
+  S1: "#ffcc00",
+  S2: "#ff9900",
+  S3: "#ff6600",
+  S4: "#ff3300",
+  S5: "#ff0000"
+};
+
+/**
+ * Returns the CSS hex colour for an S-level. Unknown values (for example the
+ * literal "None") fall back to the quiet-conditions green.
+ */
+export const sScaleColor = (level: string): string =>
+  sScaleColorMap[level as SScaleLevel] ?? sScaleColorMap.S0;
