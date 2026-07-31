@@ -294,3 +294,10 @@ describe("sScaleInfo", () => {
     expect(info.code).toBe(0);
   });
 });
+
+describe("protonFluxToSScaleInfo", () => {
+  it("resolves a peak proton flux straight to its metadata", () => {
+    expect(protonFluxToSScaleInfo(10_000).level).toBe("S4");
+    expect(protonFluxToSScaleInfo(5).code).toBe(0);
+  });
+});
