@@ -57,9 +57,10 @@ in `frontend/src/utils/spaceWeatherScales.ts`:
 | R (radio blackout) | Peak GOES X-ray flux | R1–R5 | `xrayClassToRScale`, `xrayClassToRScaleInfo`, `rScaleColor` |
 | S (solar radiation storm) | Peak ≥10 MeV proton flux (pfu) | S1–S5 | `protonFluxToSScale`, `protonFluxToSScaleInfo`, `sScaleColor` |
 
-Both scales expose a metadata table (`geomagneticStormScale` / `radioBlackoutScale`) with a
-severity code, short label, and one-line operational impact, plus a colour map that escalates
-from quiet green to extreme red. `G0`/`R0` denote sub-storm quiet conditions.
+Each scale exposes a metadata table (`geomagneticStormScale` / `radioBlackoutScale` /
+`solarRadiationStormScale`) with a severity code, short label, and one-line operational impact,
+plus a colour map that escalates from quiet green to extreme red. `G0`/`R0`/`S0` denote
+sub-storm quiet conditions.
 
 ## Orbit Summary
 
