@@ -231,3 +231,37 @@ const sScaleColorMap: Record<SScaleLevel, string> = {
  */
 export const sScaleColor = (level: string): string =>
   sScaleColorMap[level as SScaleLevel] ?? sScaleColorMap.S0;
+
+/** Descriptive metadata for a single NOAA solar radiation storm level. */
+export interface SScaleInfo {
+  level: SScaleLevel;
+  /** NOAA numeric severity code (0 for quiet, 1-5 for S1-S5). */
+  code: number;
+  /** Short human label for the level. */
+  label: string;
+  /** One-line summary of the expected operational impact. */
+  impact: string;
+}
+
+/**
+ * The five active NOAA solar radiation storm levels (S1-S5) with their severity
+ * codes and a concise impact summary each. Ordered from least to most severe.
+ */
+export const solarRadiationStormScale: SScaleInfo[] = [
+  { level: "S1", code: 1, label: "Minor", impact: "Minor impacts on HF radio in the polar regions." },
+  { level: "S2", code: 2, label: "Moderate", impact: "Small effects on HF propagation and polar navigation." },
+  { level: "S3", code: 3, label: "Strong", impact: "Degraded HF at high latitudes, single-event upsets possible." },
+  { level: "S4", code: 4, label: "Severe", impact: "Blackout of HF through the polar regions, elevated radiation risk." },
+  { level: "S5", code: 5, label: "Extreme", impact: "Complete polar HF blackout, high radiation hazard to crews and satellites." }
+];
+
+const noSolarRadiationStorm: SScaleInfo = {
+  level: "S0",
+  code: 0,
+  label: "Quiet",
+  impact: "No significant solar radiation storm activity."
+};
+
+/** Looks up the full metadata for an S-level, defaulting to quiet conditions. */
+export const sScaleInfo = (level: string): SScaleInfo =>
+  solarRadiationStormScale.find((entry) => entry.level === level) ?? noSolarRadiationStorm;
