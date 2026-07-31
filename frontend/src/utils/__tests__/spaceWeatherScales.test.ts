@@ -265,3 +265,32 @@ describe("sScaleColor", () => {
     expect(sScaleColor("")).toBe("#7dff6a");
   });
 });
+
+describe("solarRadiationStormScale", () => {
+  it("lists the five active levels in ascending severity", () => {
+    expect(solarRadiationStormScale.map((entry) => entry.level)).toEqual([
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ]);
+    const codes = solarRadiationStormScale.map((entry) => entry.code);
+    expect(codes).toEqual([...codes].sort((a, b) => a - b));
+  });
+});
+
+describe("sScaleInfo", () => {
+  it("returns matching metadata for an active level", () => {
+    const info = sScaleInfo("S3");
+    expect(info.code).toBe(3);
+    expect(info.label).toBe("Strong");
+    expect(info.impact.length).toBeGreaterThan(0);
+  });
+
+  it("defaults to quiet conditions for unknown levels", () => {
+    const info = sScaleInfo("None");
+    expect(info.level).toBe("S0");
+    expect(info.code).toBe(0);
+  });
+});
