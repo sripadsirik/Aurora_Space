@@ -222,3 +222,27 @@ describe("xrayClassToRScaleInfo", () => {
     expect(xrayClassToRScaleInfo("n/a").level).toBe("R0");
   });
 });
+
+describe("protonFluxToSScale", () => {
+  it("treats sub-storm proton flux as quiet (S0)", () => {
+    expect(protonFluxToSScale(0)).toBe("S0");
+    expect(protonFluxToSScale(9.9)).toBe("S0");
+  });
+
+  it("maps each decade of proton flux to the matching S-level", () => {
+    expect(protonFluxToSScale(10)).toBe("S1");
+    expect(protonFluxToSScale(100)).toBe("S2");
+    expect(protonFluxToSScale(1_000)).toBe("S3");
+    expect(protonFluxToSScale(10_000)).toBe("S4");
+    expect(protonFluxToSScale(100_000)).toBe("S5");
+  });
+
+  it("treats the thresholds as inclusive lower bounds", () => {
+    expect(protonFluxToSScale(99)).toBe("S1");
+    expect(protonFluxToSScale(100)).toBe("S2");
+  });
+
+  it("clamps values above the S5 threshold to S5", () => {
+    expect(protonFluxToSScale(5_000_000)).toBe("S5");
+  });
+});
