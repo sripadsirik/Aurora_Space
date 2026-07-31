@@ -47,8 +47,8 @@ Current backend split:
 
 ## Space Weather Scales
 
-The Space Weather panel renders two of NOAA SWPC's
-[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), both derived
+The Space Weather panel renders all three of NOAA SWPC's
+[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), all derived
 in `frontend/src/utils/spaceWeatherScales.ts`:
 
 | Scale | Driver | Levels | Helpers |
