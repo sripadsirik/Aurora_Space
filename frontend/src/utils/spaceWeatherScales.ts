@@ -265,3 +265,7 @@ const noSolarRadiationStorm: SScaleInfo = {
 /** Looks up the full metadata for an S-level, defaulting to quiet conditions. */
 export const sScaleInfo = (level: string): SScaleInfo =>
   solarRadiationStormScale.find((entry) => entry.level === level) ?? noSolarRadiationStorm;
+
+/** Resolves a peak >=10 MeV proton flux (pfu) straight to its full S-level metadata. */
+export const protonFluxToSScaleInfo = (fluxPfu: number): SScaleInfo =>
+  sScaleInfo(protonFluxToSScale(fluxPfu));
