@@ -79,3 +79,11 @@ export const filterElevatedRisk = (
  */
 export const sortByAltitudeDesc = (satellites: Satellite[]): Satellite[] =>
   [...satellites].sort((a, b) => b.altitudeKm - a.altitudeKm);
+
+/**
+ * Returns a new array of satellites ordered most-to-least active conjunctions,
+ * surfacing the busiest objects first. The input is not mutated, so it is safe
+ * to call on store state.
+ */
+export const sortByConjunctionCountDesc = (satellites: Satellite[]): Satellite[] =>
+  [...satellites].sort((a, b) => b.conjunctionCount - a.conjunctionCount);
