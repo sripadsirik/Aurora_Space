@@ -41,3 +41,18 @@ export const filterByAltitudeRange = (
     (satellite) => satellite.altitudeKm >= low && satellite.altitudeKm <= high
   );
 };
+
+/**
+ * Case-insensitive free-text search over the catalog. Matches when the query is
+ * a substring of a satellite's name or a prefix-free substring of its NORAD id
+ * rendered as a string, so `"25544"` and `"544"` both find object 25544. A blank
+ * query returns the catalog unchanged. The input is not mutated.
+ */
+export const searchCatalog = (satellites: Satellite[], query: string): Satellite[] => {
+  const needle = query.trim().toLowerCase();
+  if (needle.length === 0) return [...satellites];
+  return satellites.filter((satellite) => {
+    if (satellite.name.toLowerCase().includes(needle)) return true;
+    return satellite.noradId.toString().includes(needle);
+  });
+};
