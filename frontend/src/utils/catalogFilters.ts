@@ -72,3 +72,10 @@ export const filterElevatedRisk = (
   const floor = RISK_LEVELS.indexOf(threshold);
   return satellites.filter((satellite) => RISK_LEVELS.indexOf(satellite.riskLevel) >= floor);
 };
+
+/**
+ * Returns a new array of satellites ordered highest-to-lowest altitude. The
+ * input is not mutated, so it is safe to call on store state.
+ */
+export const sortByAltitudeDesc = (satellites: Satellite[]): Satellite[] =>
+  [...satellites].sort((a, b) => b.altitudeKm - a.altitudeKm);
