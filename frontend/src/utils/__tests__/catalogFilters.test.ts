@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { filterByOrbitType, filterByRiskLevel } from "../catalogFilters";
+import { filterByOrbitType, filterByOwner, filterByRiskLevel } from "../catalogFilters";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -51,5 +51,21 @@ describe("filterByRiskLevel", () => {
   it("returns an empty array when no satellite matches", () => {
     const catalog = [makeSatellite({ riskLevel: "nominal" })];
     expect(filterByRiskLevel(catalog, "warning")).toEqual([]);
+  });
+});
+
+describe("filterByOwner", () => {
+  it("matches owners case-insensitively and ignores surrounding whitespace", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "NASA" }),
+      makeSatellite({ noradId: 2, owner: "ESA" }),
+      makeSatellite({ noradId: 3, owner: " nasa " })
+    ];
+    expect(filterByOwner(catalog, "nasa").map((s) => s.noradId)).toEqual([1, 3]);
+  });
+
+  it("returns an empty array when the owner is not present", () => {
+    const catalog = [makeSatellite({ owner: "NASA" })];
+    expect(filterByOwner(catalog, "SPACEX")).toEqual([]);
   });
 });
