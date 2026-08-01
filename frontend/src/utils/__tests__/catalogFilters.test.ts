@@ -4,7 +4,8 @@ import {
   filterByAltitudeRange,
   filterByOrbitType,
   filterByOwner,
-  filterByRiskLevel
+  filterByRiskLevel,
+  searchCatalog
 } from "../catalogFilters";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -92,5 +93,31 @@ describe("filterByAltitudeRange", () => {
 
   it("normalises swapped bounds", () => {
     expect(filterByAltitudeRange(catalog, 2000, 400).map((s) => s.noradId)).toEqual([1, 2]);
+  });
+});
+
+describe("searchCatalog", () => {
+  const catalog = [
+    makeSatellite({ noradId: 25544, name: "ISS (ZARYA)" }),
+    makeSatellite({ noradId: 20580, name: "HST" }),
+    makeSatellite({ noradId: 43013, name: "NOAA 20" })
+  ];
+
+  it("matches on a case-insensitive name substring", () => {
+    expect(searchCatalog(catalog, "iss").map((s) => s.noradId)).toEqual([25544]);
+  });
+
+  it("matches on a NORAD id substring", () => {
+    expect(searchCatalog(catalog, "544").map((s) => s.noradId)).toEqual([25544]);
+  });
+
+  it("returns a copy of the catalog for a blank query", () => {
+    const result = searchCatalog(catalog, "   ");
+    expect(result).toHaveLength(3);
+    expect(result).not.toBe(catalog);
+  });
+
+  it("returns an empty array when nothing matches", () => {
+    expect(searchCatalog(catalog, "starlink")).toEqual([]);
   });
 });
