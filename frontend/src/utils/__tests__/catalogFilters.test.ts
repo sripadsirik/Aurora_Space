@@ -6,7 +6,9 @@ import {
   filterByOwner,
   filterByRiskLevel,
   filterElevatedRisk,
-  searchCatalog
+  searchCatalog,
+  sortByAltitudeDesc,
+  sortByConjunctionCountDesc
 } from "../catalogFilters";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -141,5 +143,31 @@ describe("filterElevatedRisk", () => {
 
   it("includes every object when the threshold is nominal", () => {
     expect(filterElevatedRisk(catalog, "nominal")).toHaveLength(4);
+  });
+});
+
+describe("sortByAltitudeDesc", () => {
+  it("orders satellites highest-to-lowest altitude without mutating the input", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, altitudeKm: 550 }),
+      makeSatellite({ noradId: 2, altitudeKm: 35786 }),
+      makeSatellite({ noradId: 3, altitudeKm: 20200 })
+    ];
+    const sorted = sortByAltitudeDesc(catalog);
+    expect(sorted.map((s) => s.noradId)).toEqual([2, 3, 1]);
+    expect(catalog.map((s) => s.noradId)).toEqual([1, 2, 3]);
+  });
+});
+
+describe("sortByConjunctionCountDesc", () => {
+  it("orders satellites by most active conjunctions without mutating the input", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, conjunctionCount: 2 }),
+      makeSatellite({ noradId: 2, conjunctionCount: 9 }),
+      makeSatellite({ noradId: 3, conjunctionCount: 5 })
+    ];
+    const sorted = sortByConjunctionCountDesc(catalog);
+    expect(sorted.map((s) => s.noradId)).toEqual([2, 3, 1]);
+    expect(catalog.map((s) => s.noradId)).toEqual([1, 2, 3]);
   });
 });
