@@ -23,3 +23,21 @@ export const filterByOwner = (satellites: Satellite[], owner: string): Satellite
   const target = owner.trim().toLowerCase();
   return satellites.filter((satellite) => satellite.owner.trim().toLowerCase() === target);
 };
+
+/**
+ * Returns the satellites whose altitude falls within the inclusive
+ * `[minKm, maxKm]` band. Bounds may be supplied in either order; they are
+ * normalised so a swapped pair still yields the expected range. The input is not
+ * mutated.
+ */
+export const filterByAltitudeRange = (
+  satellites: Satellite[],
+  minKm: number,
+  maxKm: number
+): Satellite[] => {
+  const low = Math.min(minKm, maxKm);
+  const high = Math.max(minKm, maxKm);
+  return satellites.filter(
+    (satellite) => satellite.altitudeKm >= low && satellite.altitudeKm <= high
+  );
+};
