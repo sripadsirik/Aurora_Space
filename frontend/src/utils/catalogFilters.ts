@@ -13,3 +13,13 @@ export const filterByOrbitType = (satellites: Satellite[], orbitType: OrbitType)
  */
 export const filterByRiskLevel = (satellites: Satellite[], riskLevel: RiskLevel): Satellite[] =>
   satellites.filter((satellite) => satellite.riskLevel === riskLevel);
+
+/**
+ * Returns the satellites belonging to the given owner. The match is
+ * case-insensitive and ignores surrounding whitespace so that display strings
+ * and query strings compare cleanly. The input is not mutated.
+ */
+export const filterByOwner = (satellites: Satellite[], owner: string): Satellite[] => {
+  const target = owner.trim().toLowerCase();
+  return satellites.filter((satellite) => satellite.owner.trim().toLowerCase() === target);
+};
