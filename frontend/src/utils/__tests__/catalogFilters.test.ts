@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { filterByOrbitType, filterByOwner, filterByRiskLevel } from "../catalogFilters";
+import {
+  filterByAltitudeRange,
+  filterByOrbitType,
+  filterByOwner,
+  filterByRiskLevel
+} from "../catalogFilters";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -67,5 +72,25 @@ describe("filterByOwner", () => {
   it("returns an empty array when the owner is not present", () => {
     const catalog = [makeSatellite({ owner: "NASA" })];
     expect(filterByOwner(catalog, "SPACEX")).toEqual([]);
+  });
+});
+
+describe("filterByAltitudeRange", () => {
+  const catalog = [
+    makeSatellite({ noradId: 1, altitudeKm: 400 }),
+    makeSatellite({ noradId: 2, altitudeKm: 2000 }),
+    makeSatellite({ noradId: 3, altitudeKm: 35786 })
+  ];
+
+  it("keeps satellites within the inclusive band", () => {
+    expect(filterByAltitudeRange(catalog, 400, 2000).map((s) => s.noradId)).toEqual([1, 2]);
+  });
+
+  it("treats the bounds as inclusive", () => {
+    expect(filterByAltitudeRange(catalog, 2000, 2000).map((s) => s.noradId)).toEqual([2]);
+  });
+
+  it("normalises swapped bounds", () => {
+    expect(filterByAltitudeRange(catalog, 2000, 400).map((s) => s.noradId)).toEqual([1, 2]);
   });
 });
