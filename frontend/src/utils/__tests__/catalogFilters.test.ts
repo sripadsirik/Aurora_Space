@@ -5,6 +5,7 @@ import {
   filterByOrbitType,
   filterByOwner,
   filterByRiskLevel,
+  filterElevatedRisk,
   searchCatalog
 } from "../catalogFilters";
 
@@ -119,5 +120,26 @@ describe("searchCatalog", () => {
 
   it("returns an empty array when nothing matches", () => {
     expect(searchCatalog(catalog, "starlink")).toEqual([]);
+  });
+});
+
+describe("filterElevatedRisk", () => {
+  const catalog = [
+    makeSatellite({ noradId: 1, riskLevel: "nominal" }),
+    makeSatellite({ noradId: 2, riskLevel: "watch" }),
+    makeSatellite({ noradId: 3, riskLevel: "warning" }),
+    makeSatellite({ noradId: 4, riskLevel: "critical" })
+  ];
+
+  it("keeps objects at or above the default watch threshold", () => {
+    expect(filterElevatedRisk(catalog).map((s) => s.noradId)).toEqual([2, 3, 4]);
+  });
+
+  it("respects an explicit higher threshold", () => {
+    expect(filterElevatedRisk(catalog, "warning").map((s) => s.noradId)).toEqual([3, 4]);
+  });
+
+  it("includes every object when the threshold is nominal", () => {
+    expect(filterElevatedRisk(catalog, "nominal")).toHaveLength(4);
   });
 });
