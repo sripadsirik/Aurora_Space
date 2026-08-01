@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { filterByOrbitType } from "../catalogFilters";
+import { filterByOrbitType, filterByRiskLevel } from "../catalogFilters";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -35,5 +35,21 @@ describe("filterByOrbitType", () => {
     const catalog = [makeSatellite({ orbitType: "LEO" })];
     filterByOrbitType(catalog, "LEO");
     expect(catalog).toHaveLength(1);
+  });
+});
+
+describe("filterByRiskLevel", () => {
+  it("keeps only satellites carrying the requested risk level", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, riskLevel: "nominal" }),
+      makeSatellite({ noradId: 2, riskLevel: "critical" }),
+      makeSatellite({ noradId: 3, riskLevel: "critical" })
+    ];
+    expect(filterByRiskLevel(catalog, "critical").map((s) => s.noradId)).toEqual([2, 3]);
+  });
+
+  it("returns an empty array when no satellite matches", () => {
+    const catalog = [makeSatellite({ riskLevel: "nominal" })];
+    expect(filterByRiskLevel(catalog, "warning")).toEqual([]);
   });
 });
