@@ -1,4 +1,5 @@
 import type { OrbitType, RiskLevel, Satellite } from "../types/space";
+import { RISK_LEVELS } from "./catalogStats";
 
 /**
  * Returns the satellites in the given orbit regime. The input is not mutated, so
@@ -55,4 +56,19 @@ export const searchCatalog = (satellites: Satellite[], query: string): Satellite
     if (satellite.name.toLowerCase().includes(needle)) return true;
     return satellite.noradId.toString().includes(needle);
   });
+};
+
+/**
+ * Returns the satellites whose risk level is at or above `threshold` in the
+ * ascending-severity order of {@link RISK_LEVELS}. This is the list counterpart
+ * to `countElevatedRisk` in `catalogStats` and shares its ordering, so the two
+ * never disagree. With the default `"watch"` threshold it yields every object
+ * flagged above nominal. The input is not mutated.
+ */
+export const filterElevatedRisk = (
+  satellites: Satellite[],
+  threshold: RiskLevel = "watch"
+): Satellite[] => {
+  const floor = RISK_LEVELS.indexOf(threshold);
+  return satellites.filter((satellite) => RISK_LEVELS.indexOf(satellite.riskLevel) >= floor);
 };
