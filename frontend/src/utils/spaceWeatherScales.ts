@@ -253,3 +253,14 @@ export const solarRadiationStormScale: SScaleInfo[] = [
   { level: "S4", code: 4, label: "Severe", impact: "Blackout of HF through the polar regions, elevated radiation risk." },
   { level: "S5", code: 5, label: "Extreme", impact: "Complete polar HF blackout, severe radiation hazard to crews and satellites." }
 ];
+
+const noRadiationStorm: SScaleInfo = {
+  level: "S0",
+  code: 0,
+  label: "Quiet",
+  impact: "No significant solar radiation storm activity."
+};
+
+/** Looks up the full metadata for an S-level, defaulting to quiet conditions. */
+export const sScaleInfo = (level: string): SScaleInfo =>
+  solarRadiationStormScale.find((entry) => entry.level === level) ?? noRadiationStorm;
