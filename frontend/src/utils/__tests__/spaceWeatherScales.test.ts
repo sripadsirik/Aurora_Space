@@ -247,6 +247,11 @@ describe("protonFluxToSScale", () => {
   it("clamps flux above the S5 threshold to S5", () => {
     expect(protonFluxToSScale(5e6)).toBe("S5");
   });
+
+  it("treats negative or non-finite readings as quiet", () => {
+    expect(protonFluxToSScale(-42)).toBe("S0");
+    expect(protonFluxToSScale(Number.NaN)).toBe("S0");
+  });
 });
 
 describe("sScaleColor", () => {
