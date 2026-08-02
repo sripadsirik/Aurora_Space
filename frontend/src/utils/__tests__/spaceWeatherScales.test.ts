@@ -8,6 +8,7 @@ import {
   parseXrayFlux,
   protonFluxToSScale,
   radioBlackoutScale,
+  sScaleColor,
   rScaleColor,
   rScaleInfo,
   xrayClassToRScale,
@@ -242,5 +243,24 @@ describe("protonFluxToSScale", () => {
 
   it("clamps flux above the S5 threshold to S5", () => {
     expect(protonFluxToSScale(5e6)).toBe("S5");
+  });
+});
+
+describe("sScaleColor", () => {
+  it("returns a distinct colour for each active storm level", () => {
+    const colors = new Set(
+      ["S1", "S2", "S3", "S4", "S5"].map((level) => sScaleColor(level))
+    );
+    expect(colors.size).toBe(5);
+  });
+
+  it("escalates from quiet green to extreme red", () => {
+    expect(sScaleColor("S0")).toBe("#7dff6a");
+    expect(sScaleColor("S5")).toBe("#ff0000");
+  });
+
+  it("falls back to quiet green for unknown levels", () => {
+    expect(sScaleColor("None")).toBe("#7dff6a");
+    expect(sScaleColor("")).toBe("#7dff6a");
   });
 });
