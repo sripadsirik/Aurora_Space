@@ -303,3 +303,12 @@ describe("protonFluxToSScaleInfo", () => {
     expect(protonFluxToSScaleInfo(5).code).toBe(0);
   });
 });
+
+describe("NOAA scale colour consistency", () => {
+  it("shares one green-to-red escalation palette across G, R, and S scales", () => {
+    for (let code = 0; code <= 5; code += 1) {
+      expect(sScaleColor(`S${code}`)).toBe(gScaleColor(`G${code}`));
+      expect(sScaleColor(`S${code}`)).toBe(rScaleColor(`R${code}`));
+    }
+  });
+});
