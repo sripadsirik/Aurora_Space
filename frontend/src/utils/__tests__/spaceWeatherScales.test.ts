@@ -6,6 +6,7 @@ import {
   kpToGScale,
   kpToGScaleInfo,
   parseXrayFlux,
+  protonFluxToSScale,
   radioBlackoutScale,
   rScaleColor,
   rScaleInfo,
@@ -215,5 +216,31 @@ describe("xrayClassToRScaleInfo", () => {
 
   it("falls back to quiet conditions for unparseable input", () => {
     expect(xrayClassToRScaleInfo("n/a").level).toBe("R0");
+  });
+});
+
+describe("protonFluxToSScale", () => {
+  it("maps NOAA proton-flux thresholds to radiation storm levels", () => {
+    expect(protonFluxToSScale(1e1)).toBe("S1");
+    expect(protonFluxToSScale(1e2)).toBe("S2");
+    expect(protonFluxToSScale(1e3)).toBe("S3");
+    expect(protonFluxToSScale(1e4)).toBe("S4");
+    expect(protonFluxToSScale(1e5)).toBe("S5");
+  });
+
+  it("treats sub-storm flux as quiet (S0)", () => {
+    expect(protonFluxToSScale(9.9)).toBe("S0");
+    expect(protonFluxToSScale(0)).toBe("S0");
+  });
+
+  it("steps down one level just below each threshold", () => {
+    expect(protonFluxToSScale(99)).toBe("S1");
+    expect(protonFluxToSScale(999)).toBe("S2");
+    expect(protonFluxToSScale(9999)).toBe("S3");
+    expect(protonFluxToSScale(99999)).toBe("S4");
+  });
+
+  it("clamps flux above the S5 threshold to S5", () => {
+    expect(protonFluxToSScale(5e6)).toBe("S5");
   });
 });
