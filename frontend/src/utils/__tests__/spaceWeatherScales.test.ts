@@ -7,6 +7,7 @@ import {
   kpToGScaleInfo,
   parseXrayFlux,
   protonFluxToSScale,
+  protonFluxToSScaleInfo,
   radioBlackoutScale,
   solarRadiationStormScale,
   sScaleColor,
@@ -293,5 +294,12 @@ describe("sScaleInfo", () => {
     const info = sScaleInfo("None");
     expect(info.level).toBe("S0");
     expect(info.code).toBe(0);
+  });
+});
+
+describe("protonFluxToSScaleInfo", () => {
+  it("resolves a proton flux straight to its metadata", () => {
+    expect(protonFluxToSScaleInfo(1e3).level).toBe("S3");
+    expect(protonFluxToSScaleInfo(5).code).toBe(0);
   });
 });
