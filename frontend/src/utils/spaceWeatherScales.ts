@@ -192,3 +192,24 @@ export const xrayFluxToRScaleInfo = (fluxWpm2: number): RScaleInfo =>
  */
 export const xrayClassToRScaleInfo = (flux: string): RScaleInfo =>
   rScaleInfo(xrayClassToRScale(flux));
+
+/**
+ * NOAA solar radiation storm scale (S-scale), driven by the peak flux of
+ * >=10 MeV protons in particle flux units (pfu) measured at geosynchronous
+ * orbit. Runs from S1 (minor) to S5 (extreme), with S0 for sub-storm conditions.
+ */
+export type SScaleLevel = "S0" | "S1" | "S2" | "S3" | "S4" | "S5";
+
+/**
+ * Maps a >=10 MeV proton flux in pfu to its NOAA solar radiation storm level.
+ * NOAA escalates one S-level per power of ten: S1 at 10 pfu, S2 at 100, S3 at
+ * 1,000, S4 at 10,000, and S5 at 100,000. Anything below 10 pfu is quiet (S0).
+ */
+export const protonFluxToSScale = (fluxPfu: number): SScaleLevel => {
+  if (fluxPfu >= 1e5) return "S5";
+  if (fluxPfu >= 1e4) return "S4";
+  if (fluxPfu >= 1e3) return "S3";
+  if (fluxPfu >= 1e2) return "S2";
+  if (fluxPfu >= 1e1) return "S1";
+  return "S0";
+};
