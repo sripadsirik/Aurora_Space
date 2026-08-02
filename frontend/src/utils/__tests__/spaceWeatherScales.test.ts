@@ -8,6 +8,7 @@ import {
   parseXrayFlux,
   protonFluxToSScale,
   radioBlackoutScale,
+  solarRadiationStormScale,
   sScaleColor,
   rScaleColor,
   rScaleInfo,
@@ -249,9 +250,9 @@ describe("protonFluxToSScale", () => {
 describe("sScaleColor", () => {
   it("returns a distinct colour for each active storm level", () => {
     const colors = new Set(
-      ["S1", "S2", "S3", "S4", "S5"].map((level) => sScaleColor(level))
+      solarRadiationStormScale.map((entry) => sScaleColor(entry.level))
     );
-    expect(colors.size).toBe(5);
+    expect(colors.size).toBe(solarRadiationStormScale.length);
   });
 
   it("escalates from quiet green to extreme red", () => {
@@ -262,5 +263,19 @@ describe("sScaleColor", () => {
   it("falls back to quiet green for unknown levels", () => {
     expect(sScaleColor("None")).toBe("#7dff6a");
     expect(sScaleColor("")).toBe("#7dff6a");
+  });
+});
+
+describe("solarRadiationStormScale", () => {
+  it("lists the five active levels in ascending severity", () => {
+    expect(solarRadiationStormScale.map((entry) => entry.level)).toEqual([
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ]);
+    const codes = solarRadiationStormScale.map((entry) => entry.code);
+    expect(codes).toEqual([...codes].sort((a, b) => a - b));
   });
 });
