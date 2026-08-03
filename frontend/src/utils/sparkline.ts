@@ -83,3 +83,12 @@ export const buildSparkline = (values: readonly number[], options: SparklineOpti
   const points = sparklinePoints(values, options);
   return { points, path: sparklinePath(points) };
 };
+
+/**
+ * Vertical pixel position of a horizontal reference line drawn at `threshold`,
+ * using the same scale as the plotted series. Handy for overlaying alert bands
+ * (for example a storm-level marker) on top of a sparkline. Thresholds outside
+ * `[min, max]` are clamped to the drawing area by {@link sparklineY}.
+ */
+export const sparklineThresholdY = (threshold: number, options: SparklineOptions): number =>
+  sparklineY(threshold, { height: options.height, min: options.min ?? 0, max: options.max });
