@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { sparklinePath, sparklinePoints, sparklineY } from "../sparkline";
+import {
+  buildSparkline,
+  sparklinePath,
+  sparklinePoints,
+  sparklineThresholdY,
+  sparklineY
+} from "../sparkline";
 
 describe("sparklineY", () => {
   it("maps the minimum to the bottom edge and the maximum to the top edge", () => {
@@ -69,5 +75,28 @@ describe("sparklinePath", () => {
 
   it("emits a lone moveto for a single point", () => {
     expect(sparklinePath([{ x: 3, y: 4, value: 9 }])).toBe("M 3 4");
+  });
+});
+
+describe("buildSparkline", () => {
+  it("returns points and a path derived from the same series", () => {
+    const options = { width: 10, height: 40, min: 0, max: 10 };
+    const { points, path } = buildSparkline([0, 10], options);
+    expect(points).toEqual(sparklinePoints([0, 10], options));
+    expect(path).toBe(sparklinePath(points));
+  });
+
+  it("produces an empty path for an empty series", () => {
+    expect(buildSparkline([], { width: 10, height: 40 })).toEqual({ points: [], path: "" });
+  });
+});
+
+describe("sparklineThresholdY", () => {
+  it("positions a reference line on the shared value scale", () => {
+    expect(sparklineThresholdY(5, { width: 10, height: 40, min: 0, max: 10 })).toBe(20);
+  });
+
+  it("clamps a threshold above the range to the top edge", () => {
+    expect(sparklineThresholdY(20, { width: 10, height: 40, min: 0, max: 10 })).toBe(0);
   });
 });
