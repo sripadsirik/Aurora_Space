@@ -59,3 +59,11 @@ export const sparklinePoints = (values: readonly number[], options: SparklineOpt
     value
   }));
 };
+
+/**
+ * Builds an SVG `path` `d` string that connects the given points in order: the
+ * first point becomes a `moveto` (`M`) and each subsequent point a `lineto`
+ * (`L`). Returns an empty string for an empty point list.
+ */
+export const sparklinePath = (points: readonly SparklinePoint[]): string =>
+  points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
