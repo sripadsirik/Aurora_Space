@@ -5,6 +5,7 @@ import { getKpColor } from "../../utils/colors";
 import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 import { countStormExposedAssets } from "../../utils/stormExposure";
+import { buildSparkline, sparklineThresholdY } from "../../utils/sparkline";
 
 const mockKpHistory = [
   2.3, 2.1, 2.5, 2.8, 3.0, 3.2, 3.1, 2.9,
@@ -38,12 +39,8 @@ export const StormImpactPanel = (): JSX.Element | null => {
   // KP Sparkline
   const sparklineWidth = 240;
   const sparklineHeight = 40;
-  const points = mockKpHistory.map((val, i) => {
-    const x = (i / (mockKpHistory.length - 1)) * sparklineWidth;
-    const y = sparklineHeight - (val / 9) * sparklineHeight;
-    return { x, y, val };
-  });
-  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const sparklineScale = { width: sparklineWidth, height: sparklineHeight, min: 0, max: 9 };
+  const { points, path: pathD } = buildSparkline(mockKpHistory, sparklineScale);
 
   return (
     <div
@@ -144,7 +141,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
             <path d={pathD} fill="none" stroke="#ff8844" strokeWidth="1.5" />
             {/* Segment coloring */}
             {points.map((p, i) => {
-              const color = p.val > 7 ? "#ff2a2a" : p.val >= 5 ? "#ffcc00" : "#7dff6a";
+              const color = p.value > 7 ? "#ff2a2a" : p.value >= 5 ? "#ffcc00" : "#7dff6a";
               return (
                 <circle key={i} cx={p.x} cy={p.y} r="2" fill={color} />
               );
