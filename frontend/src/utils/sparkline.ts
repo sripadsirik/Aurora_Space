@@ -16,6 +16,13 @@ export interface SparklineOptions {
   max?: number;
 }
 
+/** A single plotted sparkline point: pixel coordinates plus the source value. */
+export interface SparklinePoint {
+  x: number;
+  y: number;
+  value: number;
+}
+
 /**
  * Maps a single value onto its vertical pixel position within a sparkline of the
  * given `height`. The SVG y-axis grows downward, so the smallest value sits at
@@ -32,4 +39,23 @@ export const sparklineY = (
   if (range <= 0) return height;
   const fraction = Math.min(1, Math.max(0, (value - min) / range));
   return height - fraction * height;
+};
+
+/**
+ * Places each value in a series onto evenly spaced `x` columns spanning the full
+ * `width`, pairing every column with its {@link sparklineY} height. When `max`
+ * is omitted it defaults to the largest value in the series, so a bare series
+ * fills the vertical space. A single-element series is pinned to `x = 0`, and an
+ * empty series yields no points.
+ */
+export const sparklinePoints = (values: readonly number[], options: SparklineOptions): SparklinePoint[] => {
+  if (values.length === 0) return [];
+  const { width, height, min = 0 } = options;
+  const max = options.max ?? Math.max(...values);
+  const lastIndex = values.length - 1;
+  return values.map((value, index) => ({
+    x: lastIndex === 0 ? 0 : (index / lastIndex) * width,
+    y: sparklineY(value, { height, min, max }),
+    value
+  }));
 };
