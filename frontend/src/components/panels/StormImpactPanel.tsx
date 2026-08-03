@@ -41,6 +41,8 @@ export const StormImpactPanel = (): JSX.Element | null => {
   const sparklineHeight = 40;
   const sparklineScale = { width: sparklineWidth, height: sparklineHeight, min: 0, max: 9 };
   const { points, path: pathD } = buildSparkline(mockKpHistory, sparklineScale);
+  const activeThresholdY = sparklineThresholdY(5, sparklineScale);
+  const severeThresholdY = sparklineThresholdY(7, sparklineScale);
 
   return (
     <div
@@ -128,13 +130,13 @@ export const StormImpactPanel = (): JSX.Element | null => {
           >
             {/* Threshold lines */}
             <line
-              x1="0" y1={sparklineHeight - (5 / 9) * sparklineHeight}
-              x2={sparklineWidth} y2={sparklineHeight - (5 / 9) * sparklineHeight}
+              x1="0" y1={activeThresholdY}
+              x2={sparklineWidth} y2={activeThresholdY}
               stroke="#ffcc0030" strokeWidth="1" strokeDasharray="4 4"
             />
             <line
-              x1="0" y1={sparklineHeight - (7 / 9) * sparklineHeight}
-              x2={sparklineWidth} y2={sparklineHeight - (7 / 9) * sparklineHeight}
+              x1="0" y1={severeThresholdY}
+              x2={sparklineWidth} y2={severeThresholdY}
               stroke="#ff2a2a30" strokeWidth="1" strokeDasharray="4 4"
             />
             {/* Path */}
