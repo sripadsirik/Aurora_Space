@@ -67,3 +67,19 @@ export const sparklinePoints = (values: readonly number[], options: SparklineOpt
  */
 export const sparklinePath = (points: readonly SparklinePoint[]): string =>
   points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+
+/** A plotted sparkline: the per-value points plus the connecting SVG path. */
+export interface Sparkline {
+  points: SparklinePoint[];
+  path: string;
+}
+
+/**
+ * Convenience wrapper that plots a series into {@link SparklinePoint}s and the
+ * matching {@link sparklinePath} string in one call, so a renderer can derive
+ * both the marker positions and the connecting line from a single pass.
+ */
+export const buildSparkline = (values: readonly number[], options: SparklineOptions): Sparkline => {
+  const points = sparklinePoints(values, options);
+  return { points, path: sparklinePath(points) };
+};
