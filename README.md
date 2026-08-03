@@ -133,6 +133,18 @@ object can land in more than one — because each reflects a hazard operators tr
 The thresholds live in the exported `STORM_EXPOSURE_THRESHOLDS` constant, and objects exactly on a
 boundary are excluded (the comparisons are strict).
 
+`frontend/src/utils/sparkline.ts` turns a numeric series into SVG sparkline geometry. The SVG
+y-axis grows downward, so the series minimum sits at the bottom edge and the maximum at the top;
+values outside the configured `[min, max]` range are clamped into the drawing area:
+
+| Helper | Returns |
+| --- | --- |
+| `sparklineY` | Vertical pixel position for a single value |
+| `sparklinePoints` | Evenly spaced `{ x, y, value }` points across the width |
+| `sparklinePath` | An SVG `path` `d` string linking the points |
+| `buildSparkline` | Points and path in one pass |
+| `sparklineThresholdY` | Vertical position of a horizontal reference line |
+
 ## Repo Layout
 
 ```text
