@@ -115,6 +115,24 @@ panel so the boundaries never drift apart:
 reports whether it reaches the `warning` band or higher. Thresholds live in the exported
 `CONJUNCTION_RISK_THRESHOLDS` constant.
 
+## Storm Impact Panel Helpers
+
+The Storm Impact panel derives its at-risk asset tally and its Kp-history sparkline from two pure
+utility modules rather than inline component logic, so both are unit-tested independently of React.
+
+`frontend/src/utils/stormExposure.ts` counts, in a single pass over a `Satellite[]`, how many
+objects fall into each geomagnetic-storm exposure bucket. The buckets overlap by design — one
+object can land in more than one — because each reflects a hazard operators track separately:
+
+| Bucket | Criterion | Hazard |
+| --- | --- | --- |
+| `leoDrag` | Altitude below 2000 km | Increased atmospheric drag |
+| `geoCharging` | Altitude above 35000 km | Surface charging near GEO |
+| `debris` | Owner is `DEBRIS` | Accelerated orbital decay |
+
+The thresholds live in the exported `STORM_EXPOSURE_THRESHOLDS` constant, and objects exactly on a
+boundary are excluded (the comparisons are strict).
+
 ## Repo Layout
 
 ```text
