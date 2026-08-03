@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sparklinePoints, sparklineY } from "../sparkline";
+import { sparklinePath, sparklinePoints, sparklineY } from "../sparkline";
 
 describe("sparklineY", () => {
   it("maps the minimum to the bottom edge and the maximum to the top edge", () => {
@@ -50,5 +50,24 @@ describe("sparklinePoints", () => {
 
   it("returns no points for an empty series", () => {
     expect(sparklinePoints([], { width: 100, height: 40 })).toEqual([]);
+  });
+});
+
+describe("sparklinePath", () => {
+  it("starts with a moveto and links the rest with linetos", () => {
+    const path = sparklinePath([
+      { x: 0, y: 10, value: 1 },
+      { x: 5, y: 20, value: 2 },
+      { x: 10, y: 0, value: 3 }
+    ]);
+    expect(path).toBe("M 0 10 L 5 20 L 10 0");
+  });
+
+  it("returns an empty string for no points", () => {
+    expect(sparklinePath([])).toBe("");
+  });
+
+  it("emits a lone moveto for a single point", () => {
+    expect(sparklinePath([{ x: 3, y: 4, value: 9 }])).toBe("M 3 4");
   });
 });
