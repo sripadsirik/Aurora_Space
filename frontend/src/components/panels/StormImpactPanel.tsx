@@ -4,6 +4,7 @@ import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
+import { countStormExposedAssets } from "../../utils/stormExposure";
 
 const mockKpHistory = [
   2.3, 2.1, 2.5, 2.8, 3.0, 3.2, 3.1, 2.9,
@@ -26,12 +27,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
     }
   }, [currentMode, openPanel]);
 
-  const riskCounts = useMemo(() => {
-    const leo = satellites.filter((s) => s.altitudeKm < 2000).length;
-    const geo = satellites.filter((s) => s.altitudeKm > 35000).length;
-    const debris = satellites.filter((s) => s.owner === "DEBRIS").length;
-    return { leo, geo, debris };
-  }, [satellites]);
+  const riskCounts = useMemo(() => countStormExposedAssets(satellites), [satellites]);
 
   if (currentMode !== "STORM") return null;
 
@@ -94,14 +90,14 @@ export const StormImpactPanel = (): JSX.Element | null => {
                 <span className="h-2 w-2 rounded-full bg-[#ff8b38]" />
                 LEO — Drag Risk
               </span>
-              <span className="text-[#ffcc88]">{riskCounts.leo} satellites</span>
+              <span className="text-[#ffcc88]">{riskCounts.leoDrag} satellites</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[#ffcc00]" />
                 GEO — Charge Risk
               </span>
-              <span className="text-[#ffcc88]">{riskCounts.geo} satellites</span>
+              <span className="text-[#ffcc88]">{riskCounts.geoCharging} satellites</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5">
