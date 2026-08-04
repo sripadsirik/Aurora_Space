@@ -92,6 +92,7 @@ minimum ground elevation angle (defaulting to `0`, the geometric horizon):
 | `slantRangeToHorizonKm` | Line-of-sight range to the coverage edge |
 | `coverageAreaKm2` | Surface area of the coverage cap |
 | `earthCoverageFraction` | Fraction of Earth's surface in view (0-1) |
+| `isWithinCoverage` | Whether a ground point at a given angular separation is in view |
 | `getCoverageFootprint` | All of the above bundled into one `CoverageFootprint` for a `Satellite` |
 
 Raising the minimum elevation angle narrows the footprint (a station needs the satellite higher
