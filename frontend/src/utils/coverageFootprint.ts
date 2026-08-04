@@ -46,3 +46,13 @@ export const slantRangeToHorizonKm = (altitudeKm: number, minElevationDeg = 0): 
     2 * EARTH_RADIUS_KM * satelliteRadius * Math.cos(centralAngle);
   return Math.sqrt(squared);
 };
+
+/**
+ * Area of Earth's surface, in square kilometres, inside the coverage cap. Uses
+ * the spherical-cap area `2 * pi * R^2 * (1 - cos(lambda))`, where `lambda` is
+ * the Earth central angle to the coverage edge.
+ */
+export const coverageAreaKm2 = (altitudeKm: number, minElevationDeg = 0): number => {
+  const centralAngle = toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
+  return 2 * Math.PI * EARTH_RADIUS_KM ** 2 * (1 - Math.cos(centralAngle));
+};
