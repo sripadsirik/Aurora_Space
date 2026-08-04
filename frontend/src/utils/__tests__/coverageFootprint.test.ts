@@ -3,7 +3,8 @@ import type { Satellite } from "../../types/space";
 import {
   EARTH_RADIUS_KM,
   coverageRadiusKm,
-  earthCentralAngleDeg
+  earthCentralAngleDeg,
+  slantRangeToHorizonKm
 } from "../coverageFootprint";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -56,5 +57,22 @@ describe("coverageRadiusKm", () => {
 
   it("grows with altitude", () => {
     expect(coverageRadiusKm(1200)).toBeGreaterThan(coverageRadiusKm(400));
+  });
+});
+
+describe("slantRangeToHorizonKm", () => {
+  it("matches the tangent-line geometry sqrt((R+h)^2 - R^2) at the horizon", () => {
+    const altitude = 550;
+    const expected = Math.sqrt((EARTH_RADIUS_KM + altitude) ** 2 - EARTH_RADIUS_KM ** 2);
+    expect(slantRangeToHorizonKm(altitude)).toBeCloseTo(expected, 3);
+  });
+
+  it("always exceeds the satellite altitude", () => {
+    expect(slantRangeToHorizonKm(550)).toBeGreaterThan(550);
+    expect(slantRangeToHorizonKm(35_786)).toBeGreaterThan(35_786);
+  });
+
+  it("shortens as the minimum elevation angle rises", () => {
+    expect(slantRangeToHorizonKm(550, 20)).toBeLessThan(slantRangeToHorizonKm(550, 0));
   });
 });
