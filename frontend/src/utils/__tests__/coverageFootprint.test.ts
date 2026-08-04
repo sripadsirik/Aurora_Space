@@ -7,6 +7,7 @@ import {
   earthCentralAngleDeg,
   earthCoverageFraction,
   getCoverageFootprint,
+  isWithinCoverage,
   slantRangeToHorizonKm
 } from "../coverageFootprint";
 
@@ -111,6 +112,28 @@ describe("earthCoverageFraction", () => {
 
   it("covers a smaller share of Earth as the elevation limit rises", () => {
     expect(earthCoverageFraction(550, 15)).toBeLessThan(earthCoverageFraction(550, 0));
+  });
+});
+
+describe("isWithinCoverage", () => {
+  it("includes the sub-satellite point itself", () => {
+    expect(isWithinCoverage(550, 0)).toBe(true);
+  });
+
+  it("excludes points beyond the coverage edge", () => {
+    const edge = earthCentralAngleDeg(550);
+    expect(isWithinCoverage(550, edge + 1)).toBe(false);
+    expect(isWithinCoverage(550, edge - 1)).toBe(true);
+  });
+
+  it("treats the exact coverage edge as in view", () => {
+    expect(isWithinCoverage(550, earthCentralAngleDeg(550))).toBe(true);
+  });
+
+  it("drops points as the minimum elevation angle rises", () => {
+    const separation = earthCentralAngleDeg(550) - 0.5;
+    expect(isWithinCoverage(550, separation, 0)).toBe(true);
+    expect(isWithinCoverage(550, separation, 20)).toBe(false);
   });
 });
 
