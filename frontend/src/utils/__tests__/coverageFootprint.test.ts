@@ -5,6 +5,7 @@ import {
   coverageAreaKm2,
   coverageRadiusKm,
   earthCentralAngleDeg,
+  earthCoverageFraction,
   slantRangeToHorizonKm
 } from "../coverageFootprint";
 
@@ -92,5 +93,22 @@ describe("coverageAreaKm2", () => {
 
   it("grows with altitude", () => {
     expect(coverageAreaKm2(1200)).toBeGreaterThan(coverageAreaKm2(400));
+  });
+});
+
+describe("earthCoverageFraction", () => {
+  it("sees roughly 42 percent of Earth from geostationary orbit", () => {
+    const fraction = earthCoverageFraction(35_786);
+    expect(fraction).toBeGreaterThan(0.4);
+    expect(fraction).toBeLessThan(0.44);
+  });
+
+  it("stays within the 0 to 1 range", () => {
+    expect(earthCoverageFraction(400)).toBeGreaterThan(0);
+    expect(earthCoverageFraction(400)).toBeLessThan(1);
+  });
+
+  it("covers a smaller share of Earth as the elevation limit rises", () => {
+    expect(earthCoverageFraction(550, 15)).toBeLessThan(earthCoverageFraction(550, 0));
   });
 });
