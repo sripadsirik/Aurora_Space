@@ -29,3 +29,20 @@ export const earthCentralAngleDeg = (altitudeKm: number, minElevationDeg = 0): n
  */
 export const coverageRadiusKm = (altitudeKm: number, minElevationDeg = 0): number =>
   EARTH_RADIUS_KM * toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
+
+/**
+ * Line-of-sight (slant) range in kilometres from the satellite to the edge of
+ * its coverage cap. Computed with the law of cosines on the triangle formed by
+ * Earth's centre, the satellite, and the coverage-edge ground point. At the
+ * default horizon this is the maximum distance at which a receiver can still
+ * see the satellite.
+ */
+export const slantRangeToHorizonKm = (altitudeKm: number, minElevationDeg = 0): number => {
+  const satelliteRadius = EARTH_RADIUS_KM + altitudeKm;
+  const centralAngle = toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
+  const squared =
+    EARTH_RADIUS_KM ** 2 +
+    satelliteRadius ** 2 -
+    2 * EARTH_RADIUS_KM * satelliteRadius * Math.cos(centralAngle);
+  return Math.sqrt(squared);
+};
