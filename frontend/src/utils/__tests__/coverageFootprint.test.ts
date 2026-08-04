@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import {
   EARTH_RADIUS_KM,
+  coverageAreaKm2,
   coverageRadiusKm,
   earthCentralAngleDeg,
   slantRangeToHorizonKm
@@ -74,5 +75,22 @@ describe("slantRangeToHorizonKm", () => {
 
   it("shortens as the minimum elevation angle rises", () => {
     expect(slantRangeToHorizonKm(550, 20)).toBeLessThan(slantRangeToHorizonKm(550, 0));
+  });
+});
+
+describe("coverageAreaKm2", () => {
+  const EARTH_SURFACE_KM2 = 4 * Math.PI * EARTH_RADIUS_KM ** 2;
+
+  it("never exceeds the total surface area of Earth", () => {
+    expect(coverageAreaKm2(35_786)).toBeLessThan(EARTH_SURFACE_KM2);
+  });
+
+  it("matches the fraction of Earth times its surface area", () => {
+    const fraction = (1 - Math.cos((earthCentralAngleDeg(550) * Math.PI) / 180)) / 2;
+    expect(coverageAreaKm2(550)).toBeCloseTo(fraction * EARTH_SURFACE_KM2, 3);
+  });
+
+  it("grows with altitude", () => {
+    expect(coverageAreaKm2(1200)).toBeGreaterThan(coverageAreaKm2(400));
   });
 });
