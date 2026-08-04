@@ -20,3 +20,12 @@ export const earthCentralAngleDeg = (altitudeKm: number, minElevationDeg = 0): n
   const ratio = EARTH_RADIUS_KM / (EARTH_RADIUS_KM + altitudeKm);
   return toDegrees(Math.acos(ratio * Math.cos(epsilon)) - epsilon);
 };
+
+/**
+ * Radius of the ground coverage circle, in kilometres, measured as the arc
+ * length along Earth's surface from the sub-satellite point to the coverage
+ * edge. Derived directly from the central angle, so it grows with altitude and
+ * shrinks as the minimum elevation angle rises.
+ */
+export const coverageRadiusKm = (altitudeKm: number, minElevationDeg = 0): number =>
+  EARTH_RADIUS_KM * toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
