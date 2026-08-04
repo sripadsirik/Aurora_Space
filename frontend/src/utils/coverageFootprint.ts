@@ -56,3 +56,13 @@ export const coverageAreaKm2 = (altitudeKm: number, minElevationDeg = 0): number
   const centralAngle = toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
   return 2 * Math.PI * EARTH_RADIUS_KM ** 2 * (1 - Math.cos(centralAngle));
 };
+
+/**
+ * Fraction of Earth's total surface area that falls inside the coverage cap, in
+ * the range 0-1. Equal to `(1 - cos(lambda)) / 2`. A single geostationary
+ * satellite sees roughly 0.42 (about 42%) of the globe down to the horizon.
+ */
+export const earthCoverageFraction = (altitudeKm: number, minElevationDeg = 0): number => {
+  const centralAngle = toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
+  return (1 - Math.cos(centralAngle)) / 2;
+};
