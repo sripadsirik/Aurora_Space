@@ -66,3 +66,37 @@ export const earthCoverageFraction = (altitudeKm: number, minElevationDeg = 0): 
   const centralAngle = toRadians(earthCentralAngleDeg(altitudeKm, minElevationDeg));
   return (1 - Math.cos(centralAngle)) / 2;
 };
+
+/** Derived ground coverage figures for a single satellite. */
+export interface CoverageFootprint {
+  /** Minimum ground elevation angle the footprint was computed for, in degrees. */
+  minElevationDeg: number;
+  /** Earth central angle from the sub-point to the coverage edge, in degrees. */
+  centralAngleDeg: number;
+  /** Surface radius of the coverage circle, in kilometres. */
+  coverageRadiusKm: number;
+  /** Line-of-sight range to the coverage edge, in kilometres. */
+  slantRangeKm: number;
+  /** Surface area inside the coverage cap, in square kilometres. */
+  coverageAreaKm2: number;
+  /** Fraction of Earth's surface inside the coverage cap, 0-1. */
+  earthFraction: number;
+}
+
+/**
+ * Bundles the derived coverage figures for a satellite into a single footprint:
+ * central angle, surface radius, slant range, cap area, and the fraction of
+ * Earth in view. All values come from the satellite's altitude and the given
+ * minimum elevation angle, so they stay mutually consistent.
+ */
+export const getCoverageFootprint = (
+  satellite: Satellite,
+  minElevationDeg = 0
+): CoverageFootprint => ({
+  minElevationDeg,
+  centralAngleDeg: earthCentralAngleDeg(satellite.altitudeKm, minElevationDeg),
+  coverageRadiusKm: coverageRadiusKm(satellite.altitudeKm, minElevationDeg),
+  slantRangeKm: slantRangeToHorizonKm(satellite.altitudeKm, minElevationDeg),
+  coverageAreaKm2: coverageAreaKm2(satellite.altitudeKm, minElevationDeg),
+  earthFraction: earthCoverageFraction(satellite.altitudeKm, minElevationDeg)
+});
