@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import {
   EARTH_RADIUS_KM,
+  coverageRadiusKm,
   earthCentralAngleDeg
 } from "../coverageFootprint";
 
@@ -38,5 +39,22 @@ describe("earthCentralAngleDeg", () => {
 
   it("shrinks as the minimum elevation angle rises", () => {
     expect(earthCentralAngleDeg(550, 10)).toBeLessThan(earthCentralAngleDeg(550, 0));
+  });
+});
+
+describe("coverageRadiusKm", () => {
+  it("is the central angle in radians scaled by Earth's radius", () => {
+    const angleRad = (earthCentralAngleDeg(550) * Math.PI) / 180;
+    expect(coverageRadiusKm(550)).toBeCloseTo(EARTH_RADIUS_KM * angleRad, 6);
+  });
+
+  it("returns a coverage radius around 2500 km for a 550 km orbit", () => {
+    const radius = coverageRadiusKm(550);
+    expect(radius).toBeGreaterThan(2400);
+    expect(radius).toBeLessThan(2700);
+  });
+
+  it("grows with altitude", () => {
+    expect(coverageRadiusKm(1200)).toBeGreaterThan(coverageRadiusKm(400));
   });
 });
