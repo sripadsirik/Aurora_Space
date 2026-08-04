@@ -6,6 +6,7 @@ import {
   coverageRadiusKm,
   earthCentralAngleDeg,
   earthCoverageFraction,
+  getCoverageFootprint,
   slantRangeToHorizonKm
 } from "../coverageFootprint";
 
@@ -110,5 +111,30 @@ describe("earthCoverageFraction", () => {
 
   it("covers a smaller share of Earth as the elevation limit rises", () => {
     expect(earthCoverageFraction(550, 15)).toBeLessThan(earthCoverageFraction(550, 0));
+  });
+});
+
+describe("getCoverageFootprint", () => {
+  it("bundles values that agree with the standalone helpers", () => {
+    const satellite = makeSatellite({ altitudeKm: 800 });
+    const footprint = getCoverageFootprint(satellite);
+    expect(footprint.centralAngleDeg).toBeCloseTo(earthCentralAngleDeg(800), 9);
+    expect(footprint.coverageRadiusKm).toBeCloseTo(coverageRadiusKm(800), 9);
+    expect(footprint.slantRangeKm).toBeCloseTo(slantRangeToHorizonKm(800), 9);
+    expect(footprint.coverageAreaKm2).toBeCloseTo(coverageAreaKm2(800), 9);
+    expect(footprint.earthFraction).toBeCloseTo(earthCoverageFraction(800), 9);
+  });
+
+  it("defaults the minimum elevation angle to zero", () => {
+    expect(getCoverageFootprint(makeSatellite()).minElevationDeg).toBe(0);
+  });
+
+  it("threads the minimum elevation angle through to every figure", () => {
+    const satellite = makeSatellite({ altitudeKm: 550 });
+    const horizon = getCoverageFootprint(satellite, 0);
+    const elevated = getCoverageFootprint(satellite, 10);
+    expect(elevated.minElevationDeg).toBe(10);
+    expect(elevated.centralAngleDeg).toBeLessThan(horizon.centralAngleDeg);
+    expect(elevated.coverageAreaKm2).toBeLessThan(horizon.coverageAreaKm2);
   });
 });
