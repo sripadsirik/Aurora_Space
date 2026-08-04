@@ -67,6 +67,19 @@ export const earthCoverageFraction = (altitudeKm: number, minElevationDeg = 0): 
   return (1 - Math.cos(centralAngle)) / 2;
 };
 
+/**
+ * Whether a ground point is inside a satellite's coverage cap. `separationDeg`
+ * is the great-circle central angle between the sub-satellite point and the
+ * ground point; the point is in view when that separation is no larger than the
+ * coverage edge for the given minimum elevation angle. Answers the SSA question
+ * "can this satellite currently see that station?".
+ */
+export const isWithinCoverage = (
+  altitudeKm: number,
+  separationDeg: number,
+  minElevationDeg = 0
+): boolean => separationDeg <= earthCentralAngleDeg(altitudeKm, minElevationDeg);
+
 /** Derived ground coverage figures for a single satellite. */
 export interface CoverageFootprint {
   /** Minimum ground elevation angle the footprint was computed for, in degrees. */
