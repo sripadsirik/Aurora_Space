@@ -117,6 +117,22 @@ reports whether it reaches the `warning` band or higher. Thresholds live in the 
 Tailwind text-colour class used by the conjunction tables, so the active-conjunctions and
 intel-analysis panels colour their rows from a single source of truth.
 
+## Panel Display Helpers
+
+Presentation logic that used to live inline in the HUD panels is factored into small pure
+helpers so it can be unit-tested and reused:
+
+| Helper | Module | Returns |
+| --- | --- | --- |
+| `formatCmeArrival` | `cmeDisplay.ts` | The CME card's arrival status line (miss, arrived, or countdown) |
+| `cmePrimaryImpacts` | `cmeDisplay.ts` | The escalating primary-impact list for an impacting CME |
+| `getStormAssetRiskCounts` | `stormAssets.ts` | LEO / GEO / debris tallies for the storm at-risk panel |
+| `kpSparklineColor` | `spaceWeatherScales.ts` | Traffic-light colour for a single Kp sample on a sparkline |
+
+`cmePrimaryImpacts` adds power-grid stress at predicted Kp 7 and satellite-charging risk at Kp 8,
+and `getStormAssetRiskCounts` treats its categories as non-exclusive so an object can be counted as
+both LEO and debris.
+
 ## Repo Layout
 
 ```text
