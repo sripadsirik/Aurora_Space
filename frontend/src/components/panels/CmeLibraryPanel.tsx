@@ -92,10 +92,9 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
           <div className="mt-1">
             <span className="text-[#7d9cb5]">Primary Impacts:</span>
             <ul className="mt-0.5 space-y-0.5 text-[9px] text-[#ffccaa]">
-              <li>HF Radio degradation</li>
-              <li>GPS accuracy reduction</li>
-              {cme.predictedKp >= 7 && <li>Power grid stress</li>}
-              {cme.predictedKp >= 8 && <li>Satellite charging risk</li>}
+              {cmePrimaryImpacts(cme).map((impact) => (
+                <li key={impact}>{impact}</li>
+              ))}
             </ul>
           </div>
         </div>
