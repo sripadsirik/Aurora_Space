@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
+import { getStormAssetRiskCounts } from "../../utils/stormAssets";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 
 const mockKpHistory = [
@@ -26,12 +27,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
     }
   }, [currentMode, openPanel]);
 
-  const riskCounts = useMemo(() => {
-    const leo = satellites.filter((s) => s.altitudeKm < 2000).length;
-    const geo = satellites.filter((s) => s.altitudeKm > 35000).length;
-    const debris = satellites.filter((s) => s.owner === "DEBRIS").length;
-    return { leo, geo, debris };
-  }, [satellites]);
+  const riskCounts = useMemo(() => getStormAssetRiskCounts(satellites), [satellites]);
 
   if (currentMode !== "STORM") return null;
 
