@@ -3,6 +3,7 @@ import {
   geomagneticStormScale,
   gScaleColor,
   gScaleInfo,
+  kpSparklineColor,
   kpToGScale,
   kpToGScaleInfo,
   parseXrayFlux,
@@ -215,5 +216,22 @@ describe("xrayClassToRScaleInfo", () => {
 
   it("falls back to quiet conditions for unparseable input", () => {
     expect(xrayClassToRScaleInfo("n/a").level).toBe("R0");
+  });
+});
+
+describe("kpSparklineColor", () => {
+  it("returns green below the Kp 5 storm threshold", () => {
+    expect(kpSparklineColor(0)).toBe("#7dff6a");
+    expect(kpSparklineColor(4.9)).toBe("#7dff6a");
+  });
+
+  it("returns amber from Kp 5 up to and including Kp 7", () => {
+    expect(kpSparklineColor(5)).toBe("#ffcc00");
+    expect(kpSparklineColor(7)).toBe("#ffcc00");
+  });
+
+  it("returns red above Kp 7", () => {
+    expect(kpSparklineColor(7.1)).toBe("#ff2a2a");
+    expect(kpSparklineColor(9)).toBe("#ff2a2a");
   });
 });
