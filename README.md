@@ -113,7 +113,9 @@ panel so the boundaries never drift apart:
 
 `classifyConjunctionRisk` maps a probability to its tier, and `isActionableConjunctionRisk`
 reports whether it reaches the `warning` band or higher. Thresholds live in the exported
-`CONJUNCTION_RISK_THRESHOLDS` constant.
+`CONJUNCTION_RISK_THRESHOLDS` constant. `conjunctionRiskTextClass` turns a tier into the shared
+Tailwind text-colour class used by the conjunction tables, so the active-conjunctions and
+intel-analysis panels colour their rows from a single source of truth.
 
 ## Repo Layout
 
