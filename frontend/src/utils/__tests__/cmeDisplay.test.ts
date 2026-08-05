@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCmeArrival } from "../cmeDisplay";
+import { cmePrimaryImpacts, formatCmeArrival } from "../cmeDisplay";
 
 describe("formatCmeArrival", () => {
   it("describes a clean miss with the pass-by wording", () => {
@@ -36,5 +36,31 @@ describe("formatCmeArrival", () => {
     expect(
       formatCmeArrival({ impactStatus: "GLANCING BLOW", hoursUntilArrival: 12 })
     ).toBe("GLANCING ARRIVAL — 12h until arrival");
+  });
+});
+
+describe("cmePrimaryImpacts", () => {
+  it("always includes HF radio and GPS effects for a mild storm", () => {
+    expect(cmePrimaryImpacts({ predictedKp: 5 })).toEqual([
+      "HF Radio degradation",
+      "GPS accuracy reduction"
+    ]);
+  });
+
+  it("adds power grid stress at Kp 7", () => {
+    expect(cmePrimaryImpacts({ predictedKp: 7 })).toEqual([
+      "HF Radio degradation",
+      "GPS accuracy reduction",
+      "Power grid stress"
+    ]);
+  });
+
+  it("adds satellite charging risk at Kp 8", () => {
+    expect(cmePrimaryImpacts({ predictedKp: 8 })).toEqual([
+      "HF Radio degradation",
+      "GPS accuracy reduction",
+      "Power grid stress",
+      "Satellite charging risk"
+    ]);
   });
 });
