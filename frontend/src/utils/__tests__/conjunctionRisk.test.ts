@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CONJUNCTION_RISK_THRESHOLDS,
   classifyConjunctionRisk,
+  conjunctionRiskTextClass,
   isActionableConjunctionRisk,
   sortConjunctionsByProbabilityDesc
 } from "../conjunctionRisk";
@@ -62,5 +63,23 @@ describe("sortConjunctionsByProbabilityDesc", () => {
 
   it("returns an empty array unchanged", () => {
     expect(sortConjunctionsByProbabilityDesc([])).toEqual([]);
+  });
+});
+
+describe("conjunctionRiskTextClass", () => {
+  it("uses the shared critical colour regardless of the default", () => {
+    expect(conjunctionRiskTextClass("critical", "text-white")).toBe("text-[#ff7d7d]");
+  });
+
+  it("uses the shared warning colour regardless of the default", () => {
+    expect(conjunctionRiskTextClass("warning", "text-[#d8ebff]")).toBe("text-[#ffcd73]");
+  });
+
+  it("falls back to the caller-supplied default for watch", () => {
+    expect(conjunctionRiskTextClass("watch", "text-[#d8ebff]")).toBe("text-[#d8ebff]");
+  });
+
+  it("falls back to the caller-supplied default for nominal", () => {
+    expect(conjunctionRiskTextClass("nominal", "text-white")).toBe("text-white");
   });
 });
