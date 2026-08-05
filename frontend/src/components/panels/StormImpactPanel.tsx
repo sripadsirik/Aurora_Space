@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
-import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
+import { gScaleColor, kpSparklineColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormAssetRiskCounts } from "../../utils/stormAssets";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 
@@ -143,12 +143,9 @@ export const StormImpactPanel = (): JSX.Element | null => {
             {/* Path */}
             <path d={pathD} fill="none" stroke="#ff8844" strokeWidth="1.5" />
             {/* Segment coloring */}
-            {points.map((p, i) => {
-              const color = p.val > 7 ? "#ff2a2a" : p.val >= 5 ? "#ffcc00" : "#7dff6a";
-              return (
-                <circle key={i} cx={p.x} cy={p.y} r="2" fill={color} />
-              );
-            })}
+            {points.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r="2" fill={kpSparklineColor(p.val)} />
+            ))}
             {/* Current value dot */}
             <circle
               cx={points[points.length - 1].x}
