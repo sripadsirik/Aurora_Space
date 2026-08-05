@@ -33,6 +33,18 @@ export const isActionableConjunctionRisk = (probability: number): boolean =>
   probability > CONJUNCTION_RISK_THRESHOLDS.warning;
 
 /**
+ * Maps a conjunction {@link RiskLevel} to the Tailwind text-colour class used by
+ * the conjunction tables. `critical` and `warning` have fixed colours shared by
+ * every panel; the class for the calmer `watch`/`nominal` tiers is supplied by
+ * the caller via `defaultClass`, since panels differ on their resting colour.
+ */
+export const conjunctionRiskTextClass = (risk: RiskLevel, defaultClass: string): string => {
+  if (risk === "critical") return "text-[#ff7d7d]";
+  if (risk === "warning") return "text-[#ffcd73]";
+  return defaultClass;
+};
+
+/**
  * Returns a new array of conjunctions ordered most-to-least severe by collision
  * probability. The input is not mutated, so it is safe to call on store state.
  */
