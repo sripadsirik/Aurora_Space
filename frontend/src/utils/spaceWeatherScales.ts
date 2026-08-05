@@ -76,6 +76,18 @@ export const gScaleInfo = (level: string): GScaleInfo =>
 export const kpToGScaleInfo = (kp: number): GScaleInfo => gScaleInfo(kpToGScale(kp));
 
 /**
+ * Traffic-light colour for a single Kp sample on a history sparkline: red above
+ * Kp 7 (strong-to-extreme storm), amber from Kp 5 up to and including 7 (minor
+ * storm territory), and green below Kp 5 (quiet). Kept intentionally coarse so
+ * the sparkline reads at a glance rather than tracking the full G-scale palette.
+ */
+export const kpSparklineColor = (kp: number): string => {
+  if (kp > 7) return "#ff2a2a";
+  if (kp >= 5) return "#ffcc00";
+  return "#7dff6a";
+};
+
+/**
  * Base peak flux (W/m^2, GOES 0.1-0.8 nm long band) for each solar X-ray class
  * letter. A magnitude of `1` in a class corresponds to its base flux, so "M5"
  * is 5x the M base and "X10" is 10x the X base.
