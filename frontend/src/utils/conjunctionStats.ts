@@ -18,3 +18,16 @@ export const countConjunctionsByRisk = (
   }
   return counts;
 };
+
+/**
+ * Counts conjunctions severe enough to warrant operator action — those whose
+ * collision probability lands in the `warning` or `critical` tier per
+ * {@link isActionableConjunctionRisk}.
+ */
+export const countActionableConjunctions = (
+  conjunctions: readonly ConjunctionWarning[]
+): number =>
+  conjunctions.reduce(
+    (count, conjunction) => (isActionableConjunctionRisk(conjunction.probability) ? count + 1 : count),
+    0
+  );
