@@ -48,6 +48,20 @@ export const soonestTca = (
   );
 
 /**
+ * Returns the conjunction with the highest collision probability — the single
+ * most severe event in the feed — or `null` when the feed is empty. Ties
+ * resolve to the earliest matching entry. The input is not mutated.
+ */
+export const highestProbabilityConjunction = (
+  conjunctions: readonly ConjunctionWarning[]
+): ConjunctionWarning | null =>
+  conjunctions.reduce<ConjunctionWarning | null>(
+    (highest, conjunction) =>
+      highest === null || conjunction.probability > highest.probability ? conjunction : highest,
+    null
+  );
+
+/**
  * Counts conjunctions severe enough to warrant operator action — those whose
  * collision probability lands in the `warning` or `critical` tier per
  * {@link isActionableConjunctionRisk}.
