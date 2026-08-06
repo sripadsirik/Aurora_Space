@@ -6,7 +6,8 @@ import {
   countActionableConjunctions,
   countConjunctionsByRisk,
   highestProbabilityConjunction,
-  soonestTca
+  soonestTca,
+  summarizeConjunctions
 } from "../conjunctionStats";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
@@ -125,5 +126,49 @@ describe("averageMissDistanceKm", () => {
 
   it("returns 0 for an empty feed rather than NaN", () => {
     expect(averageMissDistanceKm([])).toBe(0);
+  });
+});
+
+describe("summarizeConjunctions", () => {
+  it("bundles figures consistent with the individual helpers", () => {
+    const conjunctions = [
+      makeConjunction({
+        id: "critical",
+        probability: 2e-3,
+        missDistanceKm: 0.3,
+        missDistanceM: 300,
+        tca: new Date("2026-08-06T02:00:00Z")
+      }),
+      makeConjunction({
+        id: "watch",
+        probability: 5e-6,
+        missDistanceKm: 12,
+        missDistanceM: 12000,
+        tca: new Date("2026-08-06T01:00:00Z")
+      })
+    ];
+
+    const summary = summarizeConjunctions(conjunctions);
+
+    expect(summary.total).toBe(2);
+    expect(summary.byRisk).toEqual(countConjunctionsByRisk(conjunctions));
+    expect(summary.actionable).toBe(1);
+    expect(summary.closest?.id).toBe("critical");
+    expect(summary.soonest?.id).toBe("watch");
+    expect(summary.mostProbable?.id).toBe("critical");
+    expect(summary.averageMissDistanceKm).toBeCloseTo(6.15);
+  });
+
+  it("returns null extremes and zeroed figures for an empty feed", () => {
+    const summary = summarizeConjunctions([]);
+    expect(summary).toEqual({
+      total: 0,
+      byRisk: { nominal: 0, watch: 0, warning: 0, critical: 0 },
+      actionable: 0,
+      closest: null,
+      soonest: null,
+      mostProbable: null,
+      averageMissDistanceKm: 0
+    });
   });
 });
