@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
-import { countActionableConjunctions, countConjunctionsByRisk } from "../conjunctionStats";
+import {
+  closestApproach,
+  countActionableConjunctions,
+  countConjunctionsByRisk
+} from "../conjunctionStats";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
   id: "c1",
@@ -55,5 +59,21 @@ describe("countActionableConjunctions", () => {
 
   it("returns zero for an empty feed", () => {
     expect(countActionableConjunctions([])).toBe(0);
+  });
+});
+
+describe("closestApproach", () => {
+  it("returns the conjunction with the smallest miss distance", () => {
+    const near = makeConjunction({ id: "near", missDistanceM: 120 });
+    const conjunctions = [
+      makeConjunction({ id: "far", missDistanceM: 5000 }),
+      near,
+      makeConjunction({ id: "mid", missDistanceM: 900 })
+    ];
+    expect(closestApproach(conjunctions)).toBe(near);
+  });
+
+  it("returns null for an empty feed", () => {
+    expect(closestApproach([])).toBeNull();
   });
 });
