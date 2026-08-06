@@ -115,6 +115,26 @@ panel so the boundaries never drift apart:
 reports whether it reaches the `warning` band or higher. Thresholds live in the exported
 `CONJUNCTION_RISK_THRESHOLDS` constant.
 
+## Conjunction Statistics
+
+Summary figures for the active conjunction feed come from the pure helpers in
+`frontend/src/utils/conjunctionStats.ts`, which aggregate over a `ConjunctionWarning[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `countConjunctionsByRisk` | Object counts keyed by derived risk tier |
+| `countActionableConjunctions` | Number of `warning`/`critical` conjunctions |
+| `closestApproach` | The smallest-miss-distance conjunction (or `null`) |
+| `soonestTca` | The earliest-TCA conjunction (or `null`) |
+| `highestProbabilityConjunction` | The most probable conjunction (or `null`) |
+| `averageMissDistanceKm` | Mean miss distance in kilometres |
+| `summarizeConjunctions` | All of the above bundled into one `ConjunctionSummary` |
+
+Risk tiers reuse `classifyConjunctionRisk` / `isActionableConjunctionRisk` from
+`conjunctionRisk.ts`, so a panel header derived from these helpers stays consistent with the
+per-row colours in the conjunction panels. Extremes return `null` and averages return 0 for an
+empty feed, so every figure is safe to render without a guard.
+
 ## Repo Layout
 
 ```text
