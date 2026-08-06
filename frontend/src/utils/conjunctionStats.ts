@@ -20,6 +20,20 @@ export const countConjunctionsByRisk = (
 };
 
 /**
+ * Returns the conjunction with the smallest miss distance, or `null` for an
+ * empty feed. Ties resolve to the earliest matching entry, so the result is
+ * stable for a given ordering. The input is not mutated.
+ */
+export const closestApproach = (
+  conjunctions: readonly ConjunctionWarning[]
+): ConjunctionWarning | null =>
+  conjunctions.reduce<ConjunctionWarning | null>(
+    (closest, conjunction) =>
+      closest === null || conjunction.missDistanceM < closest.missDistanceM ? conjunction : closest,
+    null
+  );
+
+/**
  * Counts conjunctions severe enough to warrant operator action — those whose
  * collision probability lands in the `warning` or `critical` tier per
  * {@link isActionableConjunctionRisk}.
