@@ -83,3 +83,38 @@ export const countActionableConjunctions = (
     (count, conjunction) => (isActionableConjunctionRisk(conjunction.probability) ? count + 1 : count),
     0
   );
+
+/** Aggregate view of a conjunction feed, suitable for a HUD or panel header. */
+export interface ConjunctionSummary {
+  /** Total number of tracked conjunctions. */
+  total: number;
+  /** Conjunction counts keyed by derived risk tier. */
+  byRisk: Record<RiskLevel, number>;
+  /** Conjunctions in the `warning` or `critical` tier. */
+  actionable: number;
+  /** The smallest-miss-distance conjunction, or `null` for an empty feed. */
+  closest: ConjunctionWarning | null;
+  /** The earliest-TCA conjunction, or `null` for an empty feed. */
+  soonest: ConjunctionWarning | null;
+  /** The highest-probability conjunction, or `null` for an empty feed. */
+  mostProbable: ConjunctionWarning | null;
+  /** Mean miss distance in kilometres. */
+  averageMissDistanceKm: number;
+}
+
+/**
+ * Bundles the conjunction aggregates into a single struct so a summary display
+ * can derive every figure from one list. All members reuse the individual
+ * helpers in this module, so they stay mutually consistent.
+ */
+export const summarizeConjunctions = (
+  conjunctions: readonly ConjunctionWarning[]
+): ConjunctionSummary => ({
+  total: conjunctions.length,
+  byRisk: countConjunctionsByRisk(conjunctions),
+  actionable: countActionableConjunctions(conjunctions),
+  closest: closestApproach(conjunctions),
+  soonest: soonestTca(conjunctions),
+  mostProbable: highestProbabilityConjunction(conjunctions),
+  averageMissDistanceKm: averageMissDistanceKm(conjunctions)
+});
