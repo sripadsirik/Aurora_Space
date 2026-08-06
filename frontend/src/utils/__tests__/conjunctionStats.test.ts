@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
+  averageMissDistanceKm,
   closestApproach,
   countActionableConjunctions,
   countConjunctionsByRisk,
@@ -109,5 +110,20 @@ describe("highestProbabilityConjunction", () => {
 
   it("returns null for an empty feed", () => {
     expect(highestProbabilityConjunction([])).toBeNull();
+  });
+});
+
+describe("averageMissDistanceKm", () => {
+  it("averages the miss distances", () => {
+    const conjunctions = [
+      makeConjunction({ id: "a", missDistanceKm: 2 }),
+      makeConjunction({ id: "b", missDistanceKm: 4 }),
+      makeConjunction({ id: "c", missDistanceKm: 6 })
+    ];
+    expect(averageMissDistanceKm(conjunctions)).toBe(4);
+  });
+
+  it("returns 0 for an empty feed rather than NaN", () => {
+    expect(averageMissDistanceKm([])).toBe(0);
   });
 });
