@@ -3,7 +3,8 @@ import type { ConjunctionWarning } from "../../types/space";
 import {
   closestApproach,
   countActionableConjunctions,
-  countConjunctionsByRisk
+  countConjunctionsByRisk,
+  soonestTca
 } from "../conjunctionStats";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
@@ -75,5 +76,21 @@ describe("closestApproach", () => {
 
   it("returns null for an empty feed", () => {
     expect(closestApproach([])).toBeNull();
+  });
+});
+
+describe("soonestTca", () => {
+  it("returns the conjunction with the earliest TCA", () => {
+    const first = makeConjunction({ id: "first", tca: new Date("2026-08-06T01:00:00Z") });
+    const conjunctions = [
+      makeConjunction({ id: "late", tca: new Date("2026-08-06T09:00:00Z") }),
+      first,
+      makeConjunction({ id: "mid", tca: new Date("2026-08-06T04:00:00Z") })
+    ];
+    expect(soonestTca(conjunctions)).toBe(first);
+  });
+
+  it("returns null for an empty feed", () => {
+    expect(soonestTca([])).toBeNull();
   });
 });
