@@ -62,6 +62,16 @@ export const highestProbabilityConjunction = (
   );
 
 /**
+ * Mean miss distance across the feed in kilometres. Returns 0 for an empty feed
+ * so the figure is always a finite number rather than `NaN`.
+ */
+export const averageMissDistanceKm = (conjunctions: readonly ConjunctionWarning[]): number => {
+  if (conjunctions.length === 0) return 0;
+  const total = conjunctions.reduce((sum, conjunction) => sum + conjunction.missDistanceKm, 0);
+  return total / conjunctions.length;
+};
+
+/**
  * Counts conjunctions severe enough to warrant operator action — those whose
  * collision probability lands in the `warning` or `critical` tier per
  * {@link isActionableConjunctionRisk}.
