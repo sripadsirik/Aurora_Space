@@ -4,6 +4,7 @@ import {
   closestApproach,
   countActionableConjunctions,
   countConjunctionsByRisk,
+  highestProbabilityConjunction,
   soonestTca
 } from "../conjunctionStats";
 
@@ -92,5 +93,21 @@ describe("soonestTca", () => {
 
   it("returns null for an empty feed", () => {
     expect(soonestTca([])).toBeNull();
+  });
+});
+
+describe("highestProbabilityConjunction", () => {
+  it("returns the most probable conjunction", () => {
+    const worst = makeConjunction({ id: "worst", probability: 4e-3 });
+    const conjunctions = [
+      makeConjunction({ id: "low", probability: 1e-6 }),
+      worst,
+      makeConjunction({ id: "mid", probability: 2e-4 })
+    ];
+    expect(highestProbabilityConjunction(conjunctions)).toBe(worst);
+  });
+
+  it("returns null for an empty feed", () => {
+    expect(highestProbabilityConjunction([])).toBeNull();
   });
 });
