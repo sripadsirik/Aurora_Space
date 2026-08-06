@@ -34,6 +34,20 @@ export const closestApproach = (
   );
 
 /**
+ * Returns the conjunction with the earliest time of closest approach (TCA), or
+ * `null` for an empty feed. Ties resolve to the earliest matching entry. The
+ * input is not mutated.
+ */
+export const soonestTca = (
+  conjunctions: readonly ConjunctionWarning[]
+): ConjunctionWarning | null =>
+  conjunctions.reduce<ConjunctionWarning | null>(
+    (soonest, conjunction) =>
+      soonest === null || conjunction.tca.getTime() < soonest.tca.getTime() ? conjunction : soonest,
+    null
+  );
+
+/**
  * Counts conjunctions severe enough to warrant operator action — those whose
  * collision probability lands in the `warning` or `critical` tier per
  * {@link isActionableConjunctionRisk}.
