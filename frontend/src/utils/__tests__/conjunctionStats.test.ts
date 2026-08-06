@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
-import { countConjunctionsByRisk } from "../conjunctionStats";
+import { countActionableConjunctions, countConjunctionsByRisk } from "../conjunctionStats";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
   id: "c1",
@@ -39,5 +39,21 @@ describe("countConjunctionsByRisk", () => {
       warning: 0,
       critical: 0
     });
+  });
+});
+
+describe("countActionableConjunctions", () => {
+  it("counts only warning and critical tiers", () => {
+    const conjunctions = [
+      makeConjunction({ id: "a", probability: 2e-3 }), // critical
+      makeConjunction({ id: "b", probability: 5e-4 }), // warning
+      makeConjunction({ id: "c", probability: 5e-6 }), // watch
+      makeConjunction({ id: "d", probability: 1e-9 }) // nominal
+    ];
+    expect(countActionableConjunctions(conjunctions)).toBe(2);
+  });
+
+  it("returns zero for an empty feed", () => {
+    expect(countActionableConjunctions([])).toBe(0);
   });
 });
