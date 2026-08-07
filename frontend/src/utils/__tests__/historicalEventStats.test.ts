@@ -4,7 +4,8 @@ import {
   countByEventType,
   eventsInDateRange,
   filterByEventType,
-  sortByDate
+  sortByDate,
+  strongestGeomagneticEvent
 } from "../historicalEventStats";
 
 const makeEvent = (overrides: Partial<HistoricalEvent> = {}): HistoricalEvent => ({
@@ -110,5 +111,37 @@ describe("eventsInDateRange", () => {
       new Date("2010-01-01T00:00:00Z")
     );
     expect(result).toEqual([]);
+  });
+});
+
+describe("strongestGeomagneticEvent", () => {
+  it("returns the event with the highest kpIndex", () => {
+    const events: HistoricalEvent[] = [
+      makeEvent({ id: "kp5", kpIndex: 5 }),
+      makeEvent({ id: "kp9", kpIndex: 9 }),
+      makeEvent({ id: "kp8", kpIndex: 8 })
+    ];
+    expect(strongestGeomagneticEvent(events)?.id).toBe("kp9");
+  });
+
+  it("ignores events without a kpIndex", () => {
+    const events: HistoricalEvent[] = [
+      makeEvent({ id: "none", kpIndex: undefined }),
+      makeEvent({ id: "kp3", kpIndex: 3 })
+    ];
+    expect(strongestGeomagneticEvent(events)?.id).toBe("kp3");
+  });
+
+  it("resolves ties to the earliest matching entry", () => {
+    const events: HistoricalEvent[] = [
+      makeEvent({ id: "first", kpIndex: 7 }),
+      makeEvent({ id: "second", kpIndex: 7 })
+    ];
+    expect(strongestGeomagneticEvent(events)?.id).toBe("first");
+  });
+
+  it("returns null when no event carries a kpIndex", () => {
+    expect(strongestGeomagneticEvent([makeEvent({ kpIndex: undefined })])).toBeNull();
+    expect(strongestGeomagneticEvent([])).toBeNull();
   });
 });
