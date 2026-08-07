@@ -47,9 +47,11 @@ Current backend split:
 
 ## Space Weather Scales
 
-The Space Weather panel renders all three of NOAA SWPC's
-[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), all derived
-in `frontend/src/utils/spaceWeatherScales.ts`:
+The space weather utilities model all three of NOAA SWPC's
+[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation) in
+`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel currently surfaces the
+G and R scales; the S scale helpers are ready for the panel to consume once a proton-flux
+reading is added to the feed:
 
 | Scale | Driver | Levels | Helpers |
 | --- | --- | --- | --- |

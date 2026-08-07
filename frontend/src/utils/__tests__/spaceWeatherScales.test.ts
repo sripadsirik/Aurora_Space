@@ -11,9 +11,9 @@ import {
   radioBlackoutScale,
   rScaleColor,
   rScaleInfo,
+  solarRadiationStormScale,
   sScaleColor,
   sScaleInfo,
-  solarRadiationStormScale,
   xrayClassToRScale,
   xrayClassToRScaleInfo,
   xrayFluxToRScale,
@@ -245,6 +245,18 @@ describe("protonFluxToSScale", () => {
   it("clamps values above the S5 threshold to S5", () => {
     expect(protonFluxToSScale(5_000_000)).toBe("S5");
   });
+
+  it("steps down one level just below each threshold", () => {
+    expect(protonFluxToSScale(99)).toBe("S1");
+    expect(protonFluxToSScale(999)).toBe("S2");
+    expect(protonFluxToSScale(9999)).toBe("S3");
+    expect(protonFluxToSScale(99999)).toBe("S4");
+  });
+
+  it("treats negative or non-finite readings as quiet", () => {
+    expect(protonFluxToSScale(-42)).toBe("S0");
+    expect(protonFluxToSScale(Number.NaN)).toBe("S0");
+  });
 });
 
 describe("sScaleColor", () => {
@@ -299,5 +311,14 @@ describe("protonFluxToSScaleInfo", () => {
   it("resolves a peak proton flux straight to its metadata", () => {
     expect(protonFluxToSScaleInfo(10_000).level).toBe("S4");
     expect(protonFluxToSScaleInfo(5).code).toBe(0);
+  });
+});
+
+describe("NOAA scale colour consistency", () => {
+  it("shares one green-to-red escalation palette across G, R, and S scales", () => {
+    for (let code = 0; code <= 5; code += 1) {
+      expect(sScaleColor(`S${code}`)).toBe(gScaleColor(`G${code}`));
+      expect(sScaleColor(`S${code}`)).toBe(rScaleColor(`R${code}`));
+    }
   });
 });
