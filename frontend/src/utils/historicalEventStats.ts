@@ -83,3 +83,29 @@ export const strongestGeomagneticEvent = (
     if (strongest === null || event.kpIndex > (strongest.kpIndex ?? -Infinity)) return event;
     return strongest;
   }, null);
+
+/**
+ * Returns the most recent event by date, or `null` for an empty feed. Ties
+ * resolve to the earliest matching entry. The input is not mutated.
+ */
+export const mostRecentEvent = (
+  events: readonly HistoricalEvent[]
+): HistoricalEvent | null =>
+  events.reduce<HistoricalEvent | null>(
+    (latest, event) =>
+      latest === null || event.date.getTime() > latest.date.getTime() ? event : latest,
+    null
+  );
+
+/**
+ * Returns the earliest event by date, or `null` for an empty feed. Ties resolve
+ * to the earliest matching entry. The input is not mutated.
+ */
+export const earliestEvent = (
+  events: readonly HistoricalEvent[]
+): HistoricalEvent | null =>
+  events.reduce<HistoricalEvent | null>(
+    (earliest, event) =>
+      earliest === null || event.date.getTime() < earliest.date.getTime() ? event : earliest,
+    null
+  );
