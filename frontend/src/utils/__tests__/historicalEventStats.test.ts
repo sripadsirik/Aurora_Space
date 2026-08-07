@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HistoricalEvent } from "../../types/space";
-import { countByEventType } from "../historicalEventStats";
+import { countByEventType, sortByDate } from "../historicalEventStats";
 
 const makeEvent = (overrides: Partial<HistoricalEvent> = {}): HistoricalEvent => ({
   id: "evt",
@@ -32,5 +32,27 @@ describe("countByEventType", () => {
       conjunction: 0,
       satellite_loss: 0
     });
+  });
+});
+
+describe("sortByDate", () => {
+  const older = makeEvent({ id: "older", date: new Date("2003-10-28T00:00:00Z") });
+  const middle = makeEvent({ id: "middle", date: new Date("2017-09-06T00:00:00Z") });
+  const newer = makeEvent({ id: "newer", date: new Date("2025-05-12T00:00:00Z") });
+
+  it("orders oldest-first by default", () => {
+    const sorted = sortByDate([middle, newer, older]);
+    expect(sorted.map((e) => e.id)).toEqual(["older", "middle", "newer"]);
+  });
+
+  it("orders newest-first when direction is desc", () => {
+    const sorted = sortByDate([middle, older, newer], "desc");
+    expect(sorted.map((e) => e.id)).toEqual(["newer", "middle", "older"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = [middle, older, newer];
+    sortByDate(input);
+    expect(input.map((e) => e.id)).toEqual(["middle", "older", "newer"]);
   });
 });
