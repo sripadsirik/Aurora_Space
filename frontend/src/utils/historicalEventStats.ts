@@ -25,3 +25,17 @@ export const countByEventType = (
   }
   return counts;
 };
+
+/**
+ * Returns a new array of the events ordered by date. The default `"asc"`
+ * direction runs oldest-first, matching a left-to-right timeline; `"desc"` runs
+ * newest-first for a most-recent-at-top list. Ties preserve input order and the
+ * input array is never mutated.
+ */
+export const sortByDate = (
+  events: readonly HistoricalEvent[],
+  direction: "asc" | "desc" = "asc"
+): HistoricalEvent[] => {
+  const sign = direction === "asc" ? 1 : -1;
+  return [...events].sort((a, b) => sign * (a.date.getTime() - b.date.getTime()));
+};
