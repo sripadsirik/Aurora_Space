@@ -7,7 +7,8 @@ import {
   filterByEventType,
   mostRecentEvent,
   sortByDate,
-  strongestGeomagneticEvent
+  strongestGeomagneticEvent,
+  summarizeHistoricalEvents
 } from "../historicalEventStats";
 
 const makeEvent = (overrides: Partial<HistoricalEvent> = {}): HistoricalEvent => ({
@@ -165,5 +166,31 @@ describe("earliestEvent and mostRecentEvent", () => {
   it("both return null for an empty feed", () => {
     expect(earliestEvent([])).toBeNull();
     expect(mostRecentEvent([])).toBeNull();
+  });
+});
+
+describe("summarizeHistoricalEvents", () => {
+  it("bundles every aggregate consistently with the individual helpers", () => {
+    const events: HistoricalEvent[] = [
+      makeEvent({ id: "storm", date: new Date("2003-10-28T00:00:00Z"), type: "solar_storm", kpIndex: 9 }),
+      makeEvent({ id: "coll", date: new Date("2009-02-10T00:00:00Z"), type: "conjunction", kpIndex: 1.7 }),
+      makeEvent({ id: "loss", date: new Date("2022-02-04T00:00:00Z"), type: "satellite_loss", kpIndex: 5.7 })
+    ];
+    const summary = summarizeHistoricalEvents(events);
+    expect(summary.total).toBe(3);
+    expect(summary.byType).toEqual({ solar_storm: 1, conjunction: 1, satellite_loss: 1 });
+    expect(summary.earliest?.id).toBe("storm");
+    expect(summary.mostRecent?.id).toBe("loss");
+    expect(summary.strongest?.id).toBe("storm");
+  });
+
+  it("reports zeros and nulls for an empty feed", () => {
+    expect(summarizeHistoricalEvents([])).toEqual({
+      total: 0,
+      byType: { solar_storm: 0, conjunction: 0, satellite_loss: 0 },
+      earliest: null,
+      mostRecent: null,
+      strongest: null
+    });
   });
 });
