@@ -83,6 +83,27 @@ relation `v = sqrt(mu / r)`), and `formatOrbitalPeriod` in `frontend/src/utils/f
 renders a period in minutes as a compact `Hh Mm` (or bare `Mm`) string. All values are derived
 from the same deterministic orbit radius so they stay mutually consistent.
 
+## Coverage Footprint
+
+How much of Earth a satellite can see or serve comes from the pure geometry helpers in
+`frontend/src/utils/coverageFootprint.ts`. Each takes an altitude in kilometres and an optional
+minimum ground elevation angle (defaulting to `0`, the geometric horizon):
+
+| Helper | Returns |
+| --- | --- |
+| `earthCentralAngleDeg` | Earth central angle from the sub-point to the coverage edge |
+| `coverageRadiusKm` | Surface radius of the coverage circle |
+| `slantRangeToHorizonKm` | Line-of-sight range to the coverage edge |
+| `coverageAreaKm2` | Surface area of the coverage cap |
+| `earthCoverageFraction` | Fraction of Earth's surface in view (0-1) |
+| `isWithinCoverage` | Whether a ground point at a given angular separation is in view |
+| `getCoverageFootprint` | All of the above bundled into one `CoverageFootprint` for a `Satellite` |
+
+Raising the minimum elevation angle narrows the footprint (a station needs the satellite higher
+above its horizon), while higher orbits widen it: a single geostationary satellite sees roughly
+42% of the globe down to the horizon. All figures derive from the same central angle, so they
+stay mutually consistent.
+
 ## Catalog Statistics
 
 Summary figures for the whole tracked catalog come from the pure helpers in
@@ -413,7 +434,8 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
-`catalogFilters`, `helio`, `spaceWeatherScales`, `conjunctionRisk`, `stormExposure`, `sparkline`), the Zustand store, and the mock datasets under `src/data/mock/`
+`catalogFilters`, `coverageFootprint`, `helio`, `spaceWeatherScales`, `conjunctionRisk`, `stormExposure`,
+`sparkline`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
