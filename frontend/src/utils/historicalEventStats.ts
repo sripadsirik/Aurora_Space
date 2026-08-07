@@ -109,3 +109,32 @@ export const earliestEvent = (
       earliest === null || event.date.getTime() < earliest.date.getTime() ? event : earliest,
     null
   );
+
+/** Aggregate view of a historical-event feed, suitable for a timeline header. */
+export interface HistoricalEventSummary {
+  /** Total number of recorded events. */
+  total: number;
+  /** Event counts keyed by category. */
+  byType: Record<HistoricalEvent["type"], number>;
+  /** The earliest event by date, or `null` for an empty feed. */
+  earliest: HistoricalEvent | null;
+  /** The most recent event by date, or `null` for an empty feed. */
+  mostRecent: HistoricalEvent | null;
+  /** The highest-Kp event, or `null` when no event carries a `kpIndex`. */
+  strongest: HistoricalEvent | null;
+}
+
+/**
+ * Bundles the historical-event aggregates into a single struct so a summary
+ * display can derive every figure from one list. All members reuse the
+ * individual helpers in this module, so they stay mutually consistent.
+ */
+export const summarizeHistoricalEvents = (
+  events: readonly HistoricalEvent[]
+): HistoricalEventSummary => ({
+  total: events.length,
+  byType: countByEventType(events),
+  earliest: earliestEvent(events),
+  mostRecent: mostRecentEvent(events),
+  strongest: strongestGeomagneticEvent(events)
+});
