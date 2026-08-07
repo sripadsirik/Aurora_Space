@@ -245,6 +245,26 @@ Risk tiers reuse `classifyConjunctionRisk` / `isActionableConjunctionRisk` from
 per-row colours in the conjunction panels. Extremes return `null` and averages return 0 for an
 empty feed, so every figure is safe to render without a guard.
 
+## Historical Event Statistics
+
+Summary and query figures for the historical-events feed come from the pure helpers in
+`frontend/src/utils/historicalEventStats.ts`, which aggregate over a `HistoricalEvent[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `countByEventType` | Event counts keyed by category (`solar_storm` / `conjunction` / `satellite_loss`) |
+| `sortByDate` | A date-ordered copy (oldest-first by default, `"desc"` for newest-first) |
+| `filterByEventType` | Events of a single category, in input order |
+| `eventsInDateRange` | Events whose date falls within an inclusive `[start, end]` window |
+| `strongestGeomagneticEvent` | The highest-`kpIndex` event (or `null`) |
+| `earliestEvent` / `mostRecentEvent` | The oldest / newest event by date (or `null`) |
+| `summarizeHistoricalEvents` | All of the above bundled into one `HistoricalEventSummary` |
+
+Every helper leaves its input array unmutated. Extremes return `null` for an empty feed (and
+`strongestGeomagneticEvent` also skips events with no `kpIndex`), and `countByEventType` always
+reports every category, so a timeline header derived from these helpers renders a stable set of
+rows without guards.
+
 ## Repo Layout
 
 ```text
