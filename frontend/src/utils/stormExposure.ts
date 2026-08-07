@@ -28,7 +28,7 @@ export interface StormExposureCounts {
  * Tallies how many catalog objects fall into each geomagnetic-storm exposure
  * bucket: low-orbit drag (below {@link STORM_EXPOSURE_THRESHOLDS.leoCeilingKm}),
  * high-altitude charging (above {@link STORM_EXPOSURE_THRESHOLDS.geoFloorKm}), and
- * debris decay ({@link DEBRIS_OWNER}-owned objects). The buckets overlap by design
+ * debris decay ({@link DEBRIS_OWNER}-owned objects, matched case-insensitively). The buckets overlap by design
  * — a single object can be counted in more than one — because each reflects a
  * distinct hazard an operator tracks separately during a storm.
  */
@@ -37,7 +37,7 @@ export const countStormExposedAssets = (satellites: readonly Satellite[]): Storm
   for (const satellite of satellites) {
     if (satellite.altitudeKm < STORM_EXPOSURE_THRESHOLDS.leoCeilingKm) counts.leoDrag += 1;
     if (satellite.altitudeKm > STORM_EXPOSURE_THRESHOLDS.geoFloorKm) counts.geoCharging += 1;
-    if (satellite.owner === DEBRIS_OWNER) counts.debris += 1;
+    if (satellite.owner.trim().toLowerCase() === DEBRIS_OWNER.toLowerCase()) counts.debris += 1;
   }
   return counts;
 };

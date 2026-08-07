@@ -21,6 +21,12 @@ export interface SpaceWeather {
   solarWindDensity: number;
   bzComponent: number;
   xrayFlux: string;
+  /**
+   * Peak flux of >=10 MeV protons in particle flux units (pfu), used to derive
+   * the NOAA solar radiation storm (S) scale. Optional because not every feed
+   * reports it.
+   */
+  protonFlux?: number;
   stormLevel: "none" | "minor" | "moderate" | "strong" | "severe" | "extreme";
   auroraKp: number;
   lastUpdated: Date;

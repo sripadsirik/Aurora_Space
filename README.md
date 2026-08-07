@@ -47,18 +47,22 @@ Current backend split:
 
 ## Space Weather Scales
 
-The Space Weather panel renders two of NOAA SWPC's
-[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), both derived
-in `frontend/src/utils/spaceWeatherScales.ts`:
+The space weather utilities model all three of NOAA SWPC's
+[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation) in
+`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel currently surfaces the
+G and R scales; the S scale helpers are ready for the panel to consume once a proton-flux
+reading is added to the feed:
 
 | Scale | Driver | Levels | Helpers |
 | --- | --- | --- | --- |
 | G (geomagnetic storm) | Planetary Kp index | G1–G5 | `kpToGScale`, `kpToGScaleInfo`, `gScaleColor` |
 | R (radio blackout) | Peak GOES X-ray flux | R1–R5 | `xrayClassToRScale`, `xrayClassToRScaleInfo`, `rScaleColor` |
+| S (solar radiation storm) | Peak ≥10 MeV proton flux (pfu) | S1–S5 | `protonFluxToSScale`, `protonFluxToSScaleInfo`, `sScaleColor` |
 
-Both scales expose a metadata table (`geomagneticStormScale` / `radioBlackoutScale`) with a
-severity code, short label, and one-line operational impact, plus a colour map that escalates
-from quiet green to extreme red. `G0`/`R0` denote sub-storm quiet conditions.
+Each scale exposes a metadata table (`geomagneticStormScale` / `radioBlackoutScale` /
+`solarRadiationStormScale`) with a severity code, short label, and one-line operational impact,
+plus a colour map that escalates from quiet green to extreme red. `G0`/`R0`/`S0` denote
+sub-storm quiet conditions.
 
 ## Orbit Summary
 
@@ -98,6 +102,29 @@ The breakdown helpers always return every regime or risk level (defaulting to ze
 averages return `0` rather than `NaN` for an empty catalog, so summary displays render a stable
 set of rows regardless of the catalog contents.
 
+## Catalog Filtering and Search
+
+Common catalog queries are collected as pure, non-mutating helpers in
+`frontend/src/utils/catalogFilters.ts`, so panels no longer re-implement the same
+`Satellite[]` filters inline:
+
+| Helper | Returns |
+| --- | --- |
+| `filterByOrbitType` | Satellites in one LEO/MEO/GEO regime |
+| `filterByRiskLevel` | Satellites carrying exactly one risk level |
+| `filterByOwner` | Satellites for an owner (case-insensitive, whitespace-trimmed) |
+| `filterByAltitudeRange` | Satellites within an inclusive altitude band |
+| `searchCatalog` | Free-text match on name or NORAD id |
+| `filterElevatedRisk` | Satellites at or above a risk threshold (default `watch`) |
+| `sortByAltitudeDesc` | Satellites ordered highest-to-lowest altitude |
+| `sortByConjunctionCountDesc` | Satellites ordered by most active conjunctions |
+
+Every helper returns a new array and never mutates its input, so the results are safe to
+derive directly from store state. `filterByAltitudeRange` normalises swapped bounds,
+`searchCatalog` returns a copy of the catalog for a blank query, and `filterElevatedRisk`
+reuses the same `RISK_LEVELS` ordering as `countElevatedRisk` in `catalogStats` so the list
+and the count never disagree.
+
 ## Conjunction Risk Tiers
 
 Conjunction warnings are ranked by collision probability into four risk tiers, defined once in
@@ -114,6 +141,20 @@ panel so the boundaries never drift apart:
 `classifyConjunctionRisk` maps a probability to its tier, and `isActionableConjunctionRisk`
 reports whether it reaches the `warning` band or higher. Thresholds live in the exported
 `CONJUNCTION_RISK_THRESHOLDS` constant.
+
+`classifyConjunctionFleetSeverity` collapses a whole fleet of conjunctions into a single
+`critical | warning | elevated | clear` severity — `critical` when any conjunction is
+individually critical (see `isCriticalConjunction`), `warning` when any remaining conjunction is
+actionable by probability, `elevated` when conjunctions are tracked but none reach those tiers,
+and `clear` for an empty fleet. The ops warning badge derives its colour from this severity via
+`conjunctionFleetSeverityColor` in `frontend/src/utils/colors.ts`, so the escalation logic lives
+in one place instead of being re-derived inline.
+
+The remaining conjunction presentation helpers are shared the same way: `conjunctionRowTextClass`
+(`colors.ts`) returns the Tailwind text-colour class used to shade each row of the active
+conjunctions table by risk level, and `formatConjunctionWarningLabel` (`format.ts`) builds the
+pluralised badge label (for example `1 ACTIVE CONJUNCTION WARNING` versus
+`3 ACTIVE CONJUNCTION WARNINGS`).
 
 ## Storm Impact Panel Helpers
 
@@ -372,7 +413,7 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
-`helio`, `spaceWeatherScales`, `conjunctionRisk`, `stormExposure`, `sparkline`), the Zustand store, and the mock datasets under `src/data/mock/`
+`catalogFilters`, `helio`, `spaceWeatherScales`, `conjunctionRisk`, `stormExposure`, `sparkline`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
