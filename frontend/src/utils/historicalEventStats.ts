@@ -39,3 +39,12 @@ export const sortByDate = (
   const sign = direction === "asc" ? 1 : -1;
   return [...events].sort((a, b) => sign * (a.date.getTime() - b.date.getTime()));
 };
+
+/**
+ * Returns a new array of the events whose category matches `type`, preserving
+ * input order. The input array is never mutated.
+ */
+export const filterByEventType = (
+  events: readonly HistoricalEvent[],
+  type: HistoricalEvent["type"]
+): HistoricalEvent[] => events.filter((event) => event.type === type);
