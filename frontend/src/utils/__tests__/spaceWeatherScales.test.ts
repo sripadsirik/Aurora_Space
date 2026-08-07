@@ -6,9 +6,14 @@ import {
   kpToGScale,
   kpToGScaleInfo,
   parseXrayFlux,
+  protonFluxToSScale,
+  protonFluxToSScaleInfo,
   radioBlackoutScale,
   rScaleColor,
   rScaleInfo,
+  sScaleColor,
+  sScaleInfo,
+  solarRadiationStormScale,
   xrayClassToRScale,
   xrayClassToRScaleInfo,
   xrayFluxToRScale,
@@ -215,5 +220,84 @@ describe("xrayClassToRScaleInfo", () => {
 
   it("falls back to quiet conditions for unparseable input", () => {
     expect(xrayClassToRScaleInfo("n/a").level).toBe("R0");
+  });
+});
+
+describe("protonFluxToSScale", () => {
+  it("treats sub-storm proton flux as quiet (S0)", () => {
+    expect(protonFluxToSScale(0)).toBe("S0");
+    expect(protonFluxToSScale(9.9)).toBe("S0");
+  });
+
+  it("maps each decade of proton flux to the matching S-level", () => {
+    expect(protonFluxToSScale(10)).toBe("S1");
+    expect(protonFluxToSScale(100)).toBe("S2");
+    expect(protonFluxToSScale(1_000)).toBe("S3");
+    expect(protonFluxToSScale(10_000)).toBe("S4");
+    expect(protonFluxToSScale(100_000)).toBe("S5");
+  });
+
+  it("treats the thresholds as inclusive lower bounds", () => {
+    expect(protonFluxToSScale(99)).toBe("S1");
+    expect(protonFluxToSScale(100)).toBe("S2");
+  });
+
+  it("clamps values above the S5 threshold to S5", () => {
+    expect(protonFluxToSScale(5_000_000)).toBe("S5");
+  });
+});
+
+describe("sScaleColor", () => {
+  it("returns a distinct colour for each active storm level", () => {
+    const colors = new Set(
+      solarRadiationStormScale.map((entry) => sScaleColor(entry.level))
+    );
+    expect(colors.size).toBe(solarRadiationStormScale.length);
+  });
+
+  it("escalates from quiet green to extreme red", () => {
+    expect(sScaleColor("S0")).toBe("#7dff6a");
+    expect(sScaleColor("S5")).toBe("#ff0000");
+  });
+
+  it("falls back to quiet green for unknown levels", () => {
+    expect(sScaleColor("None")).toBe("#7dff6a");
+    expect(sScaleColor("")).toBe("#7dff6a");
+  });
+});
+
+describe("solarRadiationStormScale", () => {
+  it("lists the five active levels in ascending severity", () => {
+    expect(solarRadiationStormScale.map((entry) => entry.level)).toEqual([
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5"
+    ]);
+    const codes = solarRadiationStormScale.map((entry) => entry.code);
+    expect(codes).toEqual([...codes].sort((a, b) => a - b));
+  });
+});
+
+describe("sScaleInfo", () => {
+  it("returns matching metadata for an active level", () => {
+    const info = sScaleInfo("S3");
+    expect(info.code).toBe(3);
+    expect(info.label).toBe("Strong");
+    expect(info.impact.length).toBeGreaterThan(0);
+  });
+
+  it("defaults to quiet conditions for unknown levels", () => {
+    const info = sScaleInfo("None");
+    expect(info.level).toBe("S0");
+    expect(info.code).toBe(0);
+  });
+});
+
+describe("protonFluxToSScaleInfo", () => {
+  it("resolves a peak proton flux straight to its metadata", () => {
+    expect(protonFluxToSScaleInfo(10_000).level).toBe("S4");
+    expect(protonFluxToSScaleInfo(5).code).toBe(0);
   });
 });

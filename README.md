@@ -47,18 +47,20 @@ Current backend split:
 
 ## Space Weather Scales
 
-The Space Weather panel renders two of NOAA SWPC's
-[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), both derived
+The Space Weather panel renders all three of NOAA SWPC's
+[space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation), all derived
 in `frontend/src/utils/spaceWeatherScales.ts`:
 
 | Scale | Driver | Levels | Helpers |
 | --- | --- | --- | --- |
 | G (geomagnetic storm) | Planetary Kp index | G1–G5 | `kpToGScale`, `kpToGScaleInfo`, `gScaleColor` |
 | R (radio blackout) | Peak GOES X-ray flux | R1–R5 | `xrayClassToRScale`, `xrayClassToRScaleInfo`, `rScaleColor` |
+| S (solar radiation storm) | Peak ≥10 MeV proton flux (pfu) | S1–S5 | `protonFluxToSScale`, `protonFluxToSScaleInfo`, `sScaleColor` |
 
-Both scales expose a metadata table (`geomagneticStormScale` / `radioBlackoutScale`) with a
-severity code, short label, and one-line operational impact, plus a colour map that escalates
-from quiet green to extreme red. `G0`/`R0` denote sub-storm quiet conditions.
+Each scale exposes a metadata table (`geomagneticStormScale` / `radioBlackoutScale` /
+`solarRadiationStormScale`) with a severity code, short label, and one-line operational impact,
+plus a colour map that escalates from quiet green to extreme red. `G0`/`R0`/`S0` denote
+sub-storm quiet conditions.
 
 ## Orbit Summary
 
