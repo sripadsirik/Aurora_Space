@@ -48,3 +48,22 @@ export const filterByEventType = (
   events: readonly HistoricalEvent[],
   type: HistoricalEvent["type"]
 ): HistoricalEvent[] => events.filter((event) => event.type === type);
+
+/**
+ * Returns a new array of the events whose date falls within `[start, end]`,
+ * inclusive of both bounds, preserving input order. The input array is never
+ * mutated. Callers are responsible for passing `start <= end`; a reversed range
+ * simply yields no matches.
+ */
+export const eventsInDateRange = (
+  events: readonly HistoricalEvent[],
+  start: Date,
+  end: Date
+): HistoricalEvent[] => {
+  const from = start.getTime();
+  const to = end.getTime();
+  return events.filter((event) => {
+    const time = event.date.getTime();
+    return time >= from && time <= to;
+  });
+};
