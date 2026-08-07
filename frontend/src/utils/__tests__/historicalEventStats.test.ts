@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { HistoricalEvent } from "../../types/space";
 import {
   countByEventType,
+  earliestEvent,
   eventsInDateRange,
   filterByEventType,
+  mostRecentEvent,
   sortByDate,
   strongestGeomagneticEvent
 } from "../historicalEventStats";
@@ -143,5 +145,25 @@ describe("strongestGeomagneticEvent", () => {
   it("returns null when no event carries a kpIndex", () => {
     expect(strongestGeomagneticEvent([makeEvent({ kpIndex: undefined })])).toBeNull();
     expect(strongestGeomagneticEvent([])).toBeNull();
+  });
+});
+
+describe("earliestEvent and mostRecentEvent", () => {
+  const older = makeEvent({ id: "older", date: new Date("2003-10-28T00:00:00Z") });
+  const middle = makeEvent({ id: "middle", date: new Date("2017-09-06T00:00:00Z") });
+  const newer = makeEvent({ id: "newer", date: new Date("2025-05-12T00:00:00Z") });
+  const events = [middle, newer, older];
+
+  it("earliestEvent returns the oldest event", () => {
+    expect(earliestEvent(events)?.id).toBe("older");
+  });
+
+  it("mostRecentEvent returns the newest event", () => {
+    expect(mostRecentEvent(events)?.id).toBe("newer");
+  });
+
+  it("both return null for an empty feed", () => {
+    expect(earliestEvent([])).toBeNull();
+    expect(mostRecentEvent([])).toBeNull();
   });
 });
