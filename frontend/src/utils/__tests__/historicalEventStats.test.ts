@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { HistoricalEvent } from "../../types/space";
-import { countByEventType, filterByEventType, sortByDate } from "../historicalEventStats";
+import {
+  countByEventType,
+  eventsInDateRange,
+  filterByEventType,
+  sortByDate
+} from "../historicalEventStats";
 
 const makeEvent = (overrides: Partial<HistoricalEvent> = {}): HistoricalEvent => ({
   id: "evt",
@@ -71,5 +76,39 @@ describe("filterByEventType", () => {
 
   it("returns an empty array when no events match", () => {
     expect(filterByEventType([], "conjunction")).toEqual([]);
+  });
+});
+
+describe("eventsInDateRange", () => {
+  const y2003 = makeEvent({ id: "y2003", date: new Date("2003-10-28T00:00:00Z") });
+  const y2017 = makeEvent({ id: "y2017", date: new Date("2017-09-06T00:00:00Z") });
+  const y2025 = makeEvent({ id: "y2025", date: new Date("2025-05-12T00:00:00Z") });
+  const events = [y2003, y2017, y2025];
+
+  it("keeps events within the inclusive range, in input order", () => {
+    const result = eventsInDateRange(
+      events,
+      new Date("2010-01-01T00:00:00Z"),
+      new Date("2020-01-01T00:00:00Z")
+    );
+    expect(result.map((e) => e.id)).toEqual(["y2017"]);
+  });
+
+  it("includes events landing exactly on either bound", () => {
+    const result = eventsInDateRange(
+      events,
+      new Date("2003-10-28T00:00:00Z"),
+      new Date("2017-09-06T00:00:00Z")
+    );
+    expect(result.map((e) => e.id)).toEqual(["y2003", "y2017"]);
+  });
+
+  it("yields no matches for a reversed range", () => {
+    const result = eventsInDateRange(
+      events,
+      new Date("2020-01-01T00:00:00Z"),
+      new Date("2010-01-01T00:00:00Z")
+    );
+    expect(result).toEqual([]);
   });
 });
