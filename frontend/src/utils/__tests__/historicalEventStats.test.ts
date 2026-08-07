@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HistoricalEvent } from "../../types/space";
-import { countByEventType, sortByDate } from "../historicalEventStats";
+import { countByEventType, filterByEventType, sortByDate } from "../historicalEventStats";
 
 const makeEvent = (overrides: Partial<HistoricalEvent> = {}): HistoricalEvent => ({
   id: "evt",
@@ -54,5 +54,22 @@ describe("sortByDate", () => {
     const input = [middle, older, newer];
     sortByDate(input);
     expect(input.map((e) => e.id)).toEqual(["middle", "older", "newer"]);
+  });
+});
+
+describe("filterByEventType", () => {
+  const events: HistoricalEvent[] = [
+    makeEvent({ id: "a", type: "solar_storm" }),
+    makeEvent({ id: "b", type: "conjunction" }),
+    makeEvent({ id: "c", type: "solar_storm" }),
+    makeEvent({ id: "d", type: "satellite_loss" })
+  ];
+
+  it("keeps only events of the requested category, in input order", () => {
+    expect(filterByEventType(events, "solar_storm").map((e) => e.id)).toEqual(["a", "c"]);
+  });
+
+  it("returns an empty array when no events match", () => {
+    expect(filterByEventType([], "conjunction")).toEqual([]);
   });
 });
