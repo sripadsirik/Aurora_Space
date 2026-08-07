@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
+  formatConjunctionWarningLabel,
   formatDurationToTca,
   formatOrbitalPeriod,
   formatProbability,
@@ -58,6 +59,21 @@ describe("isCriticalConjunction", () => {
 
   it("returns false for nominal conjunctions", () => {
     expect(isCriticalConjunction(makeConjunction({ probability: 0.001, missDistanceM: 5000 }))).toBe(false);
+  });
+});
+
+describe("formatConjunctionWarningLabel", () => {
+  it("uses the singular noun for exactly one warning", () => {
+    expect(formatConjunctionWarningLabel(1)).toBe("1 ACTIVE CONJUNCTION WARNING");
+  });
+
+  it("uses the plural noun for zero or many warnings", () => {
+    expect(formatConjunctionWarningLabel(0)).toBe("0 ACTIVE CONJUNCTION WARNINGS");
+    expect(formatConjunctionWarningLabel(3)).toBe("3 ACTIVE CONJUNCTION WARNINGS");
+  });
+
+  it("clamps negative counts to zero", () => {
+    expect(formatConjunctionWarningLabel(-4)).toBe("0 ACTIVE CONJUNCTION WARNINGS");
   });
 });
 
