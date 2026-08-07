@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseXrayFlux } from "../../../utils/spaceWeatherScales";
+import { parseXrayFlux, protonFluxToSScale } from "../../../utils/spaceWeatherScales";
 import { mockSpaceWeather } from "../spaceWeather";
 
 describe("mockSpaceWeather snapshot", () => {
@@ -24,5 +24,11 @@ describe("mockSpaceWeather snapshot", () => {
     const flux = parseXrayFlux(mockSpaceWeather.xrayFlux);
     expect(flux).not.toBeNull();
     expect(flux as number).toBeGreaterThan(0);
+  });
+
+  it("carries a non-negative proton flux that resolves to an S-level", () => {
+    const flux = mockSpaceWeather.protonFlux ?? 0;
+    expect(flux).toBeGreaterThanOrEqual(0);
+    expect(protonFluxToSScale(flux)).toMatch(/^S[0-5]$/);
   });
 });

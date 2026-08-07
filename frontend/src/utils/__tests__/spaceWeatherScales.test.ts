@@ -14,6 +14,9 @@ import {
   sScaleInfo,
   rScaleColor,
   rScaleInfo,
+  sScaleColor,
+  sScaleInfo,
+  solarRadiationStormScale,
   xrayClassToRScale,
   xrayClassToRScaleInfo,
   xrayFluxToRScale,
@@ -224,18 +227,26 @@ describe("xrayClassToRScaleInfo", () => {
 });
 
 describe("protonFluxToSScale", () => {
-  it("maps NOAA proton-flux thresholds to radiation storm levels", () => {
-    expect(protonFluxToSScale(1e1)).toBe("S1");
-    expect(protonFluxToSScale(1e2)).toBe("S2");
-    expect(protonFluxToSScale(1e3)).toBe("S3");
-    expect(protonFluxToSScale(1e4)).toBe("S4");
-    expect(protonFluxToSScale(1e5)).toBe("S5");
+  it("treats sub-storm proton flux as quiet (S0)", () => {
+    expect(protonFluxToSScale(0)).toBe("S0");
+    expect(protonFluxToSScale(9.9)).toBe("S0");
   });
 
-  it("treats sub-storm flux as quiet (S0)", () => {
-    expect(protonFluxToSScale(9.9)).toBe("S0");
-    expect(protonFluxToSScale(0)).toBe("S0");
+  it("maps each decade of proton flux to the matching S-level", () => {
+    expect(protonFluxToSScale(10)).toBe("S1");
+    expect(protonFluxToSScale(100)).toBe("S2");
+    expect(protonFluxToSScale(1_000)).toBe("S3");
+    expect(protonFluxToSScale(10_000)).toBe("S4");
+    expect(protonFluxToSScale(100_000)).toBe("S5");
   });
+
+  it("treats the thresholds as inclusive lower bounds", () => {
+    expect(protonFluxToSScale(99)).toBe("S1");
+    expect(protonFluxToSScale(100)).toBe("S2");
+  });
+
+  it("clamps values above the S5 threshold to S5", () => {
+    expect(protonFluxToSScale(5_000_000)).toBe("S5");
 
   it("steps down one level just below each threshold", () => {
     expect(protonFluxToSScale(99)).toBe("S1");
@@ -244,13 +255,10 @@ describe("protonFluxToSScale", () => {
     expect(protonFluxToSScale(99999)).toBe("S4");
   });
 
-  it("clamps flux above the S5 threshold to S5", () => {
-    expect(protonFluxToSScale(5e6)).toBe("S5");
-  });
-
   it("treats negative or non-finite readings as quiet", () => {
     expect(protonFluxToSScale(-42)).toBe("S0");
     expect(protonFluxToSScale(Number.NaN)).toBe("S0");
+  });
   });
 });
 
@@ -303,8 +311,8 @@ describe("sScaleInfo", () => {
 });
 
 describe("protonFluxToSScaleInfo", () => {
-  it("resolves a proton flux straight to its metadata", () => {
-    expect(protonFluxToSScaleInfo(1e3).level).toBe("S3");
+  it("resolves a peak proton flux straight to its metadata", () => {
+    expect(protonFluxToSScaleInfo(10_000).level).toBe("S4");
     expect(protonFluxToSScaleInfo(5).code).toBe(0);
   });
 });

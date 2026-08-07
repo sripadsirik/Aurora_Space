@@ -195,22 +195,23 @@ export const xrayClassToRScaleInfo = (flux: string): RScaleInfo =>
 
 /**
  * NOAA solar radiation storm scale (S-scale), driven by the peak flux of
- * >=10 MeV protons in particle flux units (pfu) measured at geosynchronous
- * orbit. Runs from S1 (minor) to S5 (extreme), with S0 for sub-storm conditions.
+ * >=10 MeV protons measured by GOES in particle flux units (pfu,
+ * particles cm^-2 s^-1 sr^-1). Runs from S1 (minor) to S5 (extreme), with S0
+ * for sub-storm conditions. See https://www.swpc.noaa.gov/noaa-scales-explanation.
  */
 export type SScaleLevel = "S0" | "S1" | "S2" | "S3" | "S4" | "S5";
 
 /**
- * Maps a >=10 MeV proton flux in pfu to its NOAA solar radiation storm level.
- * NOAA escalates one S-level per power of ten: S1 at 10 pfu, S2 at 100, S3 at
- * 1,000, S4 at 10,000, and S5 at 100,000. Anything below 10 pfu is quiet (S0).
+ * Maps a peak >=10 MeV proton flux in pfu to its NOAA solar radiation storm
+ * level using NOAA's decade thresholds: S1 at 10 pfu, S2 at 100, S3 at 1,000,
+ * S4 at 10,000, and S5 at 100,000. Anything below 10 pfu is quiet (S0).
  */
 export const protonFluxToSScale = (fluxPfu: number): SScaleLevel => {
   if (fluxPfu >= 1e5) return "S5";
   if (fluxPfu >= 1e4) return "S4";
   if (fluxPfu >= 1e3) return "S3";
   if (fluxPfu >= 1e2) return "S2";
-  if (fluxPfu >= 1e1) return "S1";
+  if (fluxPfu >= 10) return "S1";
   return "S0";
 };
 
@@ -249,12 +250,12 @@ export interface SScaleInfo {
 export const solarRadiationStormScale: SScaleInfo[] = [
   { level: "S1", code: 1, label: "Minor", impact: "Minor impacts on HF radio in the polar regions." },
   { level: "S2", code: 2, label: "Moderate", impact: "Small effects on HF propagation and polar navigation." },
-  { level: "S3", code: 3, label: "Strong", impact: "Degraded HF at the poles, single-event upsets possible." },
+  { level: "S3", code: 3, label: "Strong", impact: "Degraded HF at high latitudes, single-event upsets possible." },
   { level: "S4", code: 4, label: "Severe", impact: "Blackout of HF through the polar regions, elevated radiation risk." },
-  { level: "S5", code: 5, label: "Extreme", impact: "Complete polar HF blackout, severe radiation hazard to crews and satellites." }
+  { level: "S5", code: 5, label: "Extreme", impact: "Complete polar HF blackout, high radiation hazard to crews and satellites." }
 ];
 
-const noRadiationStorm: SScaleInfo = {
+const noSolarRadiationStorm: SScaleInfo = {
   level: "S0",
   code: 0,
   label: "Quiet",
@@ -263,8 +264,8 @@ const noRadiationStorm: SScaleInfo = {
 
 /** Looks up the full metadata for an S-level, defaulting to quiet conditions. */
 export const sScaleInfo = (level: string): SScaleInfo =>
-  solarRadiationStormScale.find((entry) => entry.level === level) ?? noRadiationStorm;
+  solarRadiationStormScale.find((entry) => entry.level === level) ?? noSolarRadiationStorm;
 
-/** Resolves a >=10 MeV proton flux (pfu) straight to its full S-level metadata. */
+/** Resolves a peak >=10 MeV proton flux (pfu) straight to its full S-level metadata. */
 export const protonFluxToSScaleInfo = (fluxPfu: number): SScaleInfo =>
   sScaleInfo(protonFluxToSScale(fluxPfu));
