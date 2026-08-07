@@ -1,6 +1,7 @@
 import { useAuroraStore } from "../../store/auroraStore";
-import { isActionableConjunctionRisk } from "../../utils/conjunctionRisk";
-import { isCriticalConjunction } from "../../utils/format";
+import { conjunctionFleetSeverityColor } from "../../utils/colors";
+import { classifyConjunctionFleetSeverity } from "../../utils/conjunctionRisk";
+import { formatConjunctionWarningLabel } from "../../utils/format";
 
 export const OpsWarningBadge = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -11,9 +12,7 @@ export const OpsWarningBadge = (): JSX.Element | null => {
   if (currentMode !== "OPS") return null;
 
   const activeCount = conjunctions.length;
-  const hasCritical = conjunctions.some(isCriticalConjunction);
-  const hasWarning = conjunctions.some((c) => isActionableConjunctionRisk(c.probability));
-  const badgeColor = hasCritical ? "#ff2a2a" : hasWarning ? "#ff8b38" : "#ffcc00";
+  const badgeColor = conjunctionFleetSeverityColor(classifyConjunctionFleetSeverity(conjunctions));
   const isOpen = activePanels.has("active-conjunctions");
 
   if (activeCount === 0) return null;
@@ -38,7 +37,7 @@ export const OpsWarningBadge = (): JSX.Element | null => {
           animation: "storm-pulse 3s ease-in-out infinite"
         }}
       >
-        {activeCount} ACTIVE CONJUNCTION WARNING{activeCount !== 1 ? "S" : ""}
+        {formatConjunctionWarningLabel(activeCount)}
       </button>
     </div>
   );

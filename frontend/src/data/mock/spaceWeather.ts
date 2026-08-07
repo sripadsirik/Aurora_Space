@@ -6,6 +6,7 @@ export const mockSpaceWeather: SpaceWeather = {
   solarWindDensity: 8.2,
   bzComponent: -12.4,
   xrayFlux: "C2.4",
+  protonFlux: 42,
   stormLevel: "moderate",
   auroraKp: 4,
   lastUpdated: new Date()

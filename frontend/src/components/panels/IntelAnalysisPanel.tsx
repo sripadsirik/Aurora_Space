@@ -2,7 +2,11 @@ import { useEffect } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import { classifyConjunctionRisk, sortConjunctionsByProbabilityDesc } from "../../utils/conjunctionRisk";
+import {
+  classifyConjunctionRisk,
+  conjunctionRiskTextClass,
+  sortConjunctionsByProbabilityDesc
+} from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatProbability } from "../../utils/format";
 
 interface AltitudeBand {
@@ -91,8 +95,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
             <tbody>
               {sorted.map((conj, idx) => {
                 const risk = classifyConjunctionRisk(conj.probability);
-                const rowColor =
-                  risk === "critical" ? "text-[#ff7d7d]" : risk === "warning" ? "text-[#ffcd73]" : "text-white";
+                const rowColor = conjunctionRiskTextClass(risk, "text-white");
                 const deltaV = `~${(conj.probability * 10000).toFixed(1)} m/s`;
                 return (
                   <tr

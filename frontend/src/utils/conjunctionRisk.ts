@@ -1,4 +1,5 @@
 import type { ConjunctionWarning, RiskLevel } from "../types/space";
+import { isCriticalConjunction } from "./format";
 
 /**
  * Collision-probability thresholds that separate the conjunction risk tiers.
@@ -31,6 +32,43 @@ export const classifyConjunctionRisk = (probability: number): RiskLevel => {
  */
 export const isActionableConjunctionRisk = (probability: number): boolean =>
   probability > CONJUNCTION_RISK_THRESHOLDS.warning;
+
+/**
+ * Maps a conjunction {@link RiskLevel} to the Tailwind text-colour class used by
+ * the conjunction tables. `critical` and `warning` have fixed colours shared by
+ * every panel; the class for the calmer `watch`/`nominal` tiers is supplied by
+ * the caller via `defaultClass`, since panels differ on their resting colour.
+ */
+export const conjunctionRiskTextClass = (risk: RiskLevel, defaultClass: string): string => {
+  if (risk === "critical") return "text-[#ff7d7d]";
+  if (risk === "warning") return "text-[#ffcd73]";
+  return defaultClass;
+};
+
+/**
+ * Fleet-level severity for a collection of active conjunctions, ordered from
+ * least to most urgent: `clear` (nothing tracked), `elevated` (conjunctions
+ * present but none actionable), `warning`, and `critical`.
+ */
+export type ConjunctionFleetSeverity = "critical" | "warning" | "elevated" | "clear";
+
+/**
+ * Collapses a fleet of conjunctions into a single {@link ConjunctionFleetSeverity}
+ * describing its most urgent member. A fleet is `critical` when any conjunction
+ * is individually critical (see {@link isCriticalConjunction}), `warning` when
+ * any remaining conjunction is actionable by probability, `elevated` when
+ * conjunctions are tracked but none reach those tiers, and `clear` when the
+ * fleet is empty. This centralises the badge/overlay escalation logic so call
+ * sites do not re-derive it from raw thresholds.
+ */
+export const classifyConjunctionFleetSeverity = (
+  conjunctions: readonly ConjunctionWarning[]
+): ConjunctionFleetSeverity => {
+  if (conjunctions.length === 0) return "clear";
+  if (conjunctions.some(isCriticalConjunction)) return "critical";
+  if (conjunctions.some((c) => isActionableConjunctionRisk(c.probability))) return "warning";
+  return "elevated";
+};
 
 /**
  * Returns a new array of conjunctions ordered most-to-least severe by collision
