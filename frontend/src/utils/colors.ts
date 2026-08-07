@@ -1,5 +1,6 @@
 import { Color } from "cesium";
 import type { RiskLevel } from "../types/space";
+import type { ConjunctionFleetSeverity } from "./conjunctionRisk";
 
 /** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
@@ -7,6 +8,21 @@ export const riskColorMap: Record<RiskLevel, Color> = {
   watch: Color.fromCssColorString("#ffcc00"),
   warning: Color.fromCssColorString("#ff6600"),
   critical: Color.fromCssColorString("#ff0000")
+};
+
+/**
+ * Tailwind text-colour utility class used to shade a conjunction table row by
+ * its {@link RiskLevel}: red for `critical`, amber for `warning`, and a calm
+ * blue-white for the lower `watch`/`nominal` tiers.
+ */
+export const conjunctionRowTextClass = (risk: RiskLevel): string => {
+  if (risk === "critical") {
+    return "text-[#ff7d7d]";
+  }
+  if (risk === "warning") {
+    return "text-[#ffcd73]";
+  }
+  return "text-[#d8ebff]";
 };
 
 /**
@@ -24,6 +40,21 @@ export const getKpColor = (kp: number): string => {
     return "#ff8b38";
   }
   return "#ff2a2a";
+};
+
+/**
+ * Maps a {@link ConjunctionFleetSeverity} to the CSS hex colour used by the ops
+ * warning badge: severe red for `critical`, amber for `warning`, and quiet
+ * yellow for the lower `elevated`/`clear` tiers.
+ */
+export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity): string => {
+  if (severity === "critical") {
+    return "#ff2a2a";
+  }
+  if (severity === "warning") {
+    return "#ff8b38";
+  }
+  return "#ffcc00";
 };
 
 /**

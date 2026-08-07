@@ -115,6 +115,20 @@ panel so the boundaries never drift apart:
 reports whether it reaches the `warning` band or higher. Thresholds live in the exported
 `CONJUNCTION_RISK_THRESHOLDS` constant.
 
+`classifyConjunctionFleetSeverity` collapses a whole fleet of conjunctions into a single
+`critical | warning | elevated | clear` severity — `critical` when any conjunction is
+individually critical (see `isCriticalConjunction`), `warning` when any remaining conjunction is
+actionable by probability, `elevated` when conjunctions are tracked but none reach those tiers,
+and `clear` for an empty fleet. The ops warning badge derives its colour from this severity via
+`conjunctionFleetSeverityColor` in `frontend/src/utils/colors.ts`, so the escalation logic lives
+in one place instead of being re-derived inline.
+
+The remaining conjunction presentation helpers are shared the same way: `conjunctionRowTextClass`
+(`colors.ts`) returns the Tailwind text-colour class used to shade each row of the active
+conjunctions table by risk level, and `formatConjunctionWarningLabel` (`format.ts`) builds the
+pluralised badge label (for example `1 ACTIVE CONJUNCTION WARNING` versus
+`3 ACTIVE CONJUNCTION WARNINGS`).
+
 ## Repo Layout
 
 ```text
