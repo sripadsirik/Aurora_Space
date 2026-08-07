@@ -156,6 +156,36 @@ conjunctions table by risk level, and `formatConjunctionWarningLabel` (`format.t
 pluralised badge label (for example `1 ACTIVE CONJUNCTION WARNING` versus
 `3 ACTIVE CONJUNCTION WARNINGS`).
 
+## Storm Impact Panel Helpers
+
+The Storm Impact panel derives its at-risk asset tally and its Kp-history sparkline from two pure
+utility modules rather than inline component logic, so both are unit-tested independently of React.
+
+`frontend/src/utils/stormExposure.ts` counts, in a single pass over a `Satellite[]`, how many
+objects fall into each geomagnetic-storm exposure bucket. The buckets overlap by design — one
+object can land in more than one — because each reflects a hazard operators track separately:
+
+| Bucket | Criterion | Hazard |
+| --- | --- | --- |
+| `leoDrag` | Altitude below 2000 km | Increased atmospheric drag |
+| `geoCharging` | Altitude above 35000 km | Surface charging near GEO |
+| `debris` | Owner is `DEBRIS` | Accelerated orbital decay |
+
+The thresholds live in the exported `STORM_EXPOSURE_THRESHOLDS` constant, and objects exactly on a
+boundary are excluded (the comparisons are strict).
+
+`frontend/src/utils/sparkline.ts` turns a numeric series into SVG sparkline geometry. The SVG
+y-axis grows downward, so the series minimum sits at the bottom edge and the maximum at the top;
+values outside the configured `[min, max]` range are clamped into the drawing area:
+
+| Helper | Returns |
+| --- | --- |
+| `sparklineY` | Vertical pixel position for a single value |
+| `sparklinePoints` | Evenly spaced `{ x, y, value }` points across the width |
+| `sparklinePath` | An SVG `path` `d` string linking the points |
+| `buildSparkline` | Points and path in one pass |
+| `sparklineThresholdY` | Vertical position of a horizontal reference line |
+
 ## Repo Layout
 
 ```text
@@ -383,7 +413,7 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
-`catalogFilters`, `helio`, `spaceWeatherScales`, `conjunctionRisk`), the Zustand store, and the mock datasets under `src/data/mock/`
+`catalogFilters`, `helio`, `spaceWeatherScales`, `conjunctionRisk`, `stormExposure`, `sparkline`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
