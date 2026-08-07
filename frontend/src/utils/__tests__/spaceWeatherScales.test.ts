@@ -9,14 +9,11 @@ import {
   protonFluxToSScale,
   protonFluxToSScaleInfo,
   radioBlackoutScale,
-  solarRadiationStormScale,
-  sScaleColor,
-  sScaleInfo,
   rScaleColor,
   rScaleInfo,
+  solarRadiationStormScale,
   sScaleColor,
   sScaleInfo,
-  solarRadiationStormScale,
   xrayClassToRScale,
   xrayClassToRScaleInfo,
   xrayFluxToRScale,
@@ -247,6 +244,7 @@ describe("protonFluxToSScale", () => {
 
   it("clamps values above the S5 threshold to S5", () => {
     expect(protonFluxToSScale(5_000_000)).toBe("S5");
+  });
 
   it("steps down one level just below each threshold", () => {
     expect(protonFluxToSScale(99)).toBe("S1");
@@ -258,7 +256,6 @@ describe("protonFluxToSScale", () => {
   it("treats negative or non-finite readings as quiet", () => {
     expect(protonFluxToSScale(-42)).toBe("S0");
     expect(protonFluxToSScale(Number.NaN)).toBe("S0");
-  });
   });
 });
 
