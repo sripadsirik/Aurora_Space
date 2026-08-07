@@ -47,6 +47,16 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
 };
 
 /**
+ * Builds the ops warning-badge label for a given number of active conjunctions,
+ * pluralising the noun (for example `1 ACTIVE CONJUNCTION WARNING` versus
+ * `3 ACTIVE CONJUNCTION WARNINGS`). Negative counts are clamped to zero.
+ */
+export const formatConjunctionWarningLabel = (count: number): string => {
+  const safeCount = Math.max(0, Math.trunc(count));
+  return `${safeCount} ACTIVE CONJUNCTION WARNING${safeCount === 1 ? "" : "S"}`;
+};
+
+/**
  * A conjunction is treated as critical when the collision probability is at
  * least 0.005 or the miss distance is 250 m or less.
  */
