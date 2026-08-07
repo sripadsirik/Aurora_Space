@@ -1,5 +1,6 @@
 import { useAuroraStore } from "../../store/auroraStore";
 import { mockCMEs } from "../../data/mock/cmeLibrary";
+import { cmePrimaryImpacts, formatCmeArrival } from "../../utils/cmeDisplay";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor } from "../../utils/spaceWeatherScales";
 import type { MockCME } from "../../types/space";
@@ -11,16 +12,7 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
 }): JSX.Element => {
   const isMiss = cme.impactStatus === "NO IMPACT — MISS";
   const isArrived = cme.hoursUntilArrival <= 0;
-
-  let arrivalText: string;
-  if (isMiss) {
-    arrivalText = `PASSES EARTH ORBIT IN ${cme.hoursUntilArrival}h — NO IMPACT`;
-  } else if (isArrived) {
-    arrivalText = `ARRIVED ${Math.abs(cme.hoursUntilArrival)}h ago`;
-  } else {
-    const prefix = cme.impactStatus === "GLANCING BLOW" ? "GLANCING ARRIVAL — " : "";
-    arrivalText = `${prefix}${cme.hoursUntilArrival}h until arrival`;
-  }
+  const arrivalText = formatCmeArrival(cme);
 
   return (
     <button
@@ -100,10 +92,9 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
           <div className="mt-1">
             <span className="text-[#7d9cb5]">Primary Impacts:</span>
             <ul className="mt-0.5 space-y-0.5 text-[9px] text-[#ffccaa]">
-              <li>HF Radio degradation</li>
-              <li>GPS accuracy reduction</li>
-              {cme.predictedKp >= 7 && <li>Power grid stress</li>}
-              {cme.predictedKp >= 8 && <li>Satellite charging risk</li>}
+              {cmePrimaryImpacts(cme).map((impact) => (
+                <li key={impact}>{impact}</li>
+              ))}
             </ul>
           </div>
         </div>

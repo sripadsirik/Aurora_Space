@@ -1,6 +1,7 @@
 import { Color } from "cesium";
 import type { RiskLevel } from "../types/space";
 import type { ConjunctionFleetSeverity } from "./conjunctionRisk";
+import { conjunctionRiskTextClass } from "./conjunctionRisk";
 
 /** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
@@ -15,15 +16,8 @@ export const riskColorMap: Record<RiskLevel, Color> = {
  * its {@link RiskLevel}: red for `critical`, amber for `warning`, and a calm
  * blue-white for the lower `watch`/`nominal` tiers.
  */
-export const conjunctionRowTextClass = (risk: RiskLevel): string => {
-  if (risk === "critical") {
-    return "text-[#ff7d7d]";
-  }
-  if (risk === "warning") {
-    return "text-[#ffcd73]";
-  }
-  return "text-[#d8ebff]";
-};
+export const conjunctionRowTextClass = (risk: RiskLevel): string =>
+  conjunctionRiskTextClass(risk, "text-[#d8ebff]");
 
 /**
  * Maps a planetary Kp index (0-9) to a CSS hex colour, escalating from quiet

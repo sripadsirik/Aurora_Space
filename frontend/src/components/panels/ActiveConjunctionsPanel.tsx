@@ -1,7 +1,10 @@
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import { conjunctionRowTextClass } from "../../utils/colors";
-import { classifyConjunctionRisk, sortConjunctionsByProbabilityDesc } from "../../utils/conjunctionRisk";
+import {
+  classifyConjunctionRisk,
+  conjunctionRiskTextClass,
+  sortConjunctionsByProbabilityDesc
+} from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatProbability } from "../../utils/format";
 
 export const ActiveConjunctionsPanel = (): JSX.Element | null => {
@@ -41,7 +44,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
           <tbody>
             {sorted.map((conj, idx) => {
               const risk = classifyConjunctionRisk(conj.probability);
-              const rowColor = conjunctionRowTextClass(risk);
+              const rowColor = conjunctionRiskTextClass(risk, "text-[#d8ebff]");
               return (
                 <tr
                   key={conj.id}
