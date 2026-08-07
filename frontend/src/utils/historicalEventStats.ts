@@ -67,3 +67,19 @@ export const eventsInDateRange = (
     return time >= from && time <= to;
   });
 };
+
+/**
+ * Returns the event with the highest recorded Kp index — the most geomagnetically
+ * intense event in the feed — or `null` when no event carries a `kpIndex`. Events
+ * without a `kpIndex` are ignored rather than treated as zero. Ties resolve to
+ * the earliest matching entry, so the result is stable for a given ordering. The
+ * input is not mutated.
+ */
+export const strongestGeomagneticEvent = (
+  events: readonly HistoricalEvent[]
+): HistoricalEvent | null =>
+  events.reduce<HistoricalEvent | null>((strongest, event) => {
+    if (event.kpIndex === undefined) return strongest;
+    if (strongest === null || event.kpIndex > (strongest.kpIndex ?? -Infinity)) return event;
+    return strongest;
+  }, null);
