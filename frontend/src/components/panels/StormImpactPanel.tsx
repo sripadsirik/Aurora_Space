@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
+import { filterByOwner } from "../../utils/catalogFilters";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
@@ -29,7 +30,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
   const riskCounts = useMemo(() => {
     const leo = satellites.filter((s) => s.altitudeKm < 2000).length;
     const geo = satellites.filter((s) => s.altitudeKm > 35000).length;
-    const debris = satellites.filter((s) => s.owner === "DEBRIS").length;
+    const debris = filterByOwner(satellites, "DEBRIS").length;
     return { leo, geo, debris };
   }, [satellites]);
 
