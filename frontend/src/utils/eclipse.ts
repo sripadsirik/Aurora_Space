@@ -39,3 +39,11 @@ export const eclipseFraction = (altitudeKm: number, betaDeg = 0): number => {
  */
 export const sunlightFraction = (altitudeKm: number, betaDeg = 0): number =>
   1 - eclipseFraction(altitudeKm, betaDeg);
+
+/**
+ * Worst-case eclipse fraction for an orbit, which occurs when the Sun lies in
+ * the orbital plane (`betaDeg = 0`). This is the largest share of any orbit the
+ * satellite can spend in shadow, useful as an upper bound for power sizing.
+ */
+export const maxEclipseFraction = (altitudeKm: number): number =>
+  eclipseFraction(altitudeKm, 0);
