@@ -80,3 +80,46 @@ export const eclipseDurationMinutes = (altitudeKm: number, betaDeg = 0): number 
  */
 export const sunlightDurationMinutes = (altitudeKm: number, betaDeg = 0): number =>
   sunlightFraction(altitudeKm, betaDeg) * orbitalPeriodMinutes(altitudeKm);
+
+/** Derived shadow-versus-sunlight figures for a single satellite's orbit. */
+export interface EclipseSummary {
+  /** Beta angle, in degrees, the figures were computed for. */
+  betaDeg: number;
+  /** Orbital period in minutes. */
+  orbitalPeriodMinutes: number;
+  /** Fraction of the orbit spent in Earth's shadow, 0-0.5. */
+  eclipseFraction: number;
+  /** Fraction of the orbit spent in sunlight, 0.5-1. */
+  sunlightFraction: number;
+  /** Minutes per orbit spent in Earth's shadow. */
+  eclipseMinutes: number;
+  /** Minutes per orbit spent in sunlight. */
+  sunlightMinutes: number;
+  /** Beta angle above which the orbit stops entering shadow, in degrees. */
+  cutoffBetaDeg: number;
+  /** Whether the orbit enters Earth's shadow at all at this beta angle. */
+  isEclipsed: boolean;
+}
+
+/**
+ * Bundles the derived eclipse figures for a satellite into a single summary:
+ * eclipse and sunlight fractions, their per-orbit durations, the orbital period,
+ * and the beta-angle cutoff. All values come from the satellite's altitude and
+ * the given beta angle (defaulting to the worst-case `0`), so they stay mutually
+ * consistent. `isEclipsed` is false once the beta angle reaches the cutoff.
+ */
+export const summarizeEclipse = (satellite: Satellite, betaDeg = 0): EclipseSummary => {
+  const { altitudeKm } = satellite;
+  const fraction = eclipseFraction(altitudeKm, betaDeg);
+  const period = orbitalPeriodMinutes(altitudeKm);
+  return {
+    betaDeg,
+    orbitalPeriodMinutes: period,
+    eclipseFraction: fraction,
+    sunlightFraction: 1 - fraction,
+    eclipseMinutes: fraction * period,
+    sunlightMinutes: (1 - fraction) * period,
+    cutoffBetaDeg: eclipseCutoffBetaDeg(altitudeKm),
+    isEclipsed: fraction > 0
+  };
+};
