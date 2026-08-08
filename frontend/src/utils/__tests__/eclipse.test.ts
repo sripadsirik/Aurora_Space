@@ -54,3 +54,32 @@ describe("eclipseFraction", () => {
     expect(eclipseFraction(200)).toBeLessThanOrEqual(0.5);
   });
 });
+
+describe("sunlightFraction", () => {
+  it("is the exact complement of the eclipse fraction", () => {
+    expect(sunlightFraction(550, 20)).toBeCloseTo(1 - eclipseFraction(550, 20), 12);
+  });
+
+  it("is a full orbit of sunlight past the cutoff beta angle", () => {
+    const cutoff = eclipseCutoffBetaDeg(GEO_ALTITUDE_KM);
+    expect(sunlightFraction(GEO_ALTITUDE_KM, cutoff + 1)).toBe(1);
+  });
+
+  it("stays at or above one half", () => {
+    expect(sunlightFraction(200)).toBeGreaterThanOrEqual(0.5);
+  });
+});
+
+describe("maxEclipseFraction", () => {
+  it("equals the beta-zero eclipse fraction", () => {
+    expect(maxEclipseFraction(550)).toBe(eclipseFraction(550, 0));
+  });
+
+  it("is never smaller than the eclipse fraction at any other beta angle", () => {
+    expect(maxEclipseFraction(550)).toBeGreaterThanOrEqual(eclipseFraction(550, 30));
+  });
+
+  it("falls as altitude rises", () => {
+    expect(maxEclipseFraction(GEO_ALTITUDE_KM)).toBeLessThan(maxEclipseFraction(550));
+  });
+});
