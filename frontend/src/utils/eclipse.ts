@@ -31,3 +31,11 @@ export const eclipseFraction = (altitudeKm: number, betaDeg = 0): number => {
   if (ratio >= 1) return 0;
   return Math.acos(ratio) / Math.PI;
 };
+
+/**
+ * Fraction of a circular orbit spent in sunlight, the complement of
+ * `eclipseFraction`. Ranges from 0.5 (worst-case low orbit with the Sun in the
+ * orbital plane) up to 1 for an orbit that never enters the shadow.
+ */
+export const sunlightFraction = (altitudeKm: number, betaDeg = 0): number =>
+  1 - eclipseFraction(altitudeKm, betaDeg);
