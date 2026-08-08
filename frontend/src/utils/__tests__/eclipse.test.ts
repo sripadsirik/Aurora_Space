@@ -125,3 +125,39 @@ describe("eclipseDurationMinutes and sunlightDurationMinutes", () => {
     expect(eclipseDurationMinutes(550, cutoff + 5)).toBe(0);
   });
 });
+
+describe("summarizeEclipse", () => {
+  it("bundles values that agree with the standalone helpers", () => {
+    const satellite = makeSatellite({ altitudeKm: 800 });
+    const summary = summarizeEclipse(satellite, 15);
+    expect(summary.betaDeg).toBe(15);
+    expect(summary.eclipseFraction).toBeCloseTo(eclipseFraction(800, 15), 12);
+    expect(summary.eclipseMinutes).toBeCloseTo(eclipseDurationMinutes(800, 15), 9);
+    expect(summary.sunlightMinutes).toBeCloseTo(sunlightDurationMinutes(800, 15), 9);
+    expect(summary.cutoffBetaDeg).toBeCloseTo(eclipseCutoffBetaDeg(800), 12);
+  });
+
+  it("defaults the beta angle to the worst case of zero", () => {
+    expect(summarizeEclipse(makeSatellite()).betaDeg).toBe(0);
+  });
+
+  it("keeps the eclipse and sunlight fractions summing to one", () => {
+    const summary = summarizeEclipse(makeSatellite({ altitudeKm: 1200 }), 25);
+    expect(summary.eclipseFraction + summary.sunlightFraction).toBeCloseTo(1, 12);
+  });
+
+  it("keeps the eclipse and sunlight minutes summing to the period", () => {
+    const summary = summarizeEclipse(makeSatellite({ altitudeKm: 1200 }));
+    expect(summary.eclipseMinutes + summary.sunlightMinutes).toBeCloseTo(
+      summary.orbitalPeriodMinutes,
+      9
+    );
+  });
+
+  it("reports an eclipse below the cutoff and none above it", () => {
+    const satellite = makeSatellite({ altitudeKm: GEO_ALTITUDE_KM });
+    const cutoff = eclipseCutoffBetaDeg(GEO_ALTITUDE_KM);
+    expect(summarizeEclipse(satellite, cutoff - 2).isEclipsed).toBe(true);
+    expect(summarizeEclipse(satellite, cutoff + 2).isEclipsed).toBe(false);
+  });
+});
