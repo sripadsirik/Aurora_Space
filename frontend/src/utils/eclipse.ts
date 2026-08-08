@@ -73,3 +73,10 @@ const orbitalPeriodMinutes = (altitudeKm: number): number =>
  */
 export const eclipseDurationMinutes = (altitudeKm: number, betaDeg = 0): number =>
   eclipseFraction(altitudeKm, betaDeg) * orbitalPeriodMinutes(altitudeKm);
+
+/**
+ * Wall-clock minutes the satellite spends in sunlight on each orbit, the sunlit
+ * fraction scaled by the orbital period.
+ */
+export const sunlightDurationMinutes = (altitudeKm: number, betaDeg = 0): number =>
+  sunlightFraction(altitudeKm, betaDeg) * orbitalPeriodMinutes(altitudeKm);
