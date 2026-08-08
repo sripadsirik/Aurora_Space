@@ -101,3 +101,27 @@ describe("eclipseCutoffBetaDeg", () => {
     expect(eclipseCutoffBetaDeg(GEO_ALTITUDE_KM)).toBeLessThan(eclipseCutoffBetaDeg(550));
   });
 });
+
+describe("eclipseDurationMinutes and sunlightDurationMinutes", () => {
+  it("sums to the full orbital period", () => {
+    const total = eclipseDurationMinutes(550) + sunlightDurationMinutes(550);
+    expect(total).toBeCloseTo(sunlightDurationMinutes(550, eclipseCutoffBetaDeg(550) + 1), 6);
+  });
+
+  it("puts a 550 km orbit in shadow for around half an hour", () => {
+    const minutes = eclipseDurationMinutes(550);
+    expect(minutes).toBeGreaterThan(30);
+    expect(minutes).toBeLessThan(40);
+  });
+
+  it("keeps a geostationary orbit in shadow for a little over an hour", () => {
+    const minutes = eclipseDurationMinutes(GEO_ALTITUDE_KM);
+    expect(minutes).toBeGreaterThan(60);
+    expect(minutes).toBeLessThan(75);
+  });
+
+  it("leaves an orbit fully sunlit past the cutoff", () => {
+    const cutoff = eclipseCutoffBetaDeg(550);
+    expect(eclipseDurationMinutes(550, cutoff + 5)).toBe(0);
+  });
+});
