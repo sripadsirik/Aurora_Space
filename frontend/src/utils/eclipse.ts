@@ -47,3 +47,14 @@ export const sunlightFraction = (altitudeKm: number, betaDeg = 0): number =>
  */
 export const maxEclipseFraction = (altitudeKm: number): number =>
   eclipseFraction(altitudeKm, 0);
+
+/**
+ * Beta angle, in degrees, at which the orbit stops entering Earth's shadow. For
+ * any beta magnitude at or above this cutoff the satellite stays in full
+ * sunlight for the whole orbit. Equal to `asin(R / (R + h))`, so it shrinks with
+ * altitude — higher orbits go eclipse-free at a smaller beta angle.
+ */
+export const eclipseCutoffBetaDeg = (altitudeKm: number): number => {
+  const orbitRadius = ECLIPSE_EARTH_RADIUS_KM + altitudeKm;
+  return toDegrees(Math.asin(ECLIPSE_EARTH_RADIUS_KM / orbitRadius));
+};
