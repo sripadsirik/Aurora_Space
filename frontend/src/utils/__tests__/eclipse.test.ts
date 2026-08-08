@@ -83,3 +83,21 @@ describe("maxEclipseFraction", () => {
     expect(maxEclipseFraction(GEO_ALTITUDE_KM)).toBeLessThan(maxEclipseFraction(550));
   });
 });
+
+describe("eclipseCutoffBetaDeg", () => {
+  it("matches asin(R / (R + h)) for a 550 km orbit", () => {
+    const orbitRadius = ECLIPSE_EARTH_RADIUS_KM + 550;
+    const expected = (Math.asin(ECLIPSE_EARTH_RADIUS_KM / orbitRadius) * 180) / Math.PI;
+    expect(eclipseCutoffBetaDeg(550)).toBeCloseTo(expected, 9);
+  });
+
+  it("is under 9 degrees for a geostationary orbit", () => {
+    const cutoff = eclipseCutoffBetaDeg(GEO_ALTITUDE_KM);
+    expect(cutoff).toBeGreaterThan(8);
+    expect(cutoff).toBeLessThan(9);
+  });
+
+  it("shrinks with altitude", () => {
+    expect(eclipseCutoffBetaDeg(GEO_ALTITUDE_KM)).toBeLessThan(eclipseCutoffBetaDeg(550));
+  });
+});
