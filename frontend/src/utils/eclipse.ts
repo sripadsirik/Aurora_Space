@@ -58,3 +58,18 @@ export const eclipseCutoffBetaDeg = (altitudeKm: number): number => {
   const orbitRadius = ECLIPSE_EARTH_RADIUS_KM + altitudeKm;
   return toDegrees(Math.asin(ECLIPSE_EARTH_RADIUS_KM / orbitRadius));
 };
+
+/**
+ * Orbital period in minutes for a circular orbit at the given altitude, derived
+ * from Kepler's third law on the same spherical Earth radius the eclipse
+ * geometry uses so the duration figures stay mutually consistent.
+ */
+const orbitalPeriodMinutes = (altitudeKm: number): number =>
+  getOrbitalPeriod((ECLIPSE_EARTH_RADIUS_KM + altitudeKm) * 1000) / 60;
+
+/**
+ * Wall-clock minutes the satellite spends in Earth's shadow on each orbit, the
+ * eclipse fraction scaled by the orbital period.
+ */
+export const eclipseDurationMinutes = (altitudeKm: number, betaDeg = 0): number =>
+  eclipseFraction(altitudeKm, betaDeg) * orbitalPeriodMinutes(altitudeKm);
