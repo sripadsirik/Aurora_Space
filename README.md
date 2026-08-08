@@ -104,6 +104,30 @@ above its horizon), while higher orbits widen it: a single geostationary satelli
 42% of the globe down to the horizon. All figures derive from the same central angle, so they
 stay mutually consistent.
 
+## Orbital Eclipse
+
+How much of each orbit a satellite spends in Earth's shadow versus sunlight comes from the pure
+geometry helpers in `frontend/src/utils/eclipse.ts`. They use the standard cylindrical-shadow
+model, parameterised by altitude and the orbit's *beta angle* — the angle between the orbital
+plane and the Earth-Sun line:
+
+| Helper | Returns |
+| --- | --- |
+| `eclipseFraction` | Fraction of the orbit spent in shadow for a given beta angle (0-0.5) |
+| `sunlightFraction` | Fraction of the orbit spent in sunlight (0.5-1) |
+| `maxEclipseFraction` | Worst-case shadow fraction, at beta angle `0` |
+| `eclipseCutoffBetaDeg` | Beta angle above which the orbit stays fully sunlit |
+| `eclipseDurationMinutes` | Minutes per orbit spent in shadow |
+| `sunlightDurationMinutes` | Minutes per orbit spent in sunlight |
+| `summarizeEclipse` | All of the above bundled into one `EclipseSummary` for a `Satellite` |
+
+The eclipse is longest when the Sun lies in the orbital plane (`betaDeg = 0`) and shrinks as the
+beta angle rises, vanishing once it reaches `eclipseCutoffBetaDeg` (equal to `asin(R / (R + h))`),
+beyond which the orbit rides clear of the shadow for the whole revolution. A 550 km orbit spends
+roughly 37% of each orbit in shadow, while a geostationary satellite spends under 5%. Durations
+derive from the same spherical Earth radius as the shadow geometry, so the eclipse and sunlight
+minutes always sum to the orbital period.
+
 ## Catalog Statistics
 
 Summary figures for the whole tracked catalog come from the pure helpers in
