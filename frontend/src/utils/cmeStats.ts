@@ -40,3 +40,15 @@ export const nextArrival = (cmes: readonly MockCME[]): MockCME | null =>
         : soonest,
     null
   );
+
+/**
+ * Returns the CME with the highest modelled plasma speed, or `null` for an empty
+ * feed. Speed is a physical property of the ejection, so misses are considered
+ * alongside impacts. Ties resolve to the earliest matching entry; the input is
+ * not mutated.
+ */
+export const fastestCme = (cmes: readonly MockCME[]): MockCME | null =>
+  cmes.reduce<MockCME | null>(
+    (fastest, cme) => (fastest === null || cme.speed > fastest.speed ? cme : fastest),
+    null
+  );
