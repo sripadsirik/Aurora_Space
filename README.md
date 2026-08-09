@@ -245,6 +245,27 @@ Risk tiers reuse `classifyConjunctionRisk` / `isActionableConjunctionRisk` from
 per-row colours in the conjunction panels. Extremes return `null` and averages return 0 for an
 empty feed, so every figure is safe to render without a guard.
 
+## CME Library Statistics
+
+Summary figures for the modelled CME library come from the pure helpers in
+`frontend/src/utils/cmeStats.ts`, which aggregate over a `MockCME[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `isImpactingCme` | Whether a CME reaches Earth (direct hit or glancing blow) |
+| `countImpactingCmes` | Number of Earth-directed ejections, excluding clean misses |
+| `isPendingCme` | Whether a CME is inbound and not yet arrived |
+| `nextArrival` | The soonest inbound CME (or `null`) |
+| `fastestCme` | The highest-speed ejection (or `null`) |
+| `peakPredictedKp` | Highest predicted Kp across the feed |
+| `averageConfidence` | Mean forecast confidence as a percentage |
+| `summarizeCmeLibrary` | All of the above bundled into one `CmeLibrarySummary` |
+
+Clean misses (`impactStatus` of `NO IMPACT — MISS`) are excluded from the impact and arrival
+figures but still counted in `total` and considered for `fastestCme`, since speed is a physical
+property of the ejection. Extremes return `null` and numeric aggregates return 0 for an empty
+feed, so a HUD or panel header can render every figure without a guard.
+
 ## Repo Layout
 
 ```text
