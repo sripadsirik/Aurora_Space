@@ -15,3 +15,13 @@ export const isImpactingCme = (cme: Pick<MockCME, "impactStatus">): boolean =>
  */
 export const countImpactingCmes = (cmes: readonly MockCME[]): number =>
   cmes.reduce((count, cme) => (isImpactingCme(cme) ? count + 1 : count), 0);
+
+/**
+ * Whether a CME is still inbound: it is modelled to reach Earth
+ * ({@link isImpactingCme}) and its arrival is in the future
+ * (`hoursUntilArrival > 0`). Already-arrived ejections and clean misses are
+ * excluded, matching the set an operator would count down to.
+ */
+export const isPendingCme = (
+  cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">
+): boolean => isImpactingCme(cme) && cme.hoursUntilArrival > 0;
