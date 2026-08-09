@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MockCME } from "../../types/space";
-import { countImpactingCmes, isImpactingCme } from "../cmeStats";
+import { countImpactingCmes, isImpactingCme, isPendingCme } from "../cmeStats";
 
 const cme = (overrides: Partial<MockCME>): MockCME => ({
   id: 0,
@@ -51,5 +51,23 @@ describe("countImpactingCmes", () => {
       cme({ id: 1, impactStatus: "NO IMPACT — MISS" })
     ];
     expect(countImpactingCmes(cmes)).toBe(0);
+  });
+});
+
+describe("isPendingCme", () => {
+  it("treats an inbound direct hit as pending", () => {
+    expect(isPendingCme(cme({ impactStatus: "DIRECT HIT", hoursUntilArrival: 8 }))).toBe(true);
+  });
+
+  it("excludes an already-arrived ejection", () => {
+    expect(isPendingCme(cme({ impactStatus: "DIRECT HIT", hoursUntilArrival: -2 }))).toBe(false);
+  });
+
+  it("excludes a CME arriving exactly now", () => {
+    expect(isPendingCme(cme({ impactStatus: "DIRECT HIT", hoursUntilArrival: 0 }))).toBe(false);
+  });
+
+  it("excludes a clean miss even with a future arrival", () => {
+    expect(isPendingCme(cme({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: 36 }))).toBe(false);
   });
 });
