@@ -52,3 +52,12 @@ export const fastestCme = (cmes: readonly MockCME[]): MockCME | null =>
     (fastest, cme) => (fastest === null || cme.speed > fastest.speed ? cme : fastest),
     null
   );
+
+/**
+ * Highest predicted Kp across the feed — the peak geomagnetic response any of the
+ * ejections is forecast to drive. Returns 0 for an empty feed so the figure is
+ * always a finite number. Clean misses forecast a Kp of 0 and so do not inflate
+ * the peak.
+ */
+export const peakPredictedKp = (cmes: readonly MockCME[]): number =>
+  cmes.reduce((peak, cme) => Math.max(peak, cme.predictedKp), 0);
