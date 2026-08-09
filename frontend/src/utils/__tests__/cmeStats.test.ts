@@ -5,7 +5,8 @@ import {
   fastestCme,
   isImpactingCme,
   isPendingCme,
-  nextArrival
+  nextArrival,
+  peakPredictedKp
 } from "../cmeStats";
 
 const cme = (overrides: Partial<MockCME>): MockCME => ({
@@ -142,5 +143,28 @@ describe("fastestCme", () => {
   it("resolves ties to the earliest matching entry", () => {
     const cmes = [cme({ id: 0, speed: 900 }), cme({ id: 1, speed: 900 })];
     expect(fastestCme(cmes)?.id).toBe(0);
+  });
+});
+
+describe("peakPredictedKp", () => {
+  it("returns 0 for an empty feed", () => {
+    expect(peakPredictedKp([])).toBe(0);
+  });
+
+  it("returns the highest predicted Kp in the feed", () => {
+    const cmes = [
+      cme({ id: 0, predictedKp: 7 }),
+      cme({ id: 1, predictedKp: 8 }),
+      cme({ id: 2, predictedKp: 5 })
+    ];
+    expect(peakPredictedKp(cmes)).toBe(8);
+  });
+
+  it("stays at 0 when every CME is a Kp-0 miss", () => {
+    const cmes = [
+      cme({ id: 0, predictedKp: 0, impactStatus: "NO IMPACT — MISS" }),
+      cme({ id: 1, predictedKp: 0, impactStatus: "NO IMPACT — MISS" })
+    ];
+    expect(peakPredictedKp(cmes)).toBe(0);
   });
 });
