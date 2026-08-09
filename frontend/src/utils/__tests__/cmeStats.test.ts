@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MockCME } from "../../types/space";
-import { countImpactingCmes, isImpactingCme, isPendingCme } from "../cmeStats";
+import { countImpactingCmes, isImpactingCme, isPendingCme, nextArrival } from "../cmeStats";
 
 const cme = (overrides: Partial<MockCME>): MockCME => ({
   id: 0,
@@ -69,5 +69,44 @@ describe("isPendingCme", () => {
 
   it("excludes a clean miss even with a future arrival", () => {
     expect(isPendingCme(cme({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: 36 }))).toBe(false);
+  });
+});
+
+describe("nextArrival", () => {
+  it("returns null for an empty feed", () => {
+    expect(nextArrival([])).toBeNull();
+  });
+
+  it("returns null when nothing is inbound", () => {
+    const cmes = [
+      cme({ id: 0, impactStatus: "DIRECT HIT", hoursUntilArrival: -2 }),
+      cme({ id: 1, impactStatus: "NO IMPACT — MISS", hoursUntilArrival: 36 })
+    ];
+    expect(nextArrival(cmes)).toBeNull();
+  });
+
+  it("picks the smallest positive hoursUntilArrival among inbound CMEs", () => {
+    const cmes = [
+      cme({ id: 0, hoursUntilArrival: 52 }),
+      cme({ id: 1, hoursUntilArrival: 8 }),
+      cme({ id: 2, hoursUntilArrival: 36 })
+    ];
+    expect(nextArrival(cmes)?.id).toBe(1);
+  });
+
+  it("ignores an arrived CME even when it has the smallest raw value", () => {
+    const cmes = [
+      cme({ id: 0, hoursUntilArrival: -1 }),
+      cme({ id: 1, hoursUntilArrival: 12 })
+    ];
+    expect(nextArrival(cmes)?.id).toBe(1);
+  });
+
+  it("resolves ties to the earliest matching entry", () => {
+    const cmes = [
+      cme({ id: 0, hoursUntilArrival: 10 }),
+      cme({ id: 1, hoursUntilArrival: 10 })
+    ];
+    expect(nextArrival(cmes)?.id).toBe(0);
   });
 });
