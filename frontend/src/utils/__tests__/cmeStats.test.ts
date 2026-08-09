@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { MockCME } from "../../types/space";
-import { countImpactingCmes, isImpactingCme, isPendingCme, nextArrival } from "../cmeStats";
+import {
+  countImpactingCmes,
+  fastestCme,
+  isImpactingCme,
+  isPendingCme,
+  nextArrival
+} from "../cmeStats";
 
 const cme = (overrides: Partial<MockCME>): MockCME => ({
   id: 0,
@@ -108,5 +114,33 @@ describe("nextArrival", () => {
       cme({ id: 1, hoursUntilArrival: 10 })
     ];
     expect(nextArrival(cmes)?.id).toBe(0);
+  });
+});
+
+describe("fastestCme", () => {
+  it("returns null for an empty feed", () => {
+    expect(fastestCme([])).toBeNull();
+  });
+
+  it("returns the highest-speed ejection", () => {
+    const cmes = [
+      cme({ id: 0, speed: 1250 }),
+      cme({ id: 1, speed: 2100 }),
+      cme({ id: 2, speed: 780 })
+    ];
+    expect(fastestCme(cmes)?.id).toBe(1);
+  });
+
+  it("considers a fast miss alongside impacts", () => {
+    const cmes = [
+      cme({ id: 0, speed: 1000, impactStatus: "DIRECT HIT" }),
+      cme({ id: 1, speed: 2500, impactStatus: "NO IMPACT — MISS" })
+    ];
+    expect(fastestCme(cmes)?.id).toBe(1);
+  });
+
+  it("resolves ties to the earliest matching entry", () => {
+    const cmes = [cme({ id: 0, speed: 900 }), cme({ id: 1, speed: 900 })];
+    expect(fastestCme(cmes)?.id).toBe(0);
   });
 });
