@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MockCME } from "../../types/space";
 import {
+  averageConfidence,
   countImpactingCmes,
   fastestCme,
   isImpactingCme,
@@ -166,5 +167,24 @@ describe("peakPredictedKp", () => {
       cme({ id: 1, predictedKp: 0, impactStatus: "NO IMPACT — MISS" })
     ];
     expect(peakPredictedKp(cmes)).toBe(0);
+  });
+});
+
+describe("averageConfidence", () => {
+  it("returns 0 for an empty feed", () => {
+    expect(averageConfidence([])).toBe(0);
+  });
+
+  it("averages the confidence values", () => {
+    const cmes = [
+      cme({ id: 0, confidence: 72 }),
+      cme({ id: 1, confidence: 58 }),
+      cme({ id: 2, confidence: 89 })
+    ];
+    expect(averageConfidence(cmes)).toBeCloseTo(73);
+  });
+
+  it("returns the single value for a one-CME feed", () => {
+    expect(averageConfidence([cme({ confidence: 91 })])).toBe(91);
   });
 });
