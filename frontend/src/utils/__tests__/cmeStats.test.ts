@@ -7,7 +7,8 @@ import {
   isImpactingCme,
   isPendingCme,
   nextArrival,
-  peakPredictedKp
+  peakPredictedKp,
+  summarizeCmeLibrary
 } from "../cmeStats";
 
 const cme = (overrides: Partial<MockCME>): MockCME => ({
@@ -186,5 +187,33 @@ describe("averageConfidence", () => {
 
   it("returns the single value for a one-CME feed", () => {
     expect(averageConfidence([cme({ confidence: 91 })])).toBe(91);
+  });
+});
+
+describe("summarizeCmeLibrary", () => {
+  it("returns a zeroed, null-filled summary for an empty feed", () => {
+    expect(summarizeCmeLibrary([])).toEqual({
+      total: 0,
+      impacting: 0,
+      next: null,
+      fastest: null,
+      peakKp: 0,
+      averageConfidence: 0
+    });
+  });
+
+  it("derives every figure from one list, consistent with the helpers", () => {
+    const cmes = [
+      cme({ id: 0, speed: 1250, hoursUntilArrival: 8, predictedKp: 7, confidence: 72, impactStatus: "DIRECT HIT" }),
+      cme({ id: 1, speed: 2100, hoursUntilArrival: -2, predictedKp: 8, confidence: 88, impactStatus: "DIRECT HIT" }),
+      cme({ id: 2, speed: 890, hoursUntilArrival: 36, predictedKp: 0, confidence: 92, impactStatus: "NO IMPACT — MISS" })
+    ];
+    const summary = summarizeCmeLibrary(cmes);
+    expect(summary.total).toBe(3);
+    expect(summary.impacting).toBe(countImpactingCmes(cmes));
+    expect(summary.next?.id).toBe(0);
+    expect(summary.fastest?.id).toBe(1);
+    expect(summary.peakKp).toBe(8);
+    expect(summary.averageConfidence).toBeCloseTo(84);
   });
 });
