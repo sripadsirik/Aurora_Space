@@ -71,3 +71,33 @@ export const averageConfidence = (cmes: readonly MockCME[]): number => {
   const total = cmes.reduce((sum, cme) => sum + cme.confidence, 0);
   return total / cmes.length;
 };
+
+/** Aggregate view of a CME library, suitable for a HUD or panel header. */
+export interface CmeLibrarySummary {
+  /** Total number of tracked CMEs, including clean misses. */
+  total: number;
+  /** CMEs modelled to reach Earth (direct hits and glancing blows). */
+  impacting: number;
+  /** The soonest inbound CME, or `null` when nothing is inbound. */
+  next: MockCME | null;
+  /** The highest-speed ejection in the feed, or `null` for an empty feed. */
+  fastest: MockCME | null;
+  /** Highest predicted Kp across the feed. */
+  peakKp: number;
+  /** Mean forecast confidence as a percentage. */
+  averageConfidence: number;
+}
+
+/**
+ * Bundles the CME aggregates into a single struct so a summary display can derive
+ * every figure from one list. All members reuse the individual helpers in this
+ * module, so they stay mutually consistent.
+ */
+export const summarizeCmeLibrary = (cmes: readonly MockCME[]): CmeLibrarySummary => ({
+  total: cmes.length,
+  impacting: countImpactingCmes(cmes),
+  next: nextArrival(cmes),
+  fastest: fastestCme(cmes),
+  peakKp: peakPredictedKp(cmes),
+  averageConfidence: averageConfidence(cmes)
+});
