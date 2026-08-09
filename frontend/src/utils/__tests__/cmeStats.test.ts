@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MockCME } from "../../types/space";
-import { isImpactingCme } from "../cmeStats";
+import { countImpactingCmes, isImpactingCme } from "../cmeStats";
 
 const cme = (overrides: Partial<MockCME>): MockCME => ({
   id: 0,
@@ -28,5 +28,28 @@ describe("isImpactingCme", () => {
 
   it("treats a clean miss as not impacting", () => {
     expect(isImpactingCme(cme({ impactStatus: "NO IMPACT — MISS" }))).toBe(false);
+  });
+});
+
+describe("countImpactingCmes", () => {
+  it("returns 0 for an empty feed", () => {
+    expect(countImpactingCmes([])).toBe(0);
+  });
+
+  it("counts only the Earth-directed ejections", () => {
+    const cmes = [
+      cme({ id: 0, impactStatus: "DIRECT HIT" }),
+      cme({ id: 1, impactStatus: "GLANCING BLOW" }),
+      cme({ id: 2, impactStatus: "NO IMPACT — MISS" })
+    ];
+    expect(countImpactingCmes(cmes)).toBe(2);
+  });
+
+  it("returns 0 when every CME misses", () => {
+    const cmes = [
+      cme({ id: 0, impactStatus: "NO IMPACT — MISS" }),
+      cme({ id: 1, impactStatus: "NO IMPACT — MISS" })
+    ];
+    expect(countImpactingCmes(cmes)).toBe(0);
   });
 });
