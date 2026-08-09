@@ -61,3 +61,13 @@ export const fastestCme = (cmes: readonly MockCME[]): MockCME | null =>
  */
 export const peakPredictedKp = (cmes: readonly MockCME[]): number =>
   cmes.reduce((peak, cme) => Math.max(peak, cme.predictedKp), 0);
+
+/**
+ * Mean forecast confidence across the feed, as a percentage. Returns 0 for an
+ * empty feed so the figure is always a finite number rather than `NaN`.
+ */
+export const averageConfidence = (cmes: readonly MockCME[]): number => {
+  if (cmes.length === 0) return 0;
+  const total = cmes.reduce((sum, cme) => sum + cme.confidence, 0);
+  return total / cmes.length;
+};
