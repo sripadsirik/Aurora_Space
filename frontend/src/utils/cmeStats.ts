@@ -25,3 +25,18 @@ export const countImpactingCmes = (cmes: readonly MockCME[]): number =>
 export const isPendingCme = (
   cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">
 ): boolean => isImpactingCme(cme) && cme.hoursUntilArrival > 0;
+
+/**
+ * Returns the inbound CME due to reach Earth soonest — the smallest positive
+ * `hoursUntilArrival` among the pending ejections ({@link isPendingCme}) — or
+ * `null` when nothing is inbound. Ties resolve to the earliest matching entry,
+ * so the result is stable for a given ordering. The input is not mutated.
+ */
+export const nextArrival = (cmes: readonly MockCME[]): MockCME | null =>
+  cmes.reduce<MockCME | null>(
+    (soonest, cme) =>
+      isPendingCme(cme) && (soonest === null || cme.hoursUntilArrival < soonest.hoursUntilArrival)
+        ? cme
+        : soonest,
+    null
+  );
