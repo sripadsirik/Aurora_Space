@@ -60,6 +60,15 @@ export const formatCountdownToTca = (tca: Date | string): string => {
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
 /**
+ * Renders the rough maneuver delta-V the intel table shows for a conjunction. It
+ * is a first-order display estimate that scales linearly with collision
+ * probability (`probability × 10000` m/s) and is prefixed with `~` and rounded to
+ * one decimal to signal that it is indicative rather than a computed burn.
+ */
+export const formatManeuverDeltaV = (probability: number): string =>
+  `~${(probability * 10000).toFixed(1)} m/s`;
+
+/**
  * Formats an orbital period given in minutes as a compact wall-clock string.
  * Periods under an hour read as whole minutes (for example `45m`); longer
  * periods read as hours and minutes (for example `23h 56m`). Negative inputs
