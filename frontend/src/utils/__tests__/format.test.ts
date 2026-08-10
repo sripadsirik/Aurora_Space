@@ -4,6 +4,7 @@ import {
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
+  formatManeuverDeltaV,
   formatOrbitalPeriod,
   formatProbability,
   formatUtcTime,
@@ -41,6 +42,17 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
+  });
+});
+
+describe("formatManeuverDeltaV", () => {
+  it("scales linearly with probability and rounds to one decimal", () => {
+    expect(formatManeuverDeltaV(0.0012)).toBe("~12.0 m/s");
+    expect(formatManeuverDeltaV(0.00005)).toBe("~0.5 m/s");
+  });
+
+  it("renders a zero probability as zero delta-V", () => {
+    expect(formatManeuverDeltaV(0)).toBe("~0.0 m/s");
   });
 });
 
