@@ -29,6 +29,33 @@ export const formatDurationToTca = (tca: Date | string): string => {
   return `${hours}h ${minutes}m`;
 };
 
+/**
+ * Renders a high-resolution countdown to a time of closest approach. Future TCAs
+ * read as a zero-padded `HH:MM:SS` clock; past TCAs read as `PASSED …ago`,
+ * switching from `HH:MM:SS` to `Dd HHh` once more than a day has elapsed. Accepts
+ * a `Date` or ISO string. Unlike {@link formatDurationToTca} this keeps
+ * second-level precision, so it suits a live-ticking detail readout.
+ */
+export const formatCountdownToTca = (tca: Date | string): string => {
+  const tcaDate = tca instanceof Date ? tca : new Date(tca);
+  const rawDiffMs = tcaDate.getTime() - Date.now();
+  if (rawDiffMs < 0) {
+    const elapsed = Math.abs(rawDiffMs);
+    const totalSeconds = Math.floor(elapsed / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `PASSED ${days}d ${pad(hours)}h ago`;
+    return `PASSED ${pad(hours)}:${pad(minutes)}:${pad(seconds)} ago`;
+  }
+  const totalSeconds = Math.floor(rawDiffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+};
+
 /** Formats a collision probability in exponential notation with one fraction digit. */
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
