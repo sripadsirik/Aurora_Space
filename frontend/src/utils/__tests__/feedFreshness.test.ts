@@ -32,4 +32,13 @@ describe("describeFeedFreshness", () => {
   it("treats the sixty-second boundary as a minute-scale live label", () => {
     expect(describeFeedFreshness(agoMs(60_000), now)).toEqual({ label: "1m ago", status: "live" });
   });
+
+  it("falls back to an error when a timestamp throws while being read", () => {
+    const exploding = {
+      getTime: () => {
+        throw new Error("boom");
+      }
+    } as unknown as Date;
+    expect(describeFeedFreshness(agoMs(1000), exploding)).toEqual({ label: "unknown", status: "error" });
+  });
 });
