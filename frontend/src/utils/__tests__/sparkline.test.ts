@@ -104,4 +104,8 @@ describe("sparklineThresholdY", () => {
   it("clamps a threshold above the range to the top edge", () => {
     expect(sparklineThresholdY(20, { width: 10, height: 40, min: 0, max: 10 })).toBe(0);
   });
+
+  it("defaults min to zero when omitted", () => {
+    expect(sparklineThresholdY(5, { width: 10, height: 40, max: 10 })).toBe(20);
+  });
 });
