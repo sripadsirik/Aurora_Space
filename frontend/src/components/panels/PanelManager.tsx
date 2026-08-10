@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
+import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
+import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
 import { formatCountdownToTca, formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
@@ -71,9 +72,6 @@ const getStatusClass = (status: SourceDiagnostic["status"]): string => {
   if (status === "STALE") return "text-[#ffcd73]";
   return "text-[#7df0b2]";
 };
-
-const findConjunctionPeerName = (satellite: Satellite, conjunction: Conjunction): string =>
-  conjunction.object1.noradId === satellite.noradId ? conjunction.object2.name : conjunction.object1.name;
 
 const getOrbitPeriodMinutes = (altitudeKm: number): number =>
   getOrbitalPeriod(earthRadiusMeters + altitudeKm * 1000) / 60;
@@ -156,7 +154,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
             <div className="space-y-1">
               {relatedConjunctions.map((conjunction) => (
                 <div key={conjunction.id} className="rounded-sm border border-white/10 px-2 py-1">
-                  <p className="truncate text-[11px] text-white">{findConjunctionPeerName(selectedSatellite, conjunction)}</p>
+                  <p className="truncate text-[11px] text-white">{conjunctionPeerName(selectedSatellite, conjunction)}</p>
                   <p className="text-[10px] text-[#9cc2de]">
                     TCA {formatCountdownToTca(conjunction.tca)} | {conjunction.missDistanceM}m | Pc {formatProbability(conjunction.probability)}
                   </p>
