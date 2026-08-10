@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   formatConjunctionWarningLabel,
+  formatCountdownToTca,
   formatDurationToTca,
   formatOrbitalPeriod,
   formatProbability,
@@ -124,5 +125,32 @@ describe("formatDurationToTca", () => {
 
   it("reports a long-passed TCA in days and hours", () => {
     expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
+  });
+});
+
+describe("formatCountdownToTca", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-21T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders a future TCA as a zero-padded HH:MM:SS clock", () => {
+    expect(formatCountdownToTca(new Date("2026-07-21T02:03:04Z"))).toBe("02:03:04");
+  });
+
+  it("accepts an ISO string as input", () => {
+    expect(formatCountdownToTca("2026-07-21T01:15:09Z")).toBe("01:15:09");
+  });
+
+  it("reports a recently passed TCA as a padded clock", () => {
+    expect(formatCountdownToTca(new Date("2026-07-20T23:58:30Z"))).toBe("PASSED 00:01:30 ago");
+  });
+
+  it("switches to days and hours once a passed TCA is over a day old", () => {
+    expect(formatCountdownToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
   });
 });
