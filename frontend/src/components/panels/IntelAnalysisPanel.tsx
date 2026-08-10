@@ -8,7 +8,7 @@ import {
   conjunctionRiskTextClass,
   sortConjunctionsByProbabilityDesc
 } from "../../utils/conjunctionRisk";
-import { formatDurationToTca, formatProbability } from "../../utils/format";
+import { formatDurationToTca, formatManeuverDeltaV, formatProbability } from "../../utils/format";
 
 interface AltitudeBand {
   label: string;
@@ -97,7 +97,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
               {sorted.map((conj, idx) => {
                 const risk = classifyConjunctionRisk(conj.probability);
                 const rowColor = conjunctionRiskTextClass(risk, "text-white");
-                const deltaV = `~${(conj.probability * 10000).toFixed(1)} m/s`;
+                const deltaV = formatManeuverDeltaV(conj.probability);
                 return (
                   <tr
                     key={conj.id}
