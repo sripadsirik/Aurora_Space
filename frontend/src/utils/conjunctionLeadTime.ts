@@ -63,3 +63,26 @@ export const classifyConjunctionLeadTime = (
   if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.upcoming) return "upcoming";
   return "later";
 };
+
+/**
+ * Tallies how many conjunctions fall in each lead-time bucket relative to `now`.
+ * Every bucket in {@link CONJUNCTION_LEAD_TIME_BUCKETS} is present in the result,
+ * defaulting to zero, so a display can render a stable set of rows regardless of
+ * the feed contents. The input is not mutated.
+ */
+export const countConjunctionsByLeadTime = (
+  conjunctions: readonly ConjunctionWarning[],
+  now: Date
+): Record<ConjunctionLeadTimeBucket, number> => {
+  const counts: Record<ConjunctionLeadTimeBucket, number> = {
+    passed: 0,
+    imminent: 0,
+    soon: 0,
+    upcoming: 0,
+    later: 0
+  };
+  for (const conjunction of conjunctions) {
+    counts[classifyConjunctionLeadTime(conjunction.tca, now)] += 1;
+  }
+  return counts;
+};
