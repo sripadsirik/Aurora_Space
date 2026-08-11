@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   CONJUNCTION_LEAD_TIME_BUCKETS,
+  CONJUNCTION_LEAD_TIME_BUCKET_LABELS,
   CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES,
   classifyConjunctionLeadTime,
   conjunctionsWithinMinutes,
@@ -228,5 +229,17 @@ describe("CONJUNCTION_LEAD_TIME_BUCKETS", () => {
       "upcoming",
       "later"
     ]);
+  });
+});
+
+describe("CONJUNCTION_LEAD_TIME_BUCKET_LABELS", () => {
+  it("provides a non-empty label for every bucket", () => {
+    for (const bucket of CONJUNCTION_LEAD_TIME_BUCKETS) {
+      expect(CONJUNCTION_LEAD_TIME_BUCKET_LABELS[bucket]).toBeTruthy();
+    }
+  });
+
+  it("labels the imminent bucket with its window", () => {
+    expect(CONJUNCTION_LEAD_TIME_BUCKET_LABELS.imminent).toBe("Imminent (< 1h)");
   });
 });
