@@ -1,13 +1,29 @@
 import { describe, expect, it } from "vitest";
+import type { ConjunctionWarning } from "../../types/space";
 import {
   CONJUNCTION_LEAD_TIME_BUCKETS,
   CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES,
   classifyConjunctionLeadTime,
+  countConjunctionsByLeadTime,
   leadTimeMinutes
 } from "../conjunctionLeadTime";
 
 const now = new Date("2026-08-11T12:00:00Z");
 const inMinutes = (minutes: number): Date => new Date(now.getTime() + minutes * 60_000);
+
+const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
+  id: "c1",
+  object1: { noradId: 1, name: "SAT-A" },
+  object2: { noradId: 2, name: "SAT-B" },
+  tca: inMinutes(30),
+  missDistanceKm: 1,
+  missDistanceM: 1000,
+  pc: 1e-5,
+  probability: 1e-5,
+  relativeVelocityKms: 10,
+  riskLevel: "watch",
+  ...overrides
+});
 
 describe("CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES", () => {
   it("orders the window boundaries from soonest to furthest", () => {
@@ -69,6 +85,43 @@ describe("classifyConjunctionLeadTime", () => {
 
   it("treats an exactly-now TCA as imminent", () => {
     expect(classifyConjunctionLeadTime(now, now)).toBe("imminent");
+  });
+});
+
+describe("countConjunctionsByLeadTime", () => {
+  it("tallies conjunctions into lead-time buckets derived from TCA", () => {
+    const conjunctions = [
+      makeConjunction({ id: "a", tca: inMinutes(-10) }), // passed
+      makeConjunction({ id: "b", tca: inMinutes(20) }), // imminent
+      makeConjunction({ id: "c", tca: inMinutes(200) }), // soon
+      makeConjunction({ id: "d", tca: inMinutes(800) }), // upcoming
+      makeConjunction({ id: "e", tca: inMinutes(3000) }) // later
+    ];
+    expect(countConjunctionsByLeadTime(conjunctions, now)).toEqual({
+      passed: 1,
+      imminent: 1,
+      soon: 1,
+      upcoming: 1,
+      later: 1
+    });
+  });
+
+  it("returns zeroed buckets for an empty feed", () => {
+    expect(countConjunctionsByLeadTime([], now)).toEqual({
+      passed: 0,
+      imminent: 0,
+      soon: 0,
+      upcoming: 0,
+      later: 0
+    });
+  });
+
+  it("accumulates multiple conjunctions in the same bucket", () => {
+    const conjunctions = [
+      makeConjunction({ id: "a", tca: inMinutes(5) }),
+      makeConjunction({ id: "b", tca: inMinutes(45) })
+    ];
+    expect(countConjunctionsByLeadTime(conjunctions, now).imminent).toBe(2);
   });
 });
 
