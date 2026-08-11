@@ -4,6 +4,7 @@ import {
   CONJUNCTION_LEAD_TIME_BUCKETS,
   CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES,
   classifyConjunctionLeadTime,
+  conjunctionsWithinMinutes,
   countConjunctionsByLeadTime,
   leadTimeMinutes
 } from "../conjunctionLeadTime";
@@ -122,6 +123,39 @@ describe("countConjunctionsByLeadTime", () => {
       makeConjunction({ id: "b", tca: inMinutes(45) })
     ];
     expect(countConjunctionsByLeadTime(conjunctions, now).imminent).toBe(2);
+  });
+});
+
+describe("conjunctionsWithinMinutes", () => {
+  it("keeps only conjunctions inside the upcoming window", () => {
+    const conjunctions = [
+      makeConjunction({ id: "past", tca: inMinutes(-5) }),
+      makeConjunction({ id: "near", tca: inMinutes(30) }),
+      makeConjunction({ id: "far", tca: inMinutes(120) })
+    ];
+    const ids = conjunctionsWithinMinutes(conjunctions, 60, now).map((c) => c.id);
+    expect(ids).toEqual(["near"]);
+  });
+
+  it("treats the window's upper edge as inclusive", () => {
+    const conjunctions = [makeConjunction({ id: "edge", tca: inMinutes(60) })];
+    expect(conjunctionsWithinMinutes(conjunctions, 60, now)).toHaveLength(1);
+  });
+
+  it("excludes conjunctions whose TCA has just passed", () => {
+    const conjunctions = [makeConjunction({ id: "passed", tca: inMinutes(-0.5) })];
+    expect(conjunctionsWithinMinutes(conjunctions, 60, now)).toEqual([]);
+  });
+
+  it("preserves the original ordering and does not mutate the input", () => {
+    const conjunctions = [
+      makeConjunction({ id: "b", tca: inMinutes(40) }),
+      makeConjunction({ id: "a", tca: inMinutes(10) })
+    ];
+    const snapshot = [...conjunctions];
+    const ids = conjunctionsWithinMinutes(conjunctions, 60, now).map((c) => c.id);
+    expect(ids).toEqual(["b", "a"]);
+    expect(conjunctions).toEqual(snapshot);
   });
 });
 
