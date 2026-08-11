@@ -122,6 +122,19 @@ export const nextLeadTimeMinutes = (
   return soonest;
 };
 
+/**
+ * Short human-readable label for each lead-time bucket, with the window it
+ * covers, for use in legends and panel headers. Centralised here so every
+ * display names the tiers identically.
+ */
+export const CONJUNCTION_LEAD_TIME_BUCKET_LABELS: Record<ConjunctionLeadTimeBucket, string> = {
+  passed: "Passed",
+  imminent: "Imminent (< 1h)",
+  soon: "Soon (< 6h)",
+  upcoming: "Upcoming (< 24h)",
+  later: "Later (> 24h)"
+};
+
 /** Lead-time view of a conjunction feed, suitable for a timeline or HUD header. */
 export interface ConjunctionLeadTimeSummary {
   /** Conjunction counts keyed by lead-time bucket. */
