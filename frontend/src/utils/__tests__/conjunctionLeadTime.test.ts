@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  CONJUNCTION_LEAD_TIME_BUCKETS,
   CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES,
+  classifyConjunctionLeadTime,
   leadTimeMinutes
 } from "../conjunctionLeadTime";
 
@@ -34,5 +36,50 @@ describe("leadTimeMinutes", () => {
 
   it("does not round the result", () => {
     expect(leadTimeMinutes(new Date(now.getTime() + 30_000), now)).toBe(0.5);
+  });
+});
+
+describe("classifyConjunctionLeadTime", () => {
+  it("buckets an elapsed TCA as passed", () => {
+    expect(classifyConjunctionLeadTime(inMinutes(-1), now)).toBe("passed");
+  });
+
+  it("buckets a TCA within the hour as imminent", () => {
+    expect(classifyConjunctionLeadTime(inMinutes(30), now)).toBe("imminent");
+  });
+
+  it("buckets a TCA a few hours out as soon", () => {
+    expect(classifyConjunctionLeadTime(inMinutes(180), now)).toBe("soon");
+  });
+
+  it("buckets a TCA later in the day as upcoming", () => {
+    expect(classifyConjunctionLeadTime(inMinutes(720), now)).toBe("upcoming");
+  });
+
+  it("buckets a TCA beyond a day as later", () => {
+    expect(classifyConjunctionLeadTime(inMinutes(2000), now)).toBe("later");
+  });
+
+  it("treats each window's upper edge as inclusive", () => {
+    const { imminent, soon, upcoming } = CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES;
+    expect(classifyConjunctionLeadTime(inMinutes(imminent), now)).toBe("imminent");
+    expect(classifyConjunctionLeadTime(inMinutes(soon), now)).toBe("soon");
+    expect(classifyConjunctionLeadTime(inMinutes(upcoming), now)).toBe("upcoming");
+  });
+
+  it("treats an exactly-now TCA as imminent", () => {
+    expect(classifyConjunctionLeadTime(now, now)).toBe("imminent");
+  });
+});
+
+describe("CONJUNCTION_LEAD_TIME_BUCKETS", () => {
+  it("lists every bucket once, most urgent first", () => {
+    expect(CONJUNCTION_LEAD_TIME_BUCKETS).toEqual([
+      "passed",
+      "imminent",
+      "soon",
+      "upcoming",
+      "later"
+    ]);
   });
 });
