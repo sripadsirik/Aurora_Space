@@ -102,3 +102,22 @@ export const conjunctionsWithinMinutes = (
     const minutes = leadTimeMinutes(conjunction.tca, now);
     return minutes >= 0 && minutes <= windowMinutes;
   });
+
+/**
+ * Lead time in minutes to the soonest still-upcoming conjunction, or `null` when
+ * none lie ahead of `now`. Already-passed conjunctions are ignored, so this
+ * answers "how long until the next close approach?" directly. The input is not
+ * mutated.
+ */
+export const nextLeadTimeMinutes = (
+  conjunctions: readonly ConjunctionWarning[],
+  now: Date
+): number | null => {
+  let soonest: number | null = null;
+  for (const conjunction of conjunctions) {
+    const minutes = leadTimeMinutes(conjunction.tca, now);
+    if (minutes < 0) continue;
+    if (soonest === null || minutes < soonest) soonest = minutes;
+  }
+  return soonest;
+};
