@@ -7,7 +7,8 @@ import {
   conjunctionsWithinMinutes,
   countConjunctionsByLeadTime,
   leadTimeMinutes,
-  nextLeadTimeMinutes
+  nextLeadTimeMinutes,
+  summarizeConjunctionLeadTime
 } from "../conjunctionLeadTime";
 
 const now = new Date("2026-08-11T12:00:00Z");
@@ -185,6 +186,36 @@ describe("nextLeadTimeMinutes", () => {
 
   it("returns null for an empty feed", () => {
     expect(nextLeadTimeMinutes([], now)).toBeNull();
+  });
+});
+
+describe("summarizeConjunctionLeadTime", () => {
+  it("bundles bucket counts, next lead time, and upcoming total", () => {
+    const conjunctions = [
+      makeConjunction({ id: "past", tca: inMinutes(-30) }),
+      makeConjunction({ id: "near", tca: inMinutes(25) }),
+      makeConjunction({ id: "later", tca: inMinutes(2000) })
+    ];
+    expect(summarizeConjunctionLeadTime(conjunctions, now)).toEqual({
+      byBucket: { passed: 1, imminent: 1, soon: 0, upcoming: 0, later: 1 },
+      nextLeadMinutes: 25,
+      upcoming: 2
+    });
+  });
+
+  it("reports a null next lead and zero upcoming for an all-passed feed", () => {
+    const conjunctions = [makeConjunction({ id: "past", tca: inMinutes(-5) })];
+    const summary = summarizeConjunctionLeadTime(conjunctions, now);
+    expect(summary.nextLeadMinutes).toBeNull();
+    expect(summary.upcoming).toBe(0);
+  });
+
+  it("returns zeroed aggregates for an empty feed", () => {
+    expect(summarizeConjunctionLeadTime([], now)).toEqual({
+      byBucket: { passed: 0, imminent: 0, soon: 0, upcoming: 0, later: 0 },
+      nextLeadMinutes: null,
+      upcoming: 0
+    });
   });
 });
 
