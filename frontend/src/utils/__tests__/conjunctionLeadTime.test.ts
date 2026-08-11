@@ -6,7 +6,8 @@ import {
   classifyConjunctionLeadTime,
   conjunctionsWithinMinutes,
   countConjunctionsByLeadTime,
-  leadTimeMinutes
+  leadTimeMinutes,
+  nextLeadTimeMinutes
 } from "../conjunctionLeadTime";
 
 const now = new Date("2026-08-11T12:00:00Z");
@@ -156,6 +157,34 @@ describe("conjunctionsWithinMinutes", () => {
     const ids = conjunctionsWithinMinutes(conjunctions, 60, now).map((c) => c.id);
     expect(ids).toEqual(["b", "a"]);
     expect(conjunctions).toEqual(snapshot);
+  });
+});
+
+describe("nextLeadTimeMinutes", () => {
+  it("returns the smallest positive lead time", () => {
+    const conjunctions = [
+      makeConjunction({ id: "a", tca: inMinutes(90) }),
+      makeConjunction({ id: "b", tca: inMinutes(15) }),
+      makeConjunction({ id: "c", tca: inMinutes(45) })
+    ];
+    expect(nextLeadTimeMinutes(conjunctions, now)).toBe(15);
+  });
+
+  it("ignores conjunctions whose TCA has passed", () => {
+    const conjunctions = [
+      makeConjunction({ id: "past", tca: inMinutes(-20) }),
+      makeConjunction({ id: "next", tca: inMinutes(80) })
+    ];
+    expect(nextLeadTimeMinutes(conjunctions, now)).toBe(80);
+  });
+
+  it("returns null when no conjunctions lie ahead", () => {
+    const conjunctions = [makeConjunction({ id: "past", tca: inMinutes(-1) })];
+    expect(nextLeadTimeMinutes(conjunctions, now)).toBeNull();
+  });
+
+  it("returns null for an empty feed", () => {
+    expect(nextLeadTimeMinutes([], now)).toBeNull();
   });
 });
 
