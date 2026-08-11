@@ -86,3 +86,19 @@ export const countConjunctionsByLeadTime = (
   }
   return counts;
 };
+
+/**
+ * Filters a feed to the conjunctions whose TCA falls within the next
+ * `windowMinutes` — that is, still ahead of `now` and no more than the window
+ * away. Already-passed conjunctions are excluded, and the window's upper edge is
+ * inclusive. The input is not mutated and the original ordering is preserved.
+ */
+export const conjunctionsWithinMinutes = (
+  conjunctions: readonly ConjunctionWarning[],
+  windowMinutes: number,
+  now: Date
+): ConjunctionWarning[] =>
+  conjunctions.filter((conjunction) => {
+    const minutes = leadTimeMinutes(conjunction.tca, now);
+    return minutes >= 0 && minutes <= windowMinutes;
+  });
