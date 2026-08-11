@@ -245,6 +245,27 @@ Risk tiers reuse `classifyConjunctionRisk` / `isActionableConjunctionRisk` from
 per-row colours in the conjunction panels. Extremes return `null` and averages return 0 for an
 empty feed, so every figure is safe to render without a guard.
 
+## Conjunction Lead Time
+
+Where `conjunctionStats.ts` groups the feed by *severity*, the pure helpers in
+`frontend/src/utils/conjunctionLeadTime.ts` group it by *lead time* — how soon each
+conjunction's time of closest approach (TCA) is, relative to a supplied `now`:
+
+| Helper | Returns |
+| --- | --- |
+| `leadTimeMinutes` | Signed minutes from `now` to a TCA (negative once passed) |
+| `classifyConjunctionLeadTime` | The `passed`/`imminent`/`soon`/`upcoming`/`later` bucket |
+| `countConjunctionsByLeadTime` | Object counts keyed by lead-time bucket |
+| `conjunctionsWithinMinutes` | The conjunctions whose TCA falls in the next N minutes |
+| `nextLeadTimeMinutes` | Lead time to the soonest upcoming conjunction (or `null`) |
+| `summarizeConjunctionLeadTime` | All of the above bundled into one `ConjunctionLeadTimeSummary` |
+
+The window boundaries live in `CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES` (≤ 1 hour is
+`imminent`, ≤ 6 hours `soon`, ≤ 24 hours `upcoming`), and `CONJUNCTION_LEAD_TIME_BUCKETS`
+lists the tiers most-urgent-first for stable rendering. Every bucket is always present in
+the counts and an all-passed or empty feed yields a `null` next lead time, so a timeline or
+HUD header can render from these helpers without a guard.
+
 ## Repo Layout
 
 ```text
