@@ -121,3 +121,30 @@ export const nextLeadTimeMinutes = (
   }
   return soonest;
 };
+
+/** Lead-time view of a conjunction feed, suitable for a timeline or HUD header. */
+export interface ConjunctionLeadTimeSummary {
+  /** Conjunction counts keyed by lead-time bucket. */
+  byBucket: Record<ConjunctionLeadTimeBucket, number>;
+  /** Lead time in minutes to the soonest upcoming conjunction, or `null`. */
+  nextLeadMinutes: number | null;
+  /** Number of conjunctions still ahead of `now` (every bucket but `passed`). */
+  upcoming: number;
+}
+
+/**
+ * Bundles the lead-time aggregates for a feed into a single struct so a display
+ * can derive every figure from one list and one reference time. All members
+ * reuse the individual helpers in this module, so they stay mutually consistent.
+ */
+export const summarizeConjunctionLeadTime = (
+  conjunctions: readonly ConjunctionWarning[],
+  now: Date
+): ConjunctionLeadTimeSummary => {
+  const byBucket = countConjunctionsByLeadTime(conjunctions, now);
+  return {
+    byBucket,
+    nextLeadMinutes: nextLeadTimeMinutes(conjunctions, now),
+    upcoming: conjunctions.length - byBucket.passed
+  };
+};
