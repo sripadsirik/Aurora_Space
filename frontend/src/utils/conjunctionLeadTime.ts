@@ -25,3 +25,41 @@ export const leadTimeMinutes = (tca: Date | string, now: Date): number => {
   const tcaDate = tca instanceof Date ? tca : new Date(tca);
   return (tcaDate.getTime() - now.getTime()) / 60_000;
 };
+
+/**
+ * Lead-time bucket for a conjunction, ordered from most to least urgent:
+ * `passed` (TCA already elapsed), `imminent`, `soon`, `upcoming`, and `later`.
+ */
+export type ConjunctionLeadTimeBucket = "passed" | "imminent" | "soon" | "upcoming" | "later";
+
+/**
+ * Lead-time buckets in urgency order, most urgent first. Handy for rendering a
+ * stable set of rows or iterating tiers without re-listing the string union.
+ */
+export const CONJUNCTION_LEAD_TIME_BUCKETS: readonly ConjunctionLeadTimeBucket[] = [
+  "passed",
+  "imminent",
+  "soon",
+  "upcoming",
+  "later"
+] as const;
+
+/**
+ * Classifies a conjunction's TCA into a {@link ConjunctionLeadTimeBucket}
+ * relative to `now`, using {@link CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES}. A
+ * TCA in the past is `passed`; otherwise the lead time is compared against the
+ * `imminent`/`soon`/`upcoming` window bounds, falling through to `later`. Each
+ * boundary is inclusive of its upper edge, so a lead time of exactly one hour is
+ * `imminent`.
+ */
+export const classifyConjunctionLeadTime = (
+  tca: Date | string,
+  now: Date
+): ConjunctionLeadTimeBucket => {
+  const minutes = leadTimeMinutes(tca, now);
+  if (minutes < 0) return "passed";
+  if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.imminent) return "imminent";
+  if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.soon) return "soon";
+  if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.upcoming) return "upcoming";
+  return "later";
+};
