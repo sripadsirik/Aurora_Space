@@ -4,7 +4,8 @@ import {
   UNKNOWN_OWNER,
   canonicalOwner,
   countByOwner,
-  distinctOwnerCount
+  distinctOwnerCount,
+  topOwners
 } from "../catalogOwners";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -101,5 +102,33 @@ describe("distinctOwnerCount", () => {
   it("treats all blank owners as a single UNKNOWN operator", () => {
     const catalog = makeCatalog(["", "   ", "NASA"]);
     expect(distinctOwnerCount(catalog)).toBe(2);
+  });
+});
+
+describe("topOwners", () => {
+  it("returns the busiest operators in descending order", () => {
+    const catalog = makeCatalog([
+      "SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"
+    ]);
+    expect(topOwners(catalog, 2)).toEqual([
+      { owner: "SpaceX", count: 3 },
+      { owner: "NASA", count: 2 }
+    ]);
+  });
+
+  it("defaults to the top five operators", () => {
+    const catalog = makeCatalog(["A", "B", "C", "D", "E", "F"]);
+    expect(topOwners(catalog)).toHaveLength(5);
+  });
+
+  it("returns an empty array for a non-positive limit", () => {
+    const catalog = makeCatalog(["NASA", "ESA"]);
+    expect(topOwners(catalog, 0)).toEqual([]);
+    expect(topOwners(catalog, -3)).toEqual([]);
+  });
+
+  it("returns every operator when the limit exceeds the distinct count", () => {
+    const catalog = makeCatalog(["NASA", "ESA"]);
+    expect(topOwners(catalog, 10)).toHaveLength(2);
   });
 });
