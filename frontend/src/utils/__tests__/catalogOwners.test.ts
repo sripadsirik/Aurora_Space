@@ -5,6 +5,7 @@ import {
   canonicalOwner,
   countByOwner,
   distinctOwnerCount,
+  largestOperator,
   topOwners
 } from "../catalogOwners";
 
@@ -130,5 +131,21 @@ describe("topOwners", () => {
   it("returns every operator when the limit exceeds the distinct count", () => {
     const catalog = makeCatalog(["NASA", "ESA"]);
     expect(topOwners(catalog, 10)).toHaveLength(2);
+  });
+});
+
+describe("largestOperator", () => {
+  it("returns the operator with the most tracked objects", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA"]);
+    expect(largestOperator(catalog)).toEqual({ owner: "SpaceX", count: 2 });
+  });
+
+  it("returns null for an empty catalog", () => {
+    expect(largestOperator([])).toBeNull();
+  });
+
+  it("breaks ties alphabetically by owner label", () => {
+    const catalog = makeCatalog(["Zenith", "Acme"]);
+    expect(largestOperator(catalog)).toEqual({ owner: "Acme", count: 1 });
   });
 });
