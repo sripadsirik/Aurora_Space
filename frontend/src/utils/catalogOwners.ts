@@ -52,3 +52,12 @@ export const countByOwner = (satellites: Satellite[]): OwnerCount[] => {
     (a, b) => b.count - a.count || a.owner.localeCompare(b.owner)
   );
 };
+
+/**
+ * Number of distinct operators represented in the catalog, using the same
+ * case-insensitive grouping as {@link countByOwner}. Blank owners collapse into
+ * a single {@link UNKNOWN_OWNER} bucket, so they contribute at most one to the
+ * total. Returns 0 for an empty catalog.
+ */
+export const distinctOwnerCount = (satellites: Satellite[]): number =>
+  countByOwner(satellites).length;
