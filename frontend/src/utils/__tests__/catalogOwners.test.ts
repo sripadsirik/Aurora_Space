@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Satellite } from "../../types/space";
+import type { RiskLevel, Satellite } from "../../types/space";
 import {
   UNKNOWN_OWNER,
   canonicalOwner,
   countByOwner,
   distinctOwnerCount,
+  elevatedRiskByOwner,
   largestOperator,
   ownerRank,
   ownerShare,
@@ -177,6 +178,49 @@ describe("ownerShare", () => {
   it("matches a blank argument against the UNKNOWN bucket", () => {
     const catalog = makeCatalog(["", "NASA"]);
     expect(ownerShare(catalog, "")).toBeCloseTo(0.5);
+  });
+});
+
+describe("elevatedRiskByOwner", () => {
+  const makeFlagged = (rows: Array<[string, RiskLevel]>): Satellite[] =>
+    rows.map(([owner, riskLevel], index) =>
+      makeSatellite({ noradId: index + 1, owner, riskLevel })
+    );
+
+  it("counts only objects at or above the default watch threshold, per owner", () => {
+    const catalog = makeFlagged([
+      ["SpaceX", "critical"],
+      ["SpaceX", "warning"],
+      ["SpaceX", "nominal"],
+      ["NASA", "watch"],
+      ["ESA", "nominal"]
+    ]);
+    expect(elevatedRiskByOwner(catalog)).toEqual([
+      { owner: "SpaceX", count: 2 },
+      { owner: "NASA", count: 1 }
+    ]);
+  });
+
+  it("honours a stricter threshold", () => {
+    const catalog = makeFlagged([
+      ["SpaceX", "warning"],
+      ["NASA", "watch"]
+    ]);
+    expect(elevatedRiskByOwner(catalog, "warning")).toEqual([
+      { owner: "SpaceX", count: 1 }
+    ]);
+  });
+
+  it("returns an empty array when nothing is flagged", () => {
+    const catalog = makeFlagged([
+      ["SpaceX", "nominal"],
+      ["NASA", "nominal"]
+    ]);
+    expect(elevatedRiskByOwner(catalog)).toEqual([]);
+  });
+
+  it("returns an empty array for an empty catalog", () => {
+    expect(elevatedRiskByOwner([])).toEqual([]);
   });
 });
 
