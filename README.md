@@ -123,6 +123,28 @@ The breakdown helpers always return every regime or risk level (defaulting to ze
 averages return `0` rather than `NaN` for an empty catalog, so summary displays render a stable
 set of rows regardless of the catalog contents.
 
+## Operator Breakdown
+
+The ownership dimension of the catalog is aggregated by the pure helpers in
+`frontend/src/utils/catalogOwners.ts`, the operator-facing counterpart to `catalogStats`:
+
+| Helper | Returns |
+| --- | --- |
+| `countByOwner` | One `OwnerCount` per operator, busiest first |
+| `distinctOwnerCount` | Number of distinct operators represented |
+| `topOwners` | The N busiest operators (default 5) as a leaderboard |
+| `largestOperator` | The single busiest operator, or `null` |
+| `ownerShare` | Fraction of the catalog held by one operator, in `[0, 1]` |
+| `ownerRank` | 1-based leaderboard position of an operator, or `null` |
+| `elevatedRiskByOwner` | Per-operator counts of objects at or above a risk threshold |
+| `summarizeOwnership` | All of the above bundled into one `OwnershipSummary` struct |
+
+Owners are grouped case-insensitively and ignoring surrounding whitespace — matching
+`filterByOwner` — while the first-seen spelling is kept as the display label, and blank owners
+collapse into a single `UNKNOWN` bucket. Counts are ordered most-to-least objects with ties
+broken alphabetically, so the ordering is stable for a given catalog, and the fractional and
+rank helpers return `0`/`null` rather than `NaN` for an empty catalog or an absent operator.
+
 ## Catalog Filtering and Search
 
 Common catalog queries are collected as pure, non-mutating helpers in
