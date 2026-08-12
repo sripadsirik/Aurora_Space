@@ -103,6 +103,21 @@ export const ownerShare = (satellites: Satellite[], owner: string): number => {
   return held / satellites.length;
 };
 
+/**
+ * The 1-based rank of `owner` in the descending object-count ordering of
+ * {@link countByOwner}, or `null` when the operator is absent from the catalog.
+ * The busiest operator ranks 1. Matching is case- and whitespace-insensitive,
+ * and a blank argument ranks the {@link UNKNOWN_OWNER} bucket. The input is not
+ * mutated.
+ */
+export const ownerRank = (satellites: Satellite[], owner: string): number | null => {
+  const key = canonicalOwner(owner).toLowerCase();
+  const index = countByOwner(satellites).findIndex(
+    (entry) => entry.owner.toLowerCase() === key
+  );
+  return index === -1 ? null : index + 1;
+};
+
 /** Aggregate view of the catalog's ownership, suitable for a summary panel. */
 export interface OwnershipSummary {
   /** Total number of tracked objects. */
