@@ -102,3 +102,37 @@ export const ownerShare = (satellites: Satellite[], owner: string): number => {
   );
   return held / satellites.length;
 };
+
+/** Aggregate view of the catalog's ownership, suitable for a summary panel. */
+export interface OwnershipSummary {
+  /** Total number of tracked objects. */
+  total: number;
+  /** Number of distinct operators represented. */
+  distinctOwners: number;
+  /** The busiest operators, highest object count first. */
+  top: OwnerCount[];
+  /** The single busiest operator, or `null` for an empty catalog. */
+  largest: OwnerCount | null;
+  /** Fraction of the catalog held by the busiest operator, in `[0, 1]`. */
+  largestShare: number;
+}
+
+/**
+ * Bundles the ownership aggregates into a single struct so a summary display can
+ * derive every figure from one list. `topLimit` caps the {@link OwnershipSummary.top}
+ * leaderboard and defaults to five. All members reuse the individual helpers in
+ * this module, so they stay mutually consistent. The input is not mutated.
+ */
+export const summarizeOwnership = (
+  satellites: Satellite[],
+  topLimit = 5
+): OwnershipSummary => {
+  const largest = largestOperator(satellites);
+  return {
+    total: satellites.length,
+    distinctOwners: distinctOwnerCount(satellites),
+    top: topOwners(satellites, topLimit),
+    largest,
+    largestShare: largest === null ? 0 : ownerShare(satellites, largest.owner)
+  };
+};
