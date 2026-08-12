@@ -6,6 +6,7 @@ import {
   countByOwner,
   distinctOwnerCount,
   largestOperator,
+  ownerShare,
   topOwners
 } from "../catalogOwners";
 
@@ -147,5 +148,32 @@ describe("largestOperator", () => {
   it("breaks ties alphabetically by owner label", () => {
     const catalog = makeCatalog(["Zenith", "Acme"]);
     expect(largestOperator(catalog)).toEqual({ owner: "Acme", count: 1 });
+  });
+});
+
+describe("ownerShare", () => {
+  it("returns the fraction of the catalog held by an operator", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA"]);
+    expect(ownerShare(catalog, "SpaceX")).toBeCloseTo(0.75);
+    expect(ownerShare(catalog, "NASA")).toBeCloseTo(0.25);
+  });
+
+  it("matches owners case- and whitespace-insensitively", () => {
+    const catalog = makeCatalog(["ESA", "esa", "NASA"]);
+    expect(ownerShare(catalog, "  esa ")).toBeCloseTo(2 / 3);
+  });
+
+  it("returns 0 for an operator not in the catalog", () => {
+    const catalog = makeCatalog(["NASA", "ESA"]);
+    expect(ownerShare(catalog, "SpaceX")).toBe(0);
+  });
+
+  it("returns 0 for an empty catalog", () => {
+    expect(ownerShare([], "NASA")).toBe(0);
+  });
+
+  it("matches a blank argument against the UNKNOWN bucket", () => {
+    const catalog = makeCatalog(["", "NASA"]);
+    expect(ownerShare(catalog, "")).toBeCloseTo(0.5);
   });
 });
