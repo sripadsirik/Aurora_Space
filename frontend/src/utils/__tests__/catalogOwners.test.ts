@@ -3,7 +3,8 @@ import type { Satellite } from "../../types/space";
 import {
   UNKNOWN_OWNER,
   canonicalOwner,
-  countByOwner
+  countByOwner,
+  distinctOwnerCount
 } from "../catalogOwners";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -79,5 +80,26 @@ describe("countByOwner", () => {
     const snapshot = [...catalog];
     countByOwner(catalog);
     expect(catalog).toEqual(snapshot);
+  });
+});
+
+describe("distinctOwnerCount", () => {
+  it("counts each operator once regardless of object count", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
+    expect(distinctOwnerCount(catalog)).toBe(3);
+  });
+
+  it("returns 0 for an empty catalog", () => {
+    expect(distinctOwnerCount([])).toBe(0);
+  });
+
+  it("collapses case and whitespace variants into one operator", () => {
+    const catalog = makeCatalog(["ESA", "esa", "  ESA "]);
+    expect(distinctOwnerCount(catalog)).toBe(1);
+  });
+
+  it("treats all blank owners as a single UNKNOWN operator", () => {
+    const catalog = makeCatalog(["", "   ", "NASA"]);
+    expect(distinctOwnerCount(catalog)).toBe(2);
   });
 });
