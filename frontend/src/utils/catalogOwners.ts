@@ -61,3 +61,16 @@ export const countByOwner = (satellites: Satellite[]): OwnerCount[] => {
  */
 export const distinctOwnerCount = (satellites: Satellite[]): number =>
   countByOwner(satellites).length;
+
+/**
+ * Returns the `limit` operators with the most tracked objects, in the
+ * descending order of {@link countByOwner} (ties broken alphabetically). A
+ * `limit` of zero or less yields an empty array, and a `limit` beyond the number
+ * of distinct owners simply returns them all. The default surfaces the top five
+ * operators, a convenient size for a leaderboard panel. The input is not
+ * mutated.
+ */
+export const topOwners = (satellites: Satellite[], limit = 5): OwnerCount[] => {
+  if (limit <= 0) return [];
+  return countByOwner(satellites).slice(0, limit);
+};
