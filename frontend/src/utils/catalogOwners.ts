@@ -83,3 +83,22 @@ export const topOwners = (satellites: Satellite[], limit = 5): OwnerCount[] => {
  */
 export const largestOperator = (satellites: Satellite[]): OwnerCount | null =>
   countByOwner(satellites)[0] ?? null;
+
+/**
+ * Fraction of the catalog attributed to `owner`, as a value in `[0, 1]`. The
+ * owner is matched with the same case-insensitive, whitespace-insensitive rule
+ * as {@link countByOwner}, and a blank argument matches the
+ * {@link UNKNOWN_OWNER} bucket. Returns 0 for an empty catalog or an owner not
+ * present, so the figure is always finite rather than `NaN`. Multiply by 100 for
+ * a percentage.
+ */
+export const ownerShare = (satellites: Satellite[], owner: string): number => {
+  if (satellites.length === 0) return 0;
+  const key = canonicalOwner(owner).toLowerCase();
+  const held = satellites.reduce(
+    (count, satellite) =>
+      canonicalOwner(satellite.owner).toLowerCase() === key ? count + 1 : count,
+    0
+  );
+  return held / satellites.length;
+};
