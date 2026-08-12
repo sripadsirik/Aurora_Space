@@ -7,6 +7,7 @@ import {
   distinctOwnerCount,
   largestOperator,
   ownerShare,
+  summarizeOwnership,
   topOwners
 } from "../catalogOwners";
 
@@ -175,5 +176,38 @@ describe("ownerShare", () => {
   it("matches a blank argument against the UNKNOWN bucket", () => {
     const catalog = makeCatalog(["", "NASA"]);
     expect(ownerShare(catalog, "")).toBeCloseTo(0.5);
+  });
+});
+
+describe("summarizeOwnership", () => {
+  it("bundles every aggregate consistently", () => {
+    const catalog = makeCatalog([
+      "SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"
+    ]);
+    const summary = summarizeOwnership(catalog);
+    expect(summary.total).toBe(6);
+    expect(summary.distinctOwners).toBe(3);
+    expect(summary.top).toEqual([
+      { owner: "SpaceX", count: 3 },
+      { owner: "NASA", count: 2 },
+      { owner: "ESA", count: 1 }
+    ]);
+    expect(summary.largest).toEqual({ owner: "SpaceX", count: 3 });
+    expect(summary.largestShare).toBeCloseTo(0.5);
+  });
+
+  it("honours the topLimit argument", () => {
+    const catalog = makeCatalog(["A", "B", "C", "D"]);
+    expect(summarizeOwnership(catalog, 2).top).toHaveLength(2);
+  });
+
+  it("returns a safe zeroed summary for an empty catalog", () => {
+    expect(summarizeOwnership([])).toEqual({
+      total: 0,
+      distinctOwners: 0,
+      top: [],
+      largest: null,
+      largestShare: 0
+    });
   });
 });
