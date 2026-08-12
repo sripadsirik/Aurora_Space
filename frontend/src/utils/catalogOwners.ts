@@ -1,4 +1,5 @@
-import type { Satellite } from "../types/space";
+import type { RiskLevel, Satellite } from "../types/space";
+import { filterElevatedRisk } from "./catalogFilters";
 
 /**
  * Display label used when a satellite's owner field is blank or whitespace
@@ -102,6 +103,20 @@ export const ownerShare = (satellites: Satellite[], owner: string): number => {
   );
   return held / satellites.length;
 };
+
+/**
+ * Tallies, per operator, the objects whose risk level is at or above
+ * `threshold` in the ascending-severity order used across the catalog helpers.
+ * This surfaces which operators carry the most flagged objects. It reuses
+ * `filterElevatedRisk` for the threshold test and {@link countByOwner} for the
+ * grouping, so it shares their ordering and normalisation: results are ordered
+ * most-to-least flagged objects, ties broken alphabetically, and operators with
+ * no flagged objects are omitted entirely. The input is not mutated.
+ */
+export const elevatedRiskByOwner = (
+  satellites: Satellite[],
+  threshold: RiskLevel = "watch"
+): OwnerCount[] => countByOwner(filterElevatedRisk(satellites, threshold));
 
 /**
  * The 1-based rank of `owner` in the descending object-count ordering of
