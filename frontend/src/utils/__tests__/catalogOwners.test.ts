@@ -6,6 +6,7 @@ import {
   countByOwner,
   distinctOwnerCount,
   largestOperator,
+  ownerRank,
   ownerShare,
   summarizeOwnership,
   topOwners
@@ -176,6 +177,29 @@ describe("ownerShare", () => {
   it("matches a blank argument against the UNKNOWN bucket", () => {
     const catalog = makeCatalog(["", "NASA"]);
     expect(ownerShare(catalog, "")).toBeCloseTo(0.5);
+  });
+});
+
+describe("ownerRank", () => {
+  it("ranks operators from busiest to least busy", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(ownerRank(catalog, "SpaceX")).toBe(1);
+    expect(ownerRank(catalog, "NASA")).toBe(2);
+    expect(ownerRank(catalog, "ESA")).toBe(3);
+  });
+
+  it("returns null for an operator not in the catalog", () => {
+    const catalog = makeCatalog(["NASA"]);
+    expect(ownerRank(catalog, "SpaceX")).toBeNull();
+  });
+
+  it("matches owners case- and whitespace-insensitively", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA"]);
+    expect(ownerRank(catalog, "  spacex ")).toBe(1);
+  });
+
+  it("returns null for an empty catalog", () => {
+    expect(ownerRank([], "NASA")).toBeNull();
   });
 });
 
