@@ -74,3 +74,12 @@ export const topOwners = (satellites: Satellite[], limit = 5): OwnerCount[] => {
   if (limit <= 0) return [];
   return countByOwner(satellites).slice(0, limit);
 };
+
+/**
+ * The single operator with the most tracked objects, or `null` for an empty
+ * catalog. Ties resolve alphabetically by owner label, matching
+ * {@link countByOwner}, so the result is stable for a given catalog. The input
+ * is not mutated.
+ */
+export const largestOperator = (satellites: Satellite[]): OwnerCount | null =>
+  countByOwner(satellites)[0] ?? null;
