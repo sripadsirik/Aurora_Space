@@ -27,3 +27,15 @@ export const countByOwner = (satellites: readonly Satellite[]): Record<string, n
   }
   return counts;
 };
+
+/**
+ * Returns the distinct operators in the catalog, sorted alphabetically
+ * (case-insensitively). Owners are de-duplicated by their
+ * {@link normalizeOwner normalised} label, and the first spelling encountered
+ * for each is kept, so the result is a stable, display-ready list. The input is
+ * not mutated.
+ */
+export const uniqueOwners = (satellites: readonly Satellite[]): string[] =>
+  Object.keys(countByOwner(satellites)).sort((a, b) =>
+    normalizeOwner(a).localeCompare(normalizeOwner(b))
+  );
