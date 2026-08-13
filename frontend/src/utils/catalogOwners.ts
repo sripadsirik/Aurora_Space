@@ -39,3 +39,30 @@ export const uniqueOwners = (satellites: readonly Satellite[]): string[] =>
   Object.keys(countByOwner(satellites)).sort((a, b) =>
     normalizeOwner(a).localeCompare(normalizeOwner(b))
   );
+
+/** An operator paired with the number of catalog objects it operates. */
+export interface OwnerCount {
+  /** The operator's display label, in its first-seen catalog spelling. */
+  owner: string;
+  /** How many catalog objects that operator owns. */
+  count: number;
+}
+
+/**
+ * Returns operators ranked from largest to smallest fleet. Ties break
+ * alphabetically (case-insensitively) so the ordering is deterministic for a
+ * given catalog. Pass `limit` to keep only the busiest N operators; omit it (or
+ * pass a non-positive value) to return every operator. The input is not
+ * mutated.
+ */
+export const topOwnersByCount = (
+  satellites: readonly Satellite[],
+  limit?: number
+): OwnerCount[] => {
+  const ranked = Object.entries(countByOwner(satellites))
+    .map(([owner, count]) => ({ owner, count }))
+    .sort(
+      (a, b) => b.count - a.count || normalizeOwner(a.owner).localeCompare(normalizeOwner(b.owner))
+    );
+  return limit !== undefined && limit > 0 ? ranked.slice(0, limit) : ranked;
+};
