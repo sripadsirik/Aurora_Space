@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { countByOwner, normalizeOwner } from "../catalogOwners";
+import { countByOwner, normalizeOwner, uniqueOwners } from "../catalogOwners";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -47,5 +47,21 @@ describe("countByOwner", () => {
 
   it("returns an empty record for an empty catalog", () => {
     expect(countByOwner([])).toEqual({});
+  });
+});
+
+describe("uniqueOwners", () => {
+  it("lists distinct operators sorted case-insensitively", () => {
+    const catalog = makeCatalog(["SpaceX", "ESA", "NASA", "SpaceX"]);
+    expect(uniqueOwners(catalog)).toEqual(["ESA", "NASA", "SpaceX"]);
+  });
+
+  it("de-duplicates spacing and case variants", () => {
+    const catalog = makeCatalog(["NASA", " nasa", "NASA "]);
+    expect(uniqueOwners(catalog)).toEqual(["NASA"]);
+  });
+
+  it("returns an empty list for an empty catalog", () => {
+    expect(uniqueOwners([])).toEqual([]);
   });
 });
