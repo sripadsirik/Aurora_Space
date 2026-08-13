@@ -91,6 +91,35 @@ export const conjunctionsByOwner = (
   return totals;
 };
 
+/** An operator paired with its total number of active conjunctions. */
+export interface OwnerConjunctions {
+  /** The operator's display label, in its first-seen catalog spelling. */
+  owner: string;
+  /** Sum of the operator's per-object active conjunction counts. */
+  conjunctions: number;
+}
+
+/**
+ * Returns operators ranked from most to fewest total active conjunctions,
+ * surfacing the operators carrying the most collision risk first. Ties break
+ * alphabetically (case-insensitively) so the ordering is deterministic. Pass
+ * `limit` to keep only the top N operators; omit it (or pass a non-positive
+ * value) to return every operator. The input is not mutated.
+ */
+export const topOwnersByConjunctions = (
+  satellites: readonly Satellite[],
+  limit?: number
+): OwnerConjunctions[] => {
+  const ranked = Object.entries(conjunctionsByOwner(satellites))
+    .map(([owner, conjunctions]) => ({ owner, conjunctions }))
+    .sort(
+      (a, b) =>
+        b.conjunctions - a.conjunctions ||
+        normalizeOwner(a.owner).localeCompare(normalizeOwner(b.owner))
+    );
+  return limit !== undefined && limit > 0 ? ranked.slice(0, limit) : ranked;
+};
+
 /** How many operators to surface in an {@link OwnerSummary} leaderboard. */
 export const OWNER_LEADERBOARD_SIZE = 5;
 
