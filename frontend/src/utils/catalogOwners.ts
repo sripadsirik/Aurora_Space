@@ -66,3 +66,27 @@ export const topOwnersByCount = (
     );
   return limit !== undefined && limit > 0 ? ranked.slice(0, limit) : ranked;
 };
+
+/**
+ * Sums each operator's per-object active conjunction counts. Like
+ * {@link countByOwner}, operators are grouped by their
+ * {@link normalizeOwner normalised} label and reported under their first-seen
+ * spelling. This is a per-object tally, so a single conjunction shared by two of
+ * an operator's objects contributes to that operator twice. The input is not
+ * mutated.
+ */
+export const conjunctionsByOwner = (
+  satellites: readonly Satellite[]
+): Record<string, number> => {
+  const totals: Record<string, number> = {};
+  const displayFor: Record<string, string> = {};
+  for (const satellite of satellites) {
+    const key = normalizeOwner(satellite.owner);
+    if (displayFor[key] === undefined) {
+      displayFor[key] = satellite.owner.trim();
+    }
+    const display = displayFor[key];
+    totals[display] = (totals[display] ?? 0) + satellite.conjunctionCount;
+  }
+  return totals;
+};
