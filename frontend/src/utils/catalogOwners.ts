@@ -91,6 +91,22 @@ export const conjunctionsByOwner = (
   return totals;
 };
 
+/**
+ * Fraction of the catalog operated by `owner`, in the range `[0, 1]`. The owner
+ * is matched by its {@link normalizeOwner normalised} label, so spacing and case
+ * do not matter. Returns 0 for an empty catalog or an owner absent from it, so
+ * the figure is always finite rather than `NaN`. The input is not mutated.
+ */
+export const ownerShare = (satellites: readonly Satellite[], owner: string): number => {
+  if (satellites.length === 0) return 0;
+  const target = normalizeOwner(owner);
+  const owned = satellites.reduce(
+    (count, satellite) => (normalizeOwner(satellite.owner) === target ? count + 1 : count),
+    0
+  );
+  return owned / satellites.length;
+};
+
 /** An operator paired with its total number of active conjunctions. */
 export interface OwnerConjunctions {
   /** The operator's display label, in its first-seen catalog spelling. */
