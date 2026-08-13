@@ -4,6 +4,7 @@ import {
   conjunctionsByOwner,
   countByOwner,
   normalizeOwner,
+  ownerShare,
   OWNER_LEADERBOARD_SIZE,
   summarizeOwners,
   topOwnersByConjunctions,
@@ -132,6 +133,28 @@ describe("conjunctionsByOwner", () => {
 
   it("returns an empty record for an empty catalog", () => {
     expect(conjunctionsByOwner([])).toEqual({});
+  });
+});
+
+describe("ownerShare", () => {
+  it("returns the fraction of the catalog an operator owns", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
+    expect(ownerShare(catalog, "SpaceX")).toBe(0.5);
+    expect(ownerShare(catalog, "NASA")).toBe(0.25);
+  });
+
+  it("matches the owner case-insensitively and ignoring whitespace", () => {
+    const catalog = makeCatalog(["NASA", "NASA", "ESA", "ESA"]);
+    expect(ownerShare(catalog, " nasa ")).toBe(0.5);
+  });
+
+  it("returns 0 for an owner absent from the catalog", () => {
+    const catalog = makeCatalog(["SpaceX", "NASA"]);
+    expect(ownerShare(catalog, "ESA")).toBe(0);
+  });
+
+  it("returns 0 for an empty catalog rather than NaN", () => {
+    expect(ownerShare([], "SpaceX")).toBe(0);
   });
 });
 
