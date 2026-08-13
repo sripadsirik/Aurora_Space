@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { countByOwner, normalizeOwner, topOwnersByCount, uniqueOwners } from "../catalogOwners";
+import {
+  conjunctionsByOwner,
+  countByOwner,
+  normalizeOwner,
+  topOwnersByCount,
+  uniqueOwners
+} from "../catalogOwners";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -100,5 +106,28 @@ describe("topOwnersByCount", () => {
 
   it("returns an empty list for an empty catalog", () => {
     expect(topOwnersByCount([])).toEqual([]);
+  });
+});
+
+describe("conjunctionsByOwner", () => {
+  it("sums active conjunction counts per operator", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "SpaceX", conjunctionCount: 2 }),
+      makeSatellite({ noradId: 2, owner: "SpaceX", conjunctionCount: 3 }),
+      makeSatellite({ noradId: 3, owner: "NASA", conjunctionCount: 1 })
+    ];
+    expect(conjunctionsByOwner(catalog)).toEqual({ SpaceX: 5, NASA: 1 });
+  });
+
+  it("groups spacing and case variants under one operator", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "ESA", conjunctionCount: 1 }),
+      makeSatellite({ noradId: 2, owner: " esa ", conjunctionCount: 4 })
+    ];
+    expect(conjunctionsByOwner(catalog)).toEqual({ ESA: 5 });
+  });
+
+  it("returns an empty record for an empty catalog", () => {
+    expect(conjunctionsByOwner([])).toEqual({});
   });
 });
