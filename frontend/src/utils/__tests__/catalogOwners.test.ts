@@ -6,6 +6,7 @@ import {
   normalizeOwner,
   OWNER_LEADERBOARD_SIZE,
   summarizeOwners,
+  topOwnersByConjunctions,
   topOwnersByCount,
   uniqueOwners
 } from "../catalogOwners";
@@ -131,6 +132,46 @@ describe("conjunctionsByOwner", () => {
 
   it("returns an empty record for an empty catalog", () => {
     expect(conjunctionsByOwner([])).toEqual({});
+  });
+});
+
+describe("topOwnersByConjunctions", () => {
+  it("ranks operators from most to fewest active conjunctions", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "SpaceX", conjunctionCount: 1 }),
+      makeSatellite({ noradId: 2, owner: "SpaceX", conjunctionCount: 1 }),
+      makeSatellite({ noradId: 3, owner: "NASA", conjunctionCount: 5 }),
+      makeSatellite({ noradId: 4, owner: "ESA", conjunctionCount: 0 })
+    ];
+    expect(topOwnersByConjunctions(catalog)).toEqual([
+      { owner: "NASA", conjunctions: 5 },
+      { owner: "SpaceX", conjunctions: 2 },
+      { owner: "ESA", conjunctions: 0 }
+    ]);
+  });
+
+  it("breaks conjunction ties alphabetically", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "NASA", conjunctionCount: 2 }),
+      makeSatellite({ noradId: 2, owner: "ESA", conjunctionCount: 2 })
+    ];
+    expect(topOwnersByConjunctions(catalog)).toEqual([
+      { owner: "ESA", conjunctions: 2 },
+      { owner: "NASA", conjunctions: 2 }
+    ]);
+  });
+
+  it("keeps only the top N operators when a limit is given", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "SpaceX", conjunctionCount: 3 }),
+      makeSatellite({ noradId: 2, owner: "NASA", conjunctionCount: 2 }),
+      makeSatellite({ noradId: 3, owner: "ESA", conjunctionCount: 1 })
+    ];
+    expect(topOwnersByConjunctions(catalog, 1)).toEqual([{ owner: "SpaceX", conjunctions: 3 }]);
+  });
+
+  it("returns an empty list for an empty catalog", () => {
+    expect(topOwnersByConjunctions([])).toEqual([]);
   });
 });
 
