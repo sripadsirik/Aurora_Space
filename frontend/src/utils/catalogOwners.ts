@@ -90,3 +90,39 @@ export const conjunctionsByOwner = (
   }
   return totals;
 };
+
+/** How many operators to surface in an {@link OwnerSummary} leaderboard. */
+export const OWNER_LEADERBOARD_SIZE = 5;
+
+/** Aggregate view of the operators behind a satellite catalog. */
+export interface OwnerSummary {
+  /** Number of distinct operators in the catalog. */
+  totalOwners: number;
+  /** Object counts keyed by operator. */
+  byOwner: Record<string, number>;
+  /**
+   * The busiest operators by fleet size, at most
+   * {@link OWNER_LEADERBOARD_SIZE} entries, ranked as by
+   * {@link topOwnersByCount}.
+   */
+  topOwners: OwnerCount[];
+  /** The single largest operator, or `null` for an empty catalog. */
+  largestOwner: OwnerCount | null;
+}
+
+/**
+ * Bundles the owner aggregates into a single struct so a summary display can
+ * derive every figure from one list. All members reuse the individual helpers
+ * in this module, so they stay mutually consistent. `largestOwner` is the first
+ * entry of the full ranking and therefore shares its deterministic tie-break.
+ * The input is not mutated.
+ */
+export const summarizeOwners = (satellites: readonly Satellite[]): OwnerSummary => {
+  const ranked = topOwnersByCount(satellites);
+  return {
+    totalOwners: ranked.length,
+    byOwner: countByOwner(satellites),
+    topOwners: ranked.slice(0, OWNER_LEADERBOARD_SIZE),
+    largestOwner: ranked[0] ?? null
+  };
+};
