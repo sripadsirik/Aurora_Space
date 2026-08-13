@@ -4,6 +4,8 @@ import {
   conjunctionsByOwner,
   countByOwner,
   normalizeOwner,
+  OWNER_LEADERBOARD_SIZE,
+  summarizeOwners,
   topOwnersByCount,
   uniqueOwners
 } from "../catalogOwners";
@@ -129,5 +131,30 @@ describe("conjunctionsByOwner", () => {
 
   it("returns an empty record for an empty catalog", () => {
     expect(conjunctionsByOwner([])).toEqual({});
+  });
+});
+
+describe("summarizeOwners", () => {
+  it("bundles owner aggregates consistently", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
+    const summary = summarizeOwners(catalog);
+    expect(summary.totalOwners).toBe(3);
+    expect(summary.byOwner).toEqual({ SpaceX: 2, NASA: 1, ESA: 1 });
+    expect(summary.largestOwner).toEqual({ owner: "SpaceX", count: 2 });
+  });
+
+  it("caps the leaderboard at OWNER_LEADERBOARD_SIZE entries", () => {
+    const owners = Array.from({ length: OWNER_LEADERBOARD_SIZE + 3 }, (_, i) => `OP-${i}`);
+    const summary = summarizeOwners(makeCatalog(owners));
+    expect(summary.topOwners).toHaveLength(OWNER_LEADERBOARD_SIZE);
+    expect(summary.totalOwners).toBe(OWNER_LEADERBOARD_SIZE + 3);
+  });
+
+  it("reports a null largest owner and zero total for an empty catalog", () => {
+    const summary = summarizeOwners([]);
+    expect(summary.totalOwners).toBe(0);
+    expect(summary.byOwner).toEqual({});
+    expect(summary.topOwners).toEqual([]);
+    expect(summary.largestOwner).toBeNull();
   });
 });
