@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { countByOwner, normalizeOwner, uniqueOwners } from "../catalogOwners";
+import { countByOwner, normalizeOwner, topOwnersByCount, uniqueOwners } from "../catalogOwners";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -63,5 +63,42 @@ describe("uniqueOwners", () => {
 
   it("returns an empty list for an empty catalog", () => {
     expect(uniqueOwners([])).toEqual([]);
+  });
+});
+
+describe("topOwnersByCount", () => {
+  it("ranks operators from largest to smallest fleet", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(topOwnersByCount(catalog)).toEqual([
+      { owner: "SpaceX", count: 3 },
+      { owner: "NASA", count: 2 },
+      { owner: "ESA", count: 1 }
+    ]);
+  });
+
+  it("breaks count ties alphabetically", () => {
+    const catalog = makeCatalog(["NASA", "ESA", "CNSA"]);
+    expect(topOwnersByCount(catalog)).toEqual([
+      { owner: "CNSA", count: 1 },
+      { owner: "ESA", count: 1 },
+      { owner: "NASA", count: 1 }
+    ]);
+  });
+
+  it("keeps only the busiest N operators when a limit is given", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(topOwnersByCount(catalog, 2)).toEqual([
+      { owner: "SpaceX", count: 3 },
+      { owner: "NASA", count: 2 }
+    ]);
+  });
+
+  it("returns every operator when the limit is non-positive", () => {
+    const catalog = makeCatalog(["SpaceX", "NASA"]);
+    expect(topOwnersByCount(catalog, 0)).toHaveLength(2);
+  });
+
+  it("returns an empty list for an empty catalog", () => {
+    expect(topOwnersByCount([])).toEqual([]);
   });
 });
