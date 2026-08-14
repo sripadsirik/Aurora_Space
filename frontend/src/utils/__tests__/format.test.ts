@@ -3,6 +3,7 @@ import type { ConjunctionWarning } from "../../types/space";
 import {
   formatConjunctionWarningLabel,
   formatDurationToTca,
+  formatMissDistance,
   formatOrbitalPeriod,
   formatProbability,
   formatUtcTime,
@@ -40,6 +41,31 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
+  });
+});
+
+describe("formatMissDistance", () => {
+  it("renders sub-kilometre distances in whole metres", () => {
+    expect(formatMissDistance(248)).toBe("248 m");
+  });
+
+  it("rounds fractional metres to the nearest whole metre", () => {
+    expect(formatMissDistance(612.4)).toBe("612 m");
+  });
+
+  it("groups thousands with separators below the kilometre cutoff", () => {
+    expect(formatMissDistance(8500)).toBe("8,500 m");
+  });
+
+  it("switches to kilometres with one fraction digit at 10 km and above", () => {
+    expect(formatMissDistance(10000)).toBe("10.0 km");
+    expect(formatMissDistance(12540)).toBe("12.5 km");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatMissDistance(-5)).toBe("—");
+    expect(formatMissDistance(NaN)).toBe("—");
+    expect(formatMissDistance(Infinity)).toBe("—");
   });
 });
 
