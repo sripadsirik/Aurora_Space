@@ -269,7 +269,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>Time until TCA</span>
             <span className="text-right">{toCountdown(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
-            <span className={`text-right ${missDistanceClass}`}>{selectedConjunction.missDistanceM} m</span>
+            <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>
             <span className="text-right">{selectedConjunction.relativeVelocityKms.toFixed(2)} km/s</span>
             <span>Collision probability</span>
