@@ -34,6 +34,31 @@ export const isActionableConjunctionRisk = (probability: number): boolean =>
   probability > CONJUNCTION_RISK_THRESHOLDS.warning;
 
 /**
+ * Miss-distance cut-offs (in metres) that separate a conjunction's proximity
+ * severity. A distance strictly below `critical` is `critical`; below `warning`
+ * is `warning`; anything else is `nominal`. These mirror the collision-probability
+ * tiers but key off physical separation, and are shared by the detail and list
+ * panels so the colour thresholds are defined once.
+ */
+export const MISS_DISTANCE_THRESHOLDS = {
+  critical: 500,
+  warning: 1000
+} as const;
+
+/** Proximity severity derived purely from a conjunction's miss distance. */
+export type MissDistanceSeverity = "critical" | "warning" | "nominal";
+
+/**
+ * Classifies a miss distance (in metres) into a {@link MissDistanceSeverity}
+ * using {@link MISS_DISTANCE_THRESHOLDS}.
+ */
+export const classifyMissDistanceSeverity = (meters: number): MissDistanceSeverity => {
+  if (meters < MISS_DISTANCE_THRESHOLDS.critical) return "critical";
+  if (meters < MISS_DISTANCE_THRESHOLDS.warning) return "warning";
+  return "nominal";
+};
+
+/**
  * Maps a conjunction {@link RiskLevel} to the Tailwind text-colour class used by
  * the conjunction tables. `critical` and `warning` have fixed colours shared by
  * every panel; the class for the calmer `watch`/`nominal` tiers is supplied by
