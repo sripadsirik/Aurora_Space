@@ -5,6 +5,7 @@ import { useAuroraStore } from "../../store/auroraStore";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
+  estimateManeuverDeltaVMs,
   sortConjunctionsByProbabilityDesc
 } from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatProbability } from "../../utils/format";
@@ -96,7 +97,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
               {sorted.map((conj, idx) => {
                 const risk = classifyConjunctionRisk(conj.probability);
                 const rowColor = conjunctionRiskTextClass(risk, "text-white");
-                const deltaV = `~${(conj.probability * 10000).toFixed(1)} m/s`;
+                const deltaV = `~${estimateManeuverDeltaVMs(conj.probability).toFixed(1)} m/s`;
                 return (
                   <tr
                     key={conj.id}
