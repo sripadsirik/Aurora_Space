@@ -5,7 +5,7 @@ import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
-import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
+import { classifyConjunctionRisk, missDistanceSeverityTextClass } from "../../utils/conjunctionRisk";
 import { formatMissDistance, formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
@@ -220,12 +220,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
   const object1 = satelliteByNorad.get(selectedConjunction.object1.noradId);
   const object2 = satelliteByNorad.get(selectedConjunction.object2.noradId);
 
-  const missDistanceClass =
-    selectedConjunction.missDistanceM < 500
-      ? "text-[#ff7d7d]"
-      : selectedConjunction.missDistanceM < 1000
-        ? "text-[#ffcd73]"
-        : "text-[#7de6b1]";
+  const missDistanceClass = missDistanceSeverityTextClass(selectedConjunction.missDistanceM);
   const probabilityRisk = classifyConjunctionRisk(selectedConjunction.probability);
   const probabilityClass =
     probabilityRisk === "critical"
