@@ -84,6 +84,16 @@ export const missDistanceSeverityTextClass = (meters: number): string => {
 };
 
 /**
+ * Rough avoidance-maneuver budget (in metres per second of delta-v) implied by a
+ * conjunction's collision probability. This is a first-order display heuristic —
+ * delta-v scales linearly with probability so the intel table can surface a
+ * comparable "how much thrust would this cost" figure — not a propagated burn
+ * solution. Negative probabilities clamp to zero.
+ */
+export const estimateManeuverDeltaVMs = (probability: number): number =>
+  Math.max(0, probability) * 10000;
+
+/**
  * Fleet-level severity for a collection of active conjunctions, ordered from
  * least to most urgent: `clear` (nothing tracked), `elevated` (conjunctions
  * present but none actionable), `warning`, and `critical`.
