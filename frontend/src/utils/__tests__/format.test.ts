@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   formatConjunctionWarningLabel,
+  formatCountdown,
   formatDurationToTca,
   formatMissDistance,
   formatOrbitalPeriod,
@@ -150,5 +151,32 @@ describe("formatDurationToTca", () => {
 
   it("reports a long-passed TCA in days and hours", () => {
     expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
+  });
+});
+
+describe("formatCountdown", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-21T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders a future target as zero-padded HH:MM:SS", () => {
+    expect(formatCountdown(new Date("2026-07-21T02:05:09Z"))).toBe("02:05:09");
+  });
+
+  it("accepts an ISO string as input", () => {
+    expect(formatCountdown("2026-07-21T00:00:45Z")).toBe("00:00:45");
+  });
+
+  it("reports a recently passed target as PASSED HH:MM:SS ago", () => {
+    expect(formatCountdown(new Date("2026-07-20T23:58:30Z"))).toBe("PASSED 00:01:30 ago");
+  });
+
+  it("collapses a long-passed target to days and hours", () => {
+    expect(formatCountdown(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
   });
 });
