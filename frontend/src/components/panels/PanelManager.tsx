@@ -5,7 +5,11 @@ import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
-import { classifyConjunctionRisk, missDistanceSeverityTextClass } from "../../utils/conjunctionRisk";
+import {
+  classifyConjunctionRisk,
+  conjunctionRiskTextClass,
+  missDistanceSeverityTextClass
+} from "../../utils/conjunctionRisk";
 import { formatMissDistance, formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
@@ -222,12 +226,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
 
   const missDistanceClass = missDistanceSeverityTextClass(selectedConjunction.missDistanceM);
   const probabilityRisk = classifyConjunctionRisk(selectedConjunction.probability);
-  const probabilityClass =
-    probabilityRisk === "critical"
-      ? "text-[#ff7d7d]"
-      : probabilityRisk === "warning"
-        ? "text-[#ffcd73]"
-        : "text-[#7de6b1]";
+  const probabilityClass = conjunctionRiskTextClass(probabilityRisk, "text-[#7de6b1]");
   const gaugeValue = normalizeProbability(selectedConjunction.probability);
   const action = getConjunctionAction(selectedConjunction.probability);
 
