@@ -7,6 +7,7 @@ import {
   classifyConjunctionRisk,
   classifyMissDistanceSeverity,
   conjunctionRiskTextClass,
+  estimateManeuverDeltaVMs,
   isActionableConjunctionRisk,
   missDistanceSeverityTextClass,
   sortConjunctionsByProbabilityDesc
@@ -169,5 +170,20 @@ describe("missDistanceSeverityTextClass", () => {
 
   it("returns the clear colour once comfortably separated", () => {
     expect(missDistanceSeverityTextClass(5000)).toBe("text-[#7de6b1]");
+  });
+});
+
+describe("estimateManeuverDeltaVMs", () => {
+  it("scales linearly with collision probability", () => {
+    expect(estimateManeuverDeltaVMs(0.01)).toBeCloseTo(100, 6);
+    expect(estimateManeuverDeltaVMs(5e-4)).toBeCloseTo(5, 6);
+  });
+
+  it("returns zero for a zero probability", () => {
+    expect(estimateManeuverDeltaVMs(0)).toBe(0);
+  });
+
+  it("clamps negative probabilities to zero", () => {
+    expect(estimateManeuverDeltaVMs(-0.1)).toBe(0);
   });
 });
