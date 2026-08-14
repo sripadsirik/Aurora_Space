@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   CONJUNCTION_RISK_THRESHOLDS,
+  MISS_DISTANCE_THRESHOLDS,
   classifyConjunctionFleetSeverity,
   classifyConjunctionRisk,
+  classifyMissDistanceSeverity,
   conjunctionRiskTextClass,
   isActionableConjunctionRisk,
+  missDistanceSeverityTextClass,
   sortConjunctionsByProbabilityDesc
 } from "../conjunctionRisk";
 
@@ -132,5 +135,39 @@ describe("conjunctionRiskTextClass", () => {
 
   it("falls back to the caller-supplied default for nominal", () => {
     expect(conjunctionRiskTextClass("nominal", "text-white")).toBe("text-white");
+  });
+});
+
+describe("classifyMissDistanceSeverity", () => {
+  it("classifies distances below the critical cut-off as critical", () => {
+    expect(classifyMissDistanceSeverity(0)).toBe("critical");
+    expect(classifyMissDistanceSeverity(MISS_DISTANCE_THRESHOLDS.critical - 1)).toBe("critical");
+  });
+
+  it("treats the critical cut-off itself as warning", () => {
+    expect(classifyMissDistanceSeverity(MISS_DISTANCE_THRESHOLDS.critical)).toBe("warning");
+  });
+
+  it("classifies distances in the warning band as warning", () => {
+    expect(classifyMissDistanceSeverity(MISS_DISTANCE_THRESHOLDS.warning - 1)).toBe("warning");
+  });
+
+  it("classifies the warning cut-off and beyond as nominal", () => {
+    expect(classifyMissDistanceSeverity(MISS_DISTANCE_THRESHOLDS.warning)).toBe("nominal");
+    expect(classifyMissDistanceSeverity(50000)).toBe("nominal");
+  });
+});
+
+describe("missDistanceSeverityTextClass", () => {
+  it("returns the critical colour for very close approaches", () => {
+    expect(missDistanceSeverityTextClass(200)).toBe("text-[#ff7d7d]");
+  });
+
+  it("returns the warning colour in the warning band", () => {
+    expect(missDistanceSeverityTextClass(700)).toBe("text-[#ffcd73]");
+  });
+
+  it("returns the clear colour once comfortably separated", () => {
+    expect(missDistanceSeverityTextClass(5000)).toBe("text-[#7de6b1]");
   });
 });
