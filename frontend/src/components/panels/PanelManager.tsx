@@ -6,7 +6,7 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
 import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
-import { formatProbability, formatUtcTime } from "../../utils/format";
+import { formatMissDistance, formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
@@ -178,7 +178,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
                 <div key={conjunction.id} className="rounded-sm border border-white/10 px-2 py-1">
                   <p className="truncate text-[11px] text-white">{findConjunctionPeerName(selectedSatellite, conjunction)}</p>
                   <p className="text-[10px] text-[#9cc2de]">
-                    TCA {toCountdown(conjunction.tca)} | {conjunction.missDistanceM}m | Pc {formatProbability(conjunction.probability)}
+                    TCA {toCountdown(conjunction.tca)} | {formatMissDistance(conjunction.missDistanceM)} | Pc {formatProbability(conjunction.probability)}
                   </p>
                 </div>
               ))}
