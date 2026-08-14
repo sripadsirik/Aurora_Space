@@ -33,6 +33,19 @@ export const formatDurationToTca = (tca: Date | string): string => {
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
 /**
+ * Formats a conjunction miss distance for display. Distances below 10 km are
+ * shown in whole metres with thousands separators (for example `8,500 m`);
+ * larger distances switch to kilometres with one fraction digit (for example
+ * `12.5 km`) to keep the figure compact. Negative or non-finite inputs render
+ * as an em dash so a bad feed value never shows as `NaN m`.
+ */
+export const formatMissDistance = (meters: number): string => {
+  if (!Number.isFinite(meters) || meters < 0) return "—";
+  if (meters < 10000) return `${Math.round(meters).toLocaleString("en-US")} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
+/**
  * Formats an orbital period given in minutes as a compact wall-clock string.
  * Periods under an hour read as whole minutes (for example `45m`); longer
  * periods read as hours and minutes (for example `23h 56m`). Negative inputs
