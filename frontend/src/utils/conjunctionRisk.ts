@@ -71,6 +71,19 @@ export const conjunctionRiskTextClass = (risk: RiskLevel, defaultClass: string):
 };
 
 /**
+ * Maps a miss distance (in metres) to the Tailwind text-colour class used for
+ * the distance figure in the conjunction panels: red when critically close,
+ * amber in the warning band, and green once comfortably clear. Centralises the
+ * colour ramp that the detail panel previously derived inline.
+ */
+export const missDistanceSeverityTextClass = (meters: number): string => {
+  const severity = classifyMissDistanceSeverity(meters);
+  if (severity === "critical") return "text-[#ff7d7d]";
+  if (severity === "warning") return "text-[#ffcd73]";
+  return "text-[#7de6b1]";
+};
+
+/**
  * Fleet-level severity for a collection of active conjunctions, ordered from
  * least to most urgent: `clear` (nothing tracked), `elevated` (conjunctions
  * present but none actionable), `warning`, and `critical`.
