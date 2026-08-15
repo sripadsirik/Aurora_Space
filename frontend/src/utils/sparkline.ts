@@ -1,3 +1,5 @@
+import { clamp01 } from "./clamp";
+
 /** Options controlling how a value series maps onto sparkline pixel coordinates. */
 export interface SparklineOptions {
   /** Width of the drawing area in pixels. */
@@ -37,7 +39,7 @@ export const sparklineY = (
   const top = max ?? min;
   const range = top - min;
   if (range <= 0) return height;
-  const fraction = Math.min(1, Math.max(0, (value - min) / range));
+  const fraction = clamp01((value - min) / range);
   return height - fraction * height;
 };
 
