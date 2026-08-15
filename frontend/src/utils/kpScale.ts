@@ -7,6 +7,8 @@
  * and the space-weather panels and gives the mapping a single tested home.
  */
 
+import { clamp01 } from "./clamp";
+
 /** The largest value the planetary Kp index can take (Kp 9, an extreme storm). */
 export const KP_MAX = 9;
 
@@ -17,7 +19,7 @@ export const KP_MAX = 9;
  */
 export const kpFraction = (kp: number): number => {
   if (!Number.isFinite(kp)) return 0;
-  return Math.max(0, Math.min(1, kp / KP_MAX));
+  return clamp01(kp / KP_MAX);
 };
 
 /**
