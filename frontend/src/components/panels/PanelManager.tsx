@@ -8,7 +8,12 @@ import { getKpColor } from "../../utils/colors";
 import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
 import { formatProbability, formatUtcTime } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
-import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import {
+  earthRadiusMeters,
+  getOrbitalPeriod,
+  kpToAuroraBoundaryLatitude,
+  kpToAuroraRadiusDegrees
+} from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
@@ -308,7 +313,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
   const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
   const kpPosition = kpToPercent(spaceWeather.kpIndex);
-  const auroraLatitude = Math.max(35, Math.min(90, 90 - spaceWeather.kpIndex * 5.5));
+  const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
 
   const forecast = useMemo(
