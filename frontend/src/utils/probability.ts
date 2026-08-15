@@ -1,3 +1,4 @@
+import { clamp01 } from "./clamp";
 import { CONJUNCTION_RISK_THRESHOLDS } from "./conjunctionRisk";
 
 // The gauge spans the same probabilities as the conjunction risk tiers: the
@@ -18,5 +19,5 @@ export const normalizeProbability = (probability: number): number => {
   }
 
   const normalized = (Math.log10(probability) - GAUGE_FLOOR_EXP) / (GAUGE_CEIL_EXP - GAUGE_FLOOR_EXP);
-  return Math.max(0, Math.min(1, normalized));
+  return clamp01(normalized);
 };
