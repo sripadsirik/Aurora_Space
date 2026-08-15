@@ -7,6 +7,7 @@ import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space
 import { getKpColor } from "../../utils/colors";
 import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
 import { formatProbability, formatUtcTime } from "../../utils/format";
+import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
@@ -306,7 +307,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const closePanel = useAuroraStore((state) => state.closePanel);
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
   const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
-  const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
+  const kpPosition = kpToPercent(spaceWeather.kpIndex);
   const auroraLatitude = Math.max(35, Math.min(90, 90 - spaceWeather.kpIndex * 5.5));
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
 
