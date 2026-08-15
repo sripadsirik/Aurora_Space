@@ -408,7 +408,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
               const barWidth = 28;
               const spacing = 10;
               const x = 8 + index * (barWidth + spacing);
-              const barHeight = (item.kp / 9) * 58;
+              const barHeight = kpToBarHeight(item.kp, 58);
               const y = 70 - barHeight;
               return (
                 <g key={item.hoursAhead}>
