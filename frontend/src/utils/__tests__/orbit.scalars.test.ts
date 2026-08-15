@@ -5,6 +5,7 @@ import {
   circularOrbitalVelocityKms,
   earthRadiusMeters,
   getOrbitalPeriod,
+  kpToAuroraBoundaryLatitude,
   kpToAuroraRadiusDegrees
 } from "../orbit";
 
@@ -64,6 +65,21 @@ describe("kpToAuroraRadiusDegrees", () => {
 
   it("interpolates linearly between the clamp bounds", () => {
     expect(kpToAuroraRadiusDegrees(6.5)).toBeCloseTo(30, 6);
+  });
+});
+
+describe("kpToAuroraBoundaryLatitude", () => {
+  it("keeps the boundary near the pole for quiet conditions", () => {
+    expect(kpToAuroraBoundaryLatitude(0)).toBe(90);
+  });
+
+  it("pushes the boundary equatorward as Kp rises", () => {
+    expect(kpToAuroraBoundaryLatitude(5)).toBeCloseTo(62.5, 6);
+  });
+
+  it("clamps the boundary to the 35 degree floor at high Kp", () => {
+    expect(kpToAuroraBoundaryLatitude(9)).toBe(40.5);
+    expect(kpToAuroraBoundaryLatitude(12)).toBe(35);
   });
 });
 
