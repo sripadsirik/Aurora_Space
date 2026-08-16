@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   formatConjunctionWarningLabel,
-  formatCountdown,
+  formatCountdownToTca,
   formatDurationToTca,
+  formatEclipseFraction,
+  formatManeuverDeltaV,
   formatMissDistance,
   formatOrbitalPeriod,
   formatProbability,
@@ -70,6 +72,17 @@ describe("formatMissDistance", () => {
   });
 });
 
+describe("formatManeuverDeltaV", () => {
+  it("scales linearly with probability and rounds to one decimal", () => {
+    expect(formatManeuverDeltaV(0.0012)).toBe("~12.0 m/s");
+    expect(formatManeuverDeltaV(0.00005)).toBe("~0.5 m/s");
+  });
+
+  it("renders a zero probability as zero delta-V", () => {
+    expect(formatManeuverDeltaV(0)).toBe("~0.0 m/s");
+  });
+});
+
 describe("isCriticalConjunction", () => {
   it("flags high collision probability", () => {
     expect(isCriticalConjunction(makeConjunction({ probability: 0.006, missDistanceM: 5000 }))).toBe(true);
@@ -127,6 +140,23 @@ describe("formatOrbitalPeriod", () => {
   });
 });
 
+describe("formatEclipseFraction", () => {
+  it("renders a fraction as a rounded whole percent", () => {
+    expect(formatEclipseFraction(0.373)).toBe("37%");
+    expect(formatEclipseFraction(0.048)).toBe("5%");
+  });
+
+  it("clamps out-of-range inputs to 0 and 100 percent", () => {
+    expect(formatEclipseFraction(-0.2)).toBe("0%");
+    expect(formatEclipseFraction(1.4)).toBe("100%");
+  });
+
+  it("renders the exact endpoints", () => {
+    expect(formatEclipseFraction(0)).toBe("0%");
+    expect(formatEclipseFraction(1)).toBe("100%");
+  });
+});
+
 describe("formatDurationToTca", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -154,7 +184,7 @@ describe("formatDurationToTca", () => {
   });
 });
 
-describe("formatCountdown", () => {
+describe("formatCountdownToTca", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-21T00:00:00Z"));
@@ -164,19 +194,19 @@ describe("formatCountdown", () => {
     vi.useRealTimers();
   });
 
-  it("renders a future target as zero-padded HH:MM:SS", () => {
-    expect(formatCountdown(new Date("2026-07-21T02:05:09Z"))).toBe("02:05:09");
+  it("renders a future TCA as a zero-padded HH:MM:SS clock", () => {
+    expect(formatCountdownToTca(new Date("2026-07-21T02:03:04Z"))).toBe("02:03:04");
   });
 
   it("accepts an ISO string as input", () => {
-    expect(formatCountdown("2026-07-21T00:00:45Z")).toBe("00:00:45");
+    expect(formatCountdownToTca("2026-07-21T01:15:09Z")).toBe("01:15:09");
   });
 
-  it("reports a recently passed target as PASSED HH:MM:SS ago", () => {
-    expect(formatCountdown(new Date("2026-07-20T23:58:30Z"))).toBe("PASSED 00:01:30 ago");
+  it("reports a recently passed TCA as a padded clock", () => {
+    expect(formatCountdownToTca(new Date("2026-07-20T23:58:30Z"))).toBe("PASSED 00:01:30 ago");
   });
 
-  it("collapses a long-passed target to days and hours", () => {
-    expect(formatCountdown(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
+  it("switches to days and hours once a passed TCA is over a day old", () => {
+    expect(formatCountdownToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
   });
 });

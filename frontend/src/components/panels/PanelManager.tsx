@@ -3,14 +3,20 @@ import type { ReactNode } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
+import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
+import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
   missDistanceSeverityTextClass
 } from "../../utils/conjunctionRisk";
-import { formatCountdown, formatMissDistance, formatProbability, formatUtcTime } from "../../utils/format";
+import {
+  formatCountdownToTca,
+  formatMissDistance,
+  formatProbability,
+  formatUtcTime
+} from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
@@ -75,9 +81,6 @@ const getStatusClass = (status: SourceDiagnostic["status"]): string => {
   if (status === "STALE") return "text-[#ffcd73]";
   return "text-[#7df0b2]";
 };
-
-const findConjunctionPeerName = (satellite: Satellite, conjunction: Conjunction): string =>
-  conjunction.object1.noradId === satellite.noradId ? conjunction.object2.name : conjunction.object1.name;
 
 const getOrbitPeriodMinutes = (altitudeKm: number): number =>
   getOrbitalPeriod(earthRadiusMeters + altitudeKm * 1000) / 60;
@@ -160,9 +163,9 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
             <div className="space-y-1">
               {relatedConjunctions.map((conjunction) => (
                 <div key={conjunction.id} className="rounded-sm border border-white/10 px-2 py-1">
-                  <p className="truncate text-[11px] text-white">{findConjunctionPeerName(selectedSatellite, conjunction)}</p>
+                  <p className="truncate text-[11px] text-white">{conjunctionPeerName(selectedSatellite, conjunction)}</p>
                   <p className="text-[10px] text-[#9cc2de]">
-                    TCA {formatCountdown(conjunction.tca)} | {formatMissDistance(conjunction.missDistanceM)} | Pc {formatProbability(conjunction.probability)}
+                    TCA {formatCountdownToTca(conjunction.tca)} | {formatMissDistance(conjunction.missDistanceM)} | Pc {formatProbability(conjunction.probability)}
                   </p>
                 </div>
               ))}
@@ -241,7 +244,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>TCA (UTC)</span>
             <span className="text-right text-[11px]">{(selectedConjunction.tca instanceof Date ? selectedConjunction.tca : new Date(selectedConjunction.tca)).toISOString().replace("T", " ").replace(".000Z", " UTC")}</span>
             <span>Time until TCA</span>
-            <span className="text-right">{formatCountdown(selectedConjunction.tca)}</span>
+            <span className="text-right">{formatCountdownToTca(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>

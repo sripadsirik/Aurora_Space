@@ -30,17 +30,18 @@ export const formatDurationToTca = (tca: Date | string): string => {
 };
 
 /**
- * Renders a live countdown to a target time at seconds resolution. Future targets
- * read as `HH:MM:SS`; past targets read as `PASSED HH:MM:SS ago`, collapsing to
- * `PASSED …d HHh ago` once more than a day has elapsed. Accepts a `Date` or ISO
- * string. Unlike {@link formatDurationToTca}, this keeps a ticking seconds field,
- * so it suits a per-second refreshed readout rather than a coarse summary.
+ * Renders a high-resolution countdown to a time of closest approach. Future TCAs
+ * read as a zero-padded `HH:MM:SS` clock; past TCAs read as `PASSED …ago`,
+ * switching from `HH:MM:SS` to `Dd HHh` once more than a day has elapsed. Accepts
+ * a `Date` or ISO string. Unlike {@link formatDurationToTca} this keeps
+ * second-level precision, so it suits a live-ticking detail readout.
  */
-export const formatCountdown = (target: Date | string): string => {
-  const targetDate = target instanceof Date ? target : new Date(target);
-  const rawDiffMs = targetDate.getTime() - Date.now();
+export const formatCountdownToTca = (tca: Date | string): string => {
+  const tcaDate = tca instanceof Date ? tca : new Date(tca);
+  const rawDiffMs = tcaDate.getTime() - Date.now();
   if (rawDiffMs < 0) {
-    const totalSeconds = Math.floor(Math.abs(rawDiffMs) / 1000);
+    const elapsed = Math.abs(rawDiffMs);
+    const totalSeconds = Math.floor(elapsed / 1000);
     const days = Math.floor(totalSeconds / 86400);
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -72,6 +73,15 @@ export const formatMissDistance = (meters: number): string => {
 };
 
 /**
+ * Renders the rough maneuver delta-V the intel table shows for a conjunction. It
+ * is a first-order display estimate that scales linearly with collision
+ * probability (`probability × 10000` m/s) and is prefixed with `~` and rounded to
+ * one decimal to signal that it is indicative rather than a computed burn.
+ */
+export const formatManeuverDeltaV = (probability: number): string =>
+  `~${(probability * 10000).toFixed(1)} m/s`;
+
+/**
  * Formats an orbital period given in minutes as a compact wall-clock string.
  * Periods under an hour read as whole minutes (for example `45m`); longer
  * periods read as hours and minutes (for example `23h 56m`). Negative inputs
@@ -83,6 +93,16 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours}h ${minutes}m`;
+};
+
+/**
+ * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
+ * whole-percent string like `37%`. Values are clamped to the 0-1 range before
+ * rounding, so out-of-range inputs read as `0%` or `100%`.
+ */
+export const formatEclipseFraction = (fraction: number): string => {
+  const clamped = Math.min(1, Math.max(0, fraction));
+  return `${Math.round(clamped * 100)}%`;
 };
 
 /**
