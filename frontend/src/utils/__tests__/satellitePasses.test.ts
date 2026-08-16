@@ -7,6 +7,7 @@ import {
   maxPassDurationMinutes,
   maxPassDurationSeconds,
   maxPassSweepDeg,
+  passOrbitFraction,
   summarizePass,
   theoreticalMaxDailyContactSeconds
 } from "../satellitePasses";
@@ -45,6 +46,21 @@ describe("maxPassSweepDeg", () => {
     const sweep = maxPassSweepDeg(35786);
     expect(sweep).toBeGreaterThan(0);
     expect(sweep).toBeLessThan(180);
+  });
+});
+
+describe("passOrbitFraction", () => {
+  it("is the sweep expressed as a share of the full orbit", () => {
+    expect(passOrbitFraction(550)).toBeCloseTo(maxPassSweepDeg(550) / 360, 10);
+  });
+
+  it("stays within the 0-1 range", () => {
+    expect(passOrbitFraction(400)).toBeGreaterThan(0);
+    expect(passOrbitFraction(35786)).toBeLessThan(1);
+  });
+
+  it("shrinks under a stricter elevation mask", () => {
+    expect(passOrbitFraction(550, 20)).toBeLessThan(passOrbitFraction(550, 0));
   });
 });
 
