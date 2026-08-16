@@ -29,8 +29,44 @@ export const formatDurationToTca = (tca: Date | string): string => {
   return `${hours}h ${minutes}m`;
 };
 
+/**
+ * Renders a high-resolution countdown to a time of closest approach. Future TCAs
+ * read as a zero-padded `HH:MM:SS` clock; past TCAs read as `PASSED …ago`,
+ * switching from `HH:MM:SS` to `Dd HHh` once more than a day has elapsed. Accepts
+ * a `Date` or ISO string. Unlike {@link formatDurationToTca} this keeps
+ * second-level precision, so it suits a live-ticking detail readout.
+ */
+export const formatCountdownToTca = (tca: Date | string): string => {
+  const tcaDate = tca instanceof Date ? tca : new Date(tca);
+  const rawDiffMs = tcaDate.getTime() - Date.now();
+  if (rawDiffMs < 0) {
+    const elapsed = Math.abs(rawDiffMs);
+    const totalSeconds = Math.floor(elapsed / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (days > 0) return `PASSED ${days}d ${pad(hours)}h ago`;
+    return `PASSED ${pad(hours)}:${pad(minutes)}:${pad(seconds)} ago`;
+  }
+  const totalSeconds = Math.floor(rawDiffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+};
+
 /** Formats a collision probability in exponential notation with one fraction digit. */
 export const formatProbability = (probability: number): string => probability.toExponential(1);
+
+/**
+ * Renders the rough maneuver delta-V the intel table shows for a conjunction. It
+ * is a first-order display estimate that scales linearly with collision
+ * probability (`probability × 10000` m/s) and is prefixed with `~` and rounded to
+ * one decimal to signal that it is indicative rather than a computed burn.
+ */
+export const formatManeuverDeltaV = (probability: number): string =>
+  `~${(probability * 10000).toFixed(1)} m/s`;
 
 /**
  * Formats an orbital period given in minutes as a compact wall-clock string.
@@ -44,6 +80,16 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours}h ${minutes}m`;
+};
+
+/**
+ * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
+ * whole-percent string like `37%`. Values are clamped to the 0-1 range before
+ * rounding, so out-of-range inputs read as `0%` or `100%`.
+ */
+export const formatEclipseFraction = (fraction: number): string => {
+  const clamped = Math.min(1, Math.max(0, fraction));
+  return `${Math.round(clamped * 100)}%`;
 };
 
 /**
