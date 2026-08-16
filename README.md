@@ -104,6 +104,30 @@ above its horizon), while higher orbits widen it: a single geostationary satelli
 42% of the globe down to the horizon. All figures derive from the same central angle, so they
 stay mutually consistent.
 
+## Orbital Eclipse
+
+How much of each orbit a satellite spends in Earth's shadow versus sunlight comes from the pure
+geometry helpers in `frontend/src/utils/eclipse.ts`. They use the standard cylindrical-shadow
+model, parameterised by altitude and the orbit's *beta angle* — the angle between the orbital
+plane and the Earth-Sun line:
+
+| Helper | Returns |
+| --- | --- |
+| `eclipseFraction` | Fraction of the orbit spent in shadow for a given beta angle (0-0.5) |
+| `sunlightFraction` | Fraction of the orbit spent in sunlight (0.5-1) |
+| `maxEclipseFraction` | Worst-case shadow fraction, at beta angle `0` |
+| `eclipseCutoffBetaDeg` | Beta angle above which the orbit stays fully sunlit |
+| `eclipseDurationMinutes` | Minutes per orbit spent in shadow |
+| `sunlightDurationMinutes` | Minutes per orbit spent in sunlight |
+| `summarizeEclipse` | All of the above bundled into one `EclipseSummary` for a `Satellite` |
+
+The eclipse is longest when the Sun lies in the orbital plane (`betaDeg = 0`) and shrinks as the
+beta angle rises, vanishing once it reaches `eclipseCutoffBetaDeg` (equal to `asin(R / (R + h))`),
+beyond which the orbit rides clear of the shadow for the whole revolution. A 550 km orbit spends
+roughly 37% of each orbit in shadow, while a geostationary satellite spends under 5%. Durations
+derive from the same spherical Earth radius as the shadow geometry, so the eclipse and sunlight
+minutes always sum to the orbital period.
+
 ## Catalog Statistics
 
 Summary figures for the whole tracked catalog come from the pure helpers in
@@ -244,6 +268,26 @@ Risk tiers reuse `classifyConjunctionRisk` / `isActionableConjunctionRisk` from
 `conjunctionRisk.ts`, so a panel header derived from these helpers stays consistent with the
 per-row colours in the conjunction panels. Extremes return `null` and averages return 0 for an
 empty feed, so every figure is safe to render without a guard.
+
+## Historical Event Statistics
+
+Summary and query figures for the historical-events feed come from the pure helpers in
+`frontend/src/utils/historicalEventStats.ts`, which aggregate over a `HistoricalEvent[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `countByEventType` | Event counts keyed by category (`solar_storm` / `conjunction` / `satellite_loss`) |
+| `sortByDate` | A date-ordered copy (oldest-first by default, `"desc"` for newest-first) |
+| `filterByEventType` | Events of a single category, in input order |
+| `eventsInDateRange` | Events whose date falls within an inclusive `[start, end]` window |
+| `strongestGeomagneticEvent` | The highest-`kpIndex` event (or `null`) |
+| `earliestEvent` / `mostRecentEvent` | The oldest / newest event by date (or `null`) |
+| `summarizeHistoricalEvents` | All of the above bundled into one `HistoricalEventSummary` |
+
+Every helper leaves its input array unmutated. Extremes return `null` for an empty feed (and
+`strongestGeomagneticEvent` also skips events with no `kpIndex`), and `countByEventType` always
+reports every category, so a timeline header derived from these helpers renders a stable set of
+rows without guards.
 
 ## CME Library Statistics
 
@@ -493,8 +537,8 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
-`catalogFilters`, `coverageFootprint`, `helio`, `spaceWeatherScales`, `conjunctionRisk`, `conjunctionStats`,
-`stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`), the Zustand store, and the mock datasets under `src/data/mock/`
+`catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
+`conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
