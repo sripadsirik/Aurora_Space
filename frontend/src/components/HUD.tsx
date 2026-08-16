@@ -2,6 +2,7 @@ import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getKpColor } from "../utils/colors";
+import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { describeFeedFreshness } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
@@ -157,7 +158,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
                   >
                     <span className={`h-2 w-2 rounded-full ${isCritical ? "animate-pulse bg-[#ff0000]" : "bg-[#ff6600]"}`} />
                     <span className="truncate">
-                      {conjunction.object1.name} - {conjunction.object2.name} | TCA {formatDurationToTca(conjunction.tca)} | Pc{" "}
+                      {formatConjunctionPairLabel(conjunction, "-")} | TCA {formatDurationToTca(conjunction.tca)} | Pc{" "}
                       {formatProbability(conjunction.probability)}
                     </span>
                   </button>

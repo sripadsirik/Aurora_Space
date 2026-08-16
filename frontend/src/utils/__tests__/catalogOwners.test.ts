@@ -3,14 +3,17 @@ import type { RiskLevel, Satellite } from "../../types/space";
 import {
   UNKNOWN_OWNER,
   canonicalOwner,
+  conjunctionsByOwner,
   countByOwner,
-  distinctOwnerCount,
   elevatedRiskByOwner,
-  largestOperator,
+  normalizeOwner,
   ownerRank,
   ownerShare,
-  summarizeOwnership,
-  topOwners
+  OWNER_LEADERBOARD_SIZE,
+  summarizeOwners,
+  topOwnersByConjunctions,
+  topOwnersByCount,
+  uniqueOwners
 } from "../catalogOwners";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -30,6 +33,200 @@ const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
 const makeCatalog = (owners: string[]): Satellite[] =>
   owners.map((owner, index) => makeSatellite({ noradId: index + 1, owner }));
 
+describe("normalizeOwner", () => {
+  it("trims surrounding whitespace and folds case", () => {
+    expect(normalizeOwner("  SpaceX ")).toBe("spacex");
+  });
+
+  it("leaves an already-normalised label unchanged", () => {
+    expect(normalizeOwner("nasa")).toBe("nasa");
+  });
+});
+
+describe("countByOwner", () => {
+  it("tallies satellites by operator", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
+    expect(countByOwner(catalog)).toEqual({ SpaceX: 2, NASA: 1, ESA: 1 });
+  });
+
+  it("collapses spacing and case differences onto one bucket", () => {
+    const catalog = makeCatalog(["SpaceX", " spacex ", "SPACEX"]);
+    expect(countByOwner(catalog)).toEqual({ SpaceX: 3 });
+  });
+
+  it("keeps the first-seen spelling as the display key", () => {
+    const catalog = makeCatalog([" NASA", "nasa"]);
+    expect(countByOwner(catalog)).toEqual({ NASA: 2 });
+  });
+
+  it("returns an empty record for an empty catalog", () => {
+    expect(countByOwner([])).toEqual({});
+  });
+});
+
+describe("uniqueOwners", () => {
+  it("lists distinct operators sorted case-insensitively", () => {
+    const catalog = makeCatalog(["SpaceX", "ESA", "NASA", "SpaceX"]);
+    expect(uniqueOwners(catalog)).toEqual(["ESA", "NASA", "SpaceX"]);
+  });
+
+  it("de-duplicates spacing and case variants", () => {
+    const catalog = makeCatalog(["NASA", " nasa", "NASA "]);
+    expect(uniqueOwners(catalog)).toEqual(["NASA"]);
+  });
+
+  it("returns an empty list for an empty catalog", () => {
+    expect(uniqueOwners([])).toEqual([]);
+  });
+});
+
+describe("topOwnersByCount", () => {
+  it("ranks operators from largest to smallest fleet", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(topOwnersByCount(catalog)).toEqual([
+      { owner: "SpaceX", count: 3 },
+      { owner: "NASA", count: 2 },
+      { owner: "ESA", count: 1 }
+    ]);
+  });
+
+  it("breaks count ties alphabetically", () => {
+    const catalog = makeCatalog(["NASA", "ESA", "CNSA"]);
+    expect(topOwnersByCount(catalog)).toEqual([
+      { owner: "CNSA", count: 1 },
+      { owner: "ESA", count: 1 },
+      { owner: "NASA", count: 1 }
+    ]);
+  });
+
+  it("keeps only the busiest N operators when a limit is given", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(topOwnersByCount(catalog, 2)).toEqual([
+      { owner: "SpaceX", count: 3 },
+      { owner: "NASA", count: 2 }
+    ]);
+  });
+
+  it("returns every operator when the limit is non-positive", () => {
+    const catalog = makeCatalog(["SpaceX", "NASA"]);
+    expect(topOwnersByCount(catalog, 0)).toHaveLength(2);
+  });
+
+  it("returns an empty list for an empty catalog", () => {
+    expect(topOwnersByCount([])).toEqual([]);
+  });
+});
+
+describe("conjunctionsByOwner", () => {
+  it("sums active conjunction counts per operator", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "SpaceX", conjunctionCount: 2 }),
+      makeSatellite({ noradId: 2, owner: "SpaceX", conjunctionCount: 3 }),
+      makeSatellite({ noradId: 3, owner: "NASA", conjunctionCount: 1 })
+    ];
+    expect(conjunctionsByOwner(catalog)).toEqual({ SpaceX: 5, NASA: 1 });
+  });
+
+  it("groups spacing and case variants under one operator", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "ESA", conjunctionCount: 1 }),
+      makeSatellite({ noradId: 2, owner: " esa ", conjunctionCount: 4 })
+    ];
+    expect(conjunctionsByOwner(catalog)).toEqual({ ESA: 5 });
+  });
+
+  it("returns an empty record for an empty catalog", () => {
+    expect(conjunctionsByOwner([])).toEqual({});
+  });
+});
+
+describe("ownerShare", () => {
+  it("returns the fraction of the catalog an operator owns", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
+    expect(ownerShare(catalog, "SpaceX")).toBe(0.5);
+    expect(ownerShare(catalog, "NASA")).toBe(0.25);
+  });
+
+  it("matches the owner case-insensitively and ignoring whitespace", () => {
+    const catalog = makeCatalog(["NASA", "NASA", "ESA", "ESA"]);
+    expect(ownerShare(catalog, " nasa ")).toBe(0.5);
+  });
+
+  it("returns 0 for an owner absent from the catalog", () => {
+    const catalog = makeCatalog(["SpaceX", "NASA"]);
+    expect(ownerShare(catalog, "ESA")).toBe(0);
+  });
+
+  it("returns 0 for an empty catalog rather than NaN", () => {
+    expect(ownerShare([], "SpaceX")).toBe(0);
+  });
+});
+
+describe("topOwnersByConjunctions", () => {
+  it("ranks operators from most to fewest active conjunctions", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "SpaceX", conjunctionCount: 1 }),
+      makeSatellite({ noradId: 2, owner: "SpaceX", conjunctionCount: 1 }),
+      makeSatellite({ noradId: 3, owner: "NASA", conjunctionCount: 5 }),
+      makeSatellite({ noradId: 4, owner: "ESA", conjunctionCount: 0 })
+    ];
+    expect(topOwnersByConjunctions(catalog)).toEqual([
+      { owner: "NASA", conjunctions: 5 },
+      { owner: "SpaceX", conjunctions: 2 },
+      { owner: "ESA", conjunctions: 0 }
+    ]);
+  });
+
+  it("breaks conjunction ties alphabetically", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "NASA", conjunctionCount: 2 }),
+      makeSatellite({ noradId: 2, owner: "ESA", conjunctionCount: 2 })
+    ];
+    expect(topOwnersByConjunctions(catalog)).toEqual([
+      { owner: "ESA", conjunctions: 2 },
+      { owner: "NASA", conjunctions: 2 }
+    ]);
+  });
+
+  it("keeps only the top N operators when a limit is given", () => {
+    const catalog = [
+      makeSatellite({ noradId: 1, owner: "SpaceX", conjunctionCount: 3 }),
+      makeSatellite({ noradId: 2, owner: "NASA", conjunctionCount: 2 }),
+      makeSatellite({ noradId: 3, owner: "ESA", conjunctionCount: 1 })
+    ];
+    expect(topOwnersByConjunctions(catalog, 1)).toEqual([{ owner: "SpaceX", conjunctions: 3 }]);
+  });
+
+  it("returns an empty list for an empty catalog", () => {
+    expect(topOwnersByConjunctions([])).toEqual([]);
+  });
+});
+
+describe("summarizeOwners", () => {
+  it("bundles owner aggregates consistently", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
+    const summary = summarizeOwners(catalog);
+    expect(summary.totalOwners).toBe(3);
+    expect(summary.byOwner).toEqual({ SpaceX: 2, NASA: 1, ESA: 1 });
+    expect(summary.largestOwner).toEqual({ owner: "SpaceX", count: 2 });
+  });
+
+  it("caps the leaderboard at OWNER_LEADERBOARD_SIZE entries", () => {
+    const owners = Array.from({ length: OWNER_LEADERBOARD_SIZE + 3 }, (_, i) => `OP-${i}`);
+    const summary = summarizeOwners(makeCatalog(owners));
+    expect(summary.topOwners).toHaveLength(OWNER_LEADERBOARD_SIZE);
+    expect(summary.totalOwners).toBe(OWNER_LEADERBOARD_SIZE + 3);
+  });
+
+  it("reports a null largest owner and zero total for an empty catalog", () => {
+    const summary = summarizeOwners([]);
+    expect(summary.totalOwners).toBe(0);
+    expect(summary.byOwner).toEqual({});
+    expect(summary.topOwners).toEqual([]);
+    expect(summary.largestOwner).toBeNull();
+  });
+});
+
 describe("canonicalOwner", () => {
   it("trims surrounding whitespace", () => {
     expect(canonicalOwner("  SpaceX  ")).toBe("SpaceX");
@@ -41,143 +238,39 @@ describe("canonicalOwner", () => {
   });
 });
 
-describe("countByOwner", () => {
-  it("tallies objects per operator", () => {
-    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA", "ESA", "ESA"]);
-    expect(countByOwner(catalog)).toEqual([
-      { owner: "ESA", count: 3 },
-      { owner: "SpaceX", count: 2 },
-      { owner: "NASA", count: 1 }
-    ]);
+describe("blank owner bucketing", () => {
+  it("groups blank owners under the UNKNOWN label", () => {
+    const catalog = makeCatalog(["SpaceX", "", "   "]);
+    expect(countByOwner(catalog)).toEqual({ SpaceX: 1, [UNKNOWN_OWNER]: 2 });
   });
 
-  it("returns an empty array for an empty catalog", () => {
-    expect(countByOwner([])).toEqual([]);
-  });
-
-  it("groups owners case-insensitively and ignoring whitespace", () => {
-    const catalog = makeCatalog(["SpaceX", "spacex", "  SPACEX  "]);
-    expect(countByOwner(catalog)).toEqual([{ owner: "SpaceX", count: 3 }]);
-  });
-
-  it("keeps the first-seen spelling as the display label", () => {
-    const catalog = makeCatalog(["esa", "ESA"]);
-    expect(countByOwner(catalog)[0].owner).toBe("esa");
-  });
-
-  it("buckets blank owners under UNKNOWN", () => {
-    const catalog = makeCatalog(["", "   ", "NASA"]);
-    expect(countByOwner(catalog)).toEqual([
-      { owner: UNKNOWN_OWNER, count: 2 },
-      { owner: "NASA", count: 1 }
-    ]);
-  });
-
-  it("breaks count ties alphabetically by owner label", () => {
-    const catalog = makeCatalog(["Zenith", "Acme"]);
-    expect(countByOwner(catalog)).toEqual([
-      { owner: "Acme", count: 1 },
-      { owner: "Zenith", count: 1 }
-    ]);
-  });
-
-  it("does not mutate the input array", () => {
-    const catalog = makeCatalog(["NASA", "ESA"]);
-    const snapshot = [...catalog];
-    countByOwner(catalog);
-    expect(catalog).toEqual(snapshot);
+  it("addresses the UNKNOWN bucket from a blank or explicit argument", () => {
+    const catalog = makeCatalog(["SpaceX", "", "  "]);
+    expect(ownerShare(catalog, "")).toBeCloseTo(2 / 3);
+    expect(ownerShare(catalog, UNKNOWN_OWNER)).toBeCloseTo(2 / 3);
+    expect(ownerRank(catalog, "")).toBe(1);
   });
 });
 
-describe("distinctOwnerCount", () => {
-  it("counts each operator once regardless of object count", () => {
-    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA", "ESA"]);
-    expect(distinctOwnerCount(catalog)).toBe(3);
+describe("ownerRank", () => {
+  it("ranks operators from busiest to least busy", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(ownerRank(catalog, "SpaceX")).toBe(1);
+    expect(ownerRank(catalog, "NASA")).toBe(2);
+    expect(ownerRank(catalog, "ESA")).toBe(3);
   });
 
-  it("returns 0 for an empty catalog", () => {
-    expect(distinctOwnerCount([])).toBe(0);
-  });
-
-  it("collapses case and whitespace variants into one operator", () => {
-    const catalog = makeCatalog(["ESA", "esa", "  ESA "]);
-    expect(distinctOwnerCount(catalog)).toBe(1);
-  });
-
-  it("treats all blank owners as a single UNKNOWN operator", () => {
-    const catalog = makeCatalog(["", "   ", "NASA"]);
-    expect(distinctOwnerCount(catalog)).toBe(2);
-  });
-});
-
-describe("topOwners", () => {
-  it("returns the busiest operators in descending order", () => {
-    const catalog = makeCatalog([
-      "SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"
-    ]);
-    expect(topOwners(catalog, 2)).toEqual([
-      { owner: "SpaceX", count: 3 },
-      { owner: "NASA", count: 2 }
-    ]);
-  });
-
-  it("defaults to the top five operators", () => {
-    const catalog = makeCatalog(["A", "B", "C", "D", "E", "F"]);
-    expect(topOwners(catalog)).toHaveLength(5);
-  });
-
-  it("returns an empty array for a non-positive limit", () => {
-    const catalog = makeCatalog(["NASA", "ESA"]);
-    expect(topOwners(catalog, 0)).toEqual([]);
-    expect(topOwners(catalog, -3)).toEqual([]);
-  });
-
-  it("returns every operator when the limit exceeds the distinct count", () => {
-    const catalog = makeCatalog(["NASA", "ESA"]);
-    expect(topOwners(catalog, 10)).toHaveLength(2);
-  });
-});
-
-describe("largestOperator", () => {
-  it("returns the operator with the most tracked objects", () => {
-    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA"]);
-    expect(largestOperator(catalog)).toEqual({ owner: "SpaceX", count: 2 });
-  });
-
-  it("returns null for an empty catalog", () => {
-    expect(largestOperator([])).toBeNull();
-  });
-
-  it("breaks ties alphabetically by owner label", () => {
-    const catalog = makeCatalog(["Zenith", "Acme"]);
-    expect(largestOperator(catalog)).toEqual({ owner: "Acme", count: 1 });
-  });
-});
-
-describe("ownerShare", () => {
-  it("returns the fraction of the catalog held by an operator", () => {
-    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA"]);
-    expect(ownerShare(catalog, "SpaceX")).toBeCloseTo(0.75);
-    expect(ownerShare(catalog, "NASA")).toBeCloseTo(0.25);
+  it("returns null for an operator not in the catalog", () => {
+    expect(ownerRank(makeCatalog(["NASA"]), "SpaceX")).toBeNull();
   });
 
   it("matches owners case- and whitespace-insensitively", () => {
-    const catalog = makeCatalog(["ESA", "esa", "NASA"]);
-    expect(ownerShare(catalog, "  esa ")).toBeCloseTo(2 / 3);
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA"]);
+    expect(ownerRank(catalog, "  spacex ")).toBe(1);
   });
 
-  it("returns 0 for an operator not in the catalog", () => {
-    const catalog = makeCatalog(["NASA", "ESA"]);
-    expect(ownerShare(catalog, "SpaceX")).toBe(0);
-  });
-
-  it("returns 0 for an empty catalog", () => {
-    expect(ownerShare([], "NASA")).toBe(0);
-  });
-
-  it("matches a blank argument against the UNKNOWN bucket", () => {
-    const catalog = makeCatalog(["", "NASA"]);
-    expect(ownerShare(catalog, "")).toBeCloseTo(0.5);
+  it("returns null for an empty catalog", () => {
+    expect(ownerRank([], "NASA")).toBeNull();
   });
 });
 
@@ -206,17 +299,11 @@ describe("elevatedRiskByOwner", () => {
       ["SpaceX", "warning"],
       ["NASA", "watch"]
     ]);
-    expect(elevatedRiskByOwner(catalog, "warning")).toEqual([
-      { owner: "SpaceX", count: 1 }
-    ]);
+    expect(elevatedRiskByOwner(catalog, "warning")).toEqual([{ owner: "SpaceX", count: 1 }]);
   });
 
   it("returns an empty array when nothing is flagged", () => {
-    const catalog = makeFlagged([
-      ["SpaceX", "nominal"],
-      ["NASA", "nominal"]
-    ]);
-    expect(elevatedRiskByOwner(catalog)).toEqual([]);
+    expect(elevatedRiskByOwner(makeFlagged([["SpaceX", "nominal"]]))).toEqual([]);
   });
 
   it("returns an empty array for an empty catalog", () => {
@@ -224,58 +311,16 @@ describe("elevatedRiskByOwner", () => {
   });
 });
 
-describe("ownerRank", () => {
-  it("ranks operators from busiest to least busy", () => {
-    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
-    expect(ownerRank(catalog, "SpaceX")).toBe(1);
-    expect(ownerRank(catalog, "NASA")).toBe(2);
-    expect(ownerRank(catalog, "ESA")).toBe(3);
+describe("summarizeOwners largestShare", () => {
+  it("reports the leading operator's share of the catalog", () => {
+    const summary = summarizeOwners(makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA"]));
+    expect(summary.largestOwner).toEqual({ owner: "SpaceX", count: 3 });
+    expect(summary.largestShare).toBeCloseTo(0.75);
   });
 
-  it("returns null for an operator not in the catalog", () => {
-    const catalog = makeCatalog(["NASA"]);
-    expect(ownerRank(catalog, "SpaceX")).toBeNull();
-  });
-
-  it("matches owners case- and whitespace-insensitively", () => {
-    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA"]);
-    expect(ownerRank(catalog, "  spacex ")).toBe(1);
-  });
-
-  it("returns null for an empty catalog", () => {
-    expect(ownerRank([], "NASA")).toBeNull();
-  });
-});
-
-describe("summarizeOwnership", () => {
-  it("bundles every aggregate consistently", () => {
-    const catalog = makeCatalog([
-      "SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"
-    ]);
-    const summary = summarizeOwnership(catalog);
-    expect(summary.total).toBe(6);
-    expect(summary.distinctOwners).toBe(3);
-    expect(summary.top).toEqual([
-      { owner: "SpaceX", count: 3 },
-      { owner: "NASA", count: 2 },
-      { owner: "ESA", count: 1 }
-    ]);
-    expect(summary.largest).toEqual({ owner: "SpaceX", count: 3 });
-    expect(summary.largestShare).toBeCloseTo(0.5);
-  });
-
-  it("honours the topLimit argument", () => {
-    const catalog = makeCatalog(["A", "B", "C", "D"]);
-    expect(summarizeOwnership(catalog, 2).top).toHaveLength(2);
-  });
-
-  it("returns a safe zeroed summary for an empty catalog", () => {
-    expect(summarizeOwnership([])).toEqual({
-      total: 0,
-      distinctOwners: 0,
-      top: [],
-      largest: null,
-      largestShare: 0
-    });
+  it("reports a zero share for an empty catalog", () => {
+    const summary = summarizeOwners([]);
+    expect(summary.largestOwner).toBeNull();
+    expect(summary.largestShare).toBe(0);
   });
 });

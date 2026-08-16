@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import type { Conjunction, Satellite, SourceDiagnostic } from "../../types/space";
+import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
+import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
-import { formatProbability, formatUtcTime } from "../../utils/format";
+import { formatCountdownToTca, formatProbability, formatUtcTime } from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
@@ -66,34 +67,11 @@ const getConjunctionAction = (probability: number): { label: string; className: 
   };
 };
 
-const toCountdown = (target: Date | string): string => {
-  const d = target instanceof Date ? target : new Date(target);
-  const rawDiffMs = d.getTime() - Date.now();
-  if (rawDiffMs < 0) {
-    const elapsed = Math.abs(rawDiffMs);
-    const totalSeconds = Math.floor(elapsed / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (days > 0) return `PASSED ${days}d ${hours.toString().padStart(2, "0")}h ago`;
-    return `PASSED ${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")} ago`;
-  }
-  const totalSeconds = Math.floor(rawDiffMs / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-};
-
 const getStatusClass = (status: SourceDiagnostic["status"]): string => {
   if (status === "ERROR") return "text-[#ff7d7d]";
   if (status === "STALE") return "text-[#ffcd73]";
   return "text-[#7df0b2]";
 };
-
-const findConjunctionPeerName = (satellite: Satellite, conjunction: Conjunction): string =>
-  conjunction.object1.noradId === satellite.noradId ? conjunction.object2.name : conjunction.object1.name;
 
 const getOrbitPeriodMinutes = (altitudeKm: number): number =>
   getOrbitalPeriod(earthRadiusMeters + altitudeKm * 1000) / 60;
@@ -176,9 +154,9 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
             <div className="space-y-1">
               {relatedConjunctions.map((conjunction) => (
                 <div key={conjunction.id} className="rounded-sm border border-white/10 px-2 py-1">
-                  <p className="truncate text-[11px] text-white">{findConjunctionPeerName(selectedSatellite, conjunction)}</p>
+                  <p className="truncate text-[11px] text-white">{conjunctionPeerName(selectedSatellite, conjunction)}</p>
                   <p className="text-[10px] text-[#9cc2de]">
-                    TCA {toCountdown(conjunction.tca)} | {conjunction.missDistanceM}m | Pc {formatProbability(conjunction.probability)}
+                    TCA {formatCountdownToTca(conjunction.tca)} | {conjunction.missDistanceM}m | Pc {formatProbability(conjunction.probability)}
                   </p>
                 </div>
               ))}
@@ -267,7 +245,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>TCA (UTC)</span>
             <span className="text-right text-[11px]">{(selectedConjunction.tca instanceof Date ? selectedConjunction.tca : new Date(selectedConjunction.tca)).toISOString().replace("T", " ").replace(".000Z", " UTC")}</span>
             <span>Time until TCA</span>
-            <span className="text-right">{toCountdown(selectedConjunction.tca)}</span>
+            <span className="text-right">{formatCountdownToTca(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{selectedConjunction.missDistanceM} m</span>
             <span>Relative velocity</span>

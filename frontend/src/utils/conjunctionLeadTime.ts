@@ -1,0 +1,163 @@
+import type { ConjunctionWarning } from "../types/space";
+
+/**
+ * Upper bounds, in minutes of lead time, that separate the conjunction
+ * lead-time buckets. A conjunction whose time of closest approach (TCA) is at or
+ * below a threshold — and above the previous one — falls into that bucket:
+ * `imminent` (≤ 1 hour), `soon` (≤ 6 hours), `upcoming` (≤ 24 hours). Anything
+ * further out is `later`, and a TCA in the past is `passed`. These windows are
+ * shared by the timeline and conjunction panels so lead-time grouping stays
+ * consistent across the UI.
+ */
+export const CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES = {
+  imminent: 60,
+  soon: 360,
+  upcoming: 1440
+} as const;
+
+/**
+ * Signed lead time in minutes from `now` to a conjunction's TCA. Positive when
+ * the TCA is still in the future and negative once it has elapsed. Accepts a
+ * `Date` or ISO string for the TCA. The value is not rounded, so callers can
+ * apply their own precision.
+ */
+export const leadTimeMinutes = (tca: Date | string, now: Date): number => {
+  const tcaDate = tca instanceof Date ? tca : new Date(tca);
+  return (tcaDate.getTime() - now.getTime()) / 60_000;
+};
+
+/**
+ * Lead-time bucket for a conjunction, ordered from most to least urgent:
+ * `passed` (TCA already elapsed), `imminent`, `soon`, `upcoming`, and `later`.
+ */
+export type ConjunctionLeadTimeBucket = "passed" | "imminent" | "soon" | "upcoming" | "later";
+
+/**
+ * Lead-time buckets in urgency order, most urgent first. Handy for rendering a
+ * stable set of rows or iterating tiers without re-listing the string union.
+ */
+export const CONJUNCTION_LEAD_TIME_BUCKETS: readonly ConjunctionLeadTimeBucket[] = [
+  "passed",
+  "imminent",
+  "soon",
+  "upcoming",
+  "later"
+] as const;
+
+/**
+ * Classifies a conjunction's TCA into a {@link ConjunctionLeadTimeBucket}
+ * relative to `now`, using {@link CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES}. A
+ * TCA in the past is `passed`; otherwise the lead time is compared against the
+ * `imminent`/`soon`/`upcoming` window bounds, falling through to `later`. Each
+ * boundary is inclusive of its upper edge, so a lead time of exactly one hour is
+ * `imminent`.
+ */
+export const classifyConjunctionLeadTime = (
+  tca: Date | string,
+  now: Date
+): ConjunctionLeadTimeBucket => {
+  const minutes = leadTimeMinutes(tca, now);
+  if (minutes < 0) return "passed";
+  if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.imminent) return "imminent";
+  if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.soon) return "soon";
+  if (minutes <= CONJUNCTION_LEAD_TIME_THRESHOLDS_MINUTES.upcoming) return "upcoming";
+  return "later";
+};
+
+/**
+ * Tallies how many conjunctions fall in each lead-time bucket relative to `now`.
+ * Every bucket in {@link CONJUNCTION_LEAD_TIME_BUCKETS} is present in the result,
+ * defaulting to zero, so a display can render a stable set of rows regardless of
+ * the feed contents. The input is not mutated.
+ */
+export const countConjunctionsByLeadTime = (
+  conjunctions: readonly ConjunctionWarning[],
+  now: Date
+): Record<ConjunctionLeadTimeBucket, number> => {
+  const counts: Record<ConjunctionLeadTimeBucket, number> = {
+    passed: 0,
+    imminent: 0,
+    soon: 0,
+    upcoming: 0,
+    later: 0
+  };
+  for (const conjunction of conjunctions) {
+    counts[classifyConjunctionLeadTime(conjunction.tca, now)] += 1;
+  }
+  return counts;
+};
+
+/**
+ * Filters a feed to the conjunctions whose TCA falls within the next
+ * `windowMinutes` — that is, still ahead of `now` and no more than the window
+ * away. Already-passed conjunctions are excluded, and the window's upper edge is
+ * inclusive. The input is not mutated and the original ordering is preserved.
+ */
+export const conjunctionsWithinMinutes = (
+  conjunctions: readonly ConjunctionWarning[],
+  windowMinutes: number,
+  now: Date
+): ConjunctionWarning[] =>
+  conjunctions.filter((conjunction) => {
+    const minutes = leadTimeMinutes(conjunction.tca, now);
+    return minutes >= 0 && minutes <= windowMinutes;
+  });
+
+/**
+ * Lead time in minutes to the soonest still-upcoming conjunction, or `null` when
+ * none lie ahead of `now`. Already-passed conjunctions are ignored, so this
+ * answers "how long until the next close approach?" directly. The input is not
+ * mutated.
+ */
+export const nextLeadTimeMinutes = (
+  conjunctions: readonly ConjunctionWarning[],
+  now: Date
+): number | null => {
+  let soonest: number | null = null;
+  for (const conjunction of conjunctions) {
+    const minutes = leadTimeMinutes(conjunction.tca, now);
+    if (minutes < 0) continue;
+    if (soonest === null || minutes < soonest) soonest = minutes;
+  }
+  return soonest;
+};
+
+/**
+ * Short human-readable label for each lead-time bucket, with the window it
+ * covers, for use in legends and panel headers. Centralised here so every
+ * display names the tiers identically.
+ */
+export const CONJUNCTION_LEAD_TIME_BUCKET_LABELS: Record<ConjunctionLeadTimeBucket, string> = {
+  passed: "Passed",
+  imminent: "Imminent (< 1h)",
+  soon: "Soon (< 6h)",
+  upcoming: "Upcoming (< 24h)",
+  later: "Later (> 24h)"
+};
+
+/** Lead-time view of a conjunction feed, suitable for a timeline or HUD header. */
+export interface ConjunctionLeadTimeSummary {
+  /** Conjunction counts keyed by lead-time bucket. */
+  byBucket: Record<ConjunctionLeadTimeBucket, number>;
+  /** Lead time in minutes to the soonest upcoming conjunction, or `null`. */
+  nextLeadMinutes: number | null;
+  /** Number of conjunctions still ahead of `now` (every bucket but `passed`). */
+  upcoming: number;
+}
+
+/**
+ * Bundles the lead-time aggregates for a feed into a single struct so a display
+ * can derive every figure from one list and one reference time. All members
+ * reuse the individual helpers in this module, so they stay mutually consistent.
+ */
+export const summarizeConjunctionLeadTime = (
+  conjunctions: readonly ConjunctionWarning[],
+  now: Date
+): ConjunctionLeadTimeSummary => {
+  const byBucket = countConjunctionsByLeadTime(conjunctions, now);
+  return {
+    byBucket,
+    nextLeadMinutes: nextLeadTimeMinutes(conjunctions, now),
+    upcoming: conjunctions.length - byBucket.passed
+  };
+};
