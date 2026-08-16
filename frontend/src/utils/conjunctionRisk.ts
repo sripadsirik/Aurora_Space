@@ -34,6 +34,31 @@ export const isActionableConjunctionRisk = (probability: number): boolean =>
   probability > CONJUNCTION_RISK_THRESHOLDS.warning;
 
 /**
+ * Miss-distance cut-offs (in metres) that separate a conjunction's proximity
+ * severity. A distance strictly below `critical` is `critical`; below `warning`
+ * is `warning`; anything else is `nominal`. These mirror the collision-probability
+ * tiers but key off physical separation, and are shared by the detail and list
+ * panels so the colour thresholds are defined once.
+ */
+export const MISS_DISTANCE_THRESHOLDS = {
+  critical: 500,
+  warning: 1000
+} as const;
+
+/** Proximity severity derived purely from a conjunction's miss distance. */
+export type MissDistanceSeverity = "critical" | "warning" | "nominal";
+
+/**
+ * Classifies a miss distance (in metres) into a {@link MissDistanceSeverity}
+ * using {@link MISS_DISTANCE_THRESHOLDS}.
+ */
+export const classifyMissDistanceSeverity = (meters: number): MissDistanceSeverity => {
+  if (meters < MISS_DISTANCE_THRESHOLDS.critical) return "critical";
+  if (meters < MISS_DISTANCE_THRESHOLDS.warning) return "warning";
+  return "nominal";
+};
+
+/**
  * Maps a conjunction {@link RiskLevel} to the Tailwind text-colour class used by
  * the conjunction tables. `critical` and `warning` have fixed colours shared by
  * every panel; the class for the calmer `watch`/`nominal` tiers is supplied by
@@ -44,6 +69,29 @@ export const conjunctionRiskTextClass = (risk: RiskLevel, defaultClass: string):
   if (risk === "warning") return "text-[#ffcd73]";
   return defaultClass;
 };
+
+/**
+ * Maps a miss distance (in metres) to the Tailwind text-colour class used for
+ * the distance figure in the conjunction panels: red when critically close,
+ * amber in the warning band, and green once comfortably clear. Centralises the
+ * colour ramp that the detail panel previously derived inline.
+ */
+export const missDistanceSeverityTextClass = (meters: number): string => {
+  const severity = classifyMissDistanceSeverity(meters);
+  if (severity === "critical") return "text-[#ff7d7d]";
+  if (severity === "warning") return "text-[#ffcd73]";
+  return "text-[#7de6b1]";
+};
+
+/**
+ * Rough avoidance-maneuver budget (in metres per second of delta-v) implied by a
+ * conjunction's collision probability. This is a first-order display heuristic —
+ * delta-v scales linearly with probability so the intel table can surface a
+ * comparable "how much thrust would this cost" figure — not a propagated burn
+ * solution. Negative probabilities clamp to zero.
+ */
+export const estimateManeuverDeltaVMs = (probability: number): number =>
+  Math.max(0, probability) * 10000;
 
 /**
  * Fleet-level severity for a collection of active conjunctions, ordered from

@@ -2,12 +2,13 @@ import { useEffect } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
+import { formatConjunctionPairLabel } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
   sortConjunctionsByProbabilityDesc
 } from "../../utils/conjunctionRisk";
-import { formatDurationToTca, formatProbability } from "../../utils/format";
+import { formatDurationToTca, formatManeuverDeltaV, formatProbability } from "../../utils/format";
 
 interface AltitudeBand {
   label: string;
@@ -96,7 +97,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
               {sorted.map((conj, idx) => {
                 const risk = classifyConjunctionRisk(conj.probability);
                 const rowColor = conjunctionRiskTextClass(risk, "text-white");
-                const deltaV = `~${(conj.probability * 10000).toFixed(1)} m/s`;
+                const deltaV = formatManeuverDeltaV(conj.probability);
                 return (
                   <tr
                     key={conj.id}
@@ -105,7 +106,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
                   >
                     <td className="px-1 py-1">{idx + 1}</td>
                     <td className="max-w-[120px] truncate px-1 py-1">
-                      {conj.object1.name} x {conj.object2.name}
+                      {formatConjunctionPairLabel(conj)}
                     </td>
                     <td className="px-1 py-1 text-right">{formatProbability(conj.probability)}</td>
                     <td className="px-1 py-1 text-right">{formatDurationToTca(conj.tca)}</td>

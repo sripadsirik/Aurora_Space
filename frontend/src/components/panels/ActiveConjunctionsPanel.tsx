@@ -1,11 +1,12 @@
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
+import { formatConjunctionPairLabel } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
   sortConjunctionsByProbabilityDesc
 } from "../../utils/conjunctionRisk";
-import { formatDurationToTca, formatProbability } from "../../utils/format";
+import { formatDurationToTca, formatMissDistance, formatProbability } from "../../utils/format";
 
 export const ActiveConjunctionsPanel = (): JSX.Element | null => {
   const activePanels = useAuroraStore((s) => s.activePanels);
@@ -38,7 +39,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
               <th className="px-1 py-1 text-left">PAIR</th>
               <th className="px-1 py-1 text-right">Pc</th>
               <th className="px-1 py-1 text-right">TCA</th>
-              <th className="px-1 py-1 text-right">MISS (m)</th>
+              <th className="px-1 py-1 text-right">MISS</th>
             </tr>
           </thead>
           <tbody>
@@ -56,11 +57,11 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
                 >
                   <td className="px-1 py-1.5">{idx + 1}</td>
                   <td className="px-1 py-1.5 truncate max-w-[200px]">
-                    {conj.object1.name} x {conj.object2.name}
+                    {formatConjunctionPairLabel(conj)}
                   </td>
                   <td className="px-1 py-1.5 text-right">{formatProbability(conj.probability)}</td>
                   <td className="px-1 py-1.5 text-right">{formatDurationToTca(conj.tca)}</td>
-                  <td className="px-1 py-1.5 text-right">{conj.missDistanceM}</td>
+                  <td className="px-1 py-1.5 text-right">{formatMissDistance(conj.missDistanceM)}</td>
                 </tr>
               );
             })}

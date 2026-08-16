@@ -29,6 +29,11 @@ describe("sparklineY", () => {
   it("collapses a zero-width range to the bottom edge", () => {
     expect(sparklineY(7, { height: 40, min: 7, max: 7 })).toBe(40);
   });
+
+  it("collapses to the bottom edge when max is omitted", () => {
+    expect(sparklineY(5, { height: 40, min: 0 })).toBe(40);
+    expect(sparklineY(2, { height: 30, min: 2 })).toBe(30);
+  });
 });
 
 describe("sparklinePoints", () => {
@@ -98,5 +103,9 @@ describe("sparklineThresholdY", () => {
 
   it("clamps a threshold above the range to the top edge", () => {
     expect(sparklineThresholdY(20, { width: 10, height: 40, min: 0, max: 10 })).toBe(0);
+  });
+
+  it("defaults min to zero when omitted", () => {
+    expect(sparklineThresholdY(5, { width: 10, height: 40, max: 10 })).toBe(20);
   });
 });

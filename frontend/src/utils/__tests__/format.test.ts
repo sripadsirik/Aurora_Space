@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
   formatConjunctionWarningLabel,
+  formatCountdownToTca,
   formatDurationToTca,
+  formatEclipseFraction,
+  formatManeuverDeltaV,
+  formatMissDistance,
   formatOrbitalPeriod,
   formatProbability,
   formatUtcTime,
@@ -40,6 +44,42 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
+  });
+});
+
+describe("formatMissDistance", () => {
+  it("renders sub-kilometre distances in whole metres", () => {
+    expect(formatMissDistance(248)).toBe("248 m");
+  });
+
+  it("rounds fractional metres to the nearest whole metre", () => {
+    expect(formatMissDistance(612.4)).toBe("612 m");
+  });
+
+  it("groups thousands with separators below the kilometre cutoff", () => {
+    expect(formatMissDistance(8500)).toBe("8,500 m");
+  });
+
+  it("switches to kilometres with one fraction digit at 10 km and above", () => {
+    expect(formatMissDistance(10000)).toBe("10.0 km");
+    expect(formatMissDistance(12540)).toBe("12.5 km");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatMissDistance(-5)).toBe("—");
+    expect(formatMissDistance(NaN)).toBe("—");
+    expect(formatMissDistance(Infinity)).toBe("—");
+  });
+});
+
+describe("formatManeuverDeltaV", () => {
+  it("scales linearly with probability and rounds to one decimal", () => {
+    expect(formatManeuverDeltaV(0.0012)).toBe("~12.0 m/s");
+    expect(formatManeuverDeltaV(0.00005)).toBe("~0.5 m/s");
+  });
+
+  it("renders a zero probability as zero delta-V", () => {
+    expect(formatManeuverDeltaV(0)).toBe("~0.0 m/s");
   });
 });
 
@@ -100,6 +140,23 @@ describe("formatOrbitalPeriod", () => {
   });
 });
 
+describe("formatEclipseFraction", () => {
+  it("renders a fraction as a rounded whole percent", () => {
+    expect(formatEclipseFraction(0.373)).toBe("37%");
+    expect(formatEclipseFraction(0.048)).toBe("5%");
+  });
+
+  it("clamps out-of-range inputs to 0 and 100 percent", () => {
+    expect(formatEclipseFraction(-0.2)).toBe("0%");
+    expect(formatEclipseFraction(1.4)).toBe("100%");
+  });
+
+  it("renders the exact endpoints", () => {
+    expect(formatEclipseFraction(0)).toBe("0%");
+    expect(formatEclipseFraction(1)).toBe("100%");
+  });
+});
+
 describe("formatDurationToTca", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -124,5 +181,32 @@ describe("formatDurationToTca", () => {
 
   it("reports a long-passed TCA in days and hours", () => {
     expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
+  });
+});
+
+describe("formatCountdownToTca", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-21T00:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders a future TCA as a zero-padded HH:MM:SS clock", () => {
+    expect(formatCountdownToTca(new Date("2026-07-21T02:03:04Z"))).toBe("02:03:04");
+  });
+
+  it("accepts an ISO string as input", () => {
+    expect(formatCountdownToTca("2026-07-21T01:15:09Z")).toBe("01:15:09");
+  });
+
+  it("reports a recently passed TCA as a padded clock", () => {
+    expect(formatCountdownToTca(new Date("2026-07-20T23:58:30Z"))).toBe("PASSED 00:01:30 ago");
+  });
+
+  it("switches to days and hours once a passed TCA is over a day old", () => {
+    expect(formatCountdownToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
   });
 });
