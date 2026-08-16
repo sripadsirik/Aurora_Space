@@ -141,4 +141,21 @@ describe("theoreticalMaxDailyContactSeconds", () => {
       theoreticalMaxDailyContactSeconds(satellite, 0)
     );
   });
+
+  it("depends only on altitude and mask, not orbit type or period", () => {
+    // The per-pass duration and revolutions-per-day period factors cancel, so
+    // two satellites at the same altitude give the same daily ceiling even if
+    // their orbit-type metadata differs.
+    const leo = makeSatellite({ altitudeKm: 1200, orbitType: "LEO", noradId: 7 });
+    const meo = makeSatellite({ altitudeKm: 1200, orbitType: "MEO", noradId: 999 });
+    expect(theoreticalMaxDailyContactSeconds(meo)).toBeCloseTo(
+      theoreticalMaxDailyContactSeconds(leo),
+      9
+    );
+  });
+
+  it("never exceeds a full day of seconds", () => {
+    const geo = makeSatellite({ altitudeKm: 35_786, orbitType: "GEO" });
+    expect(theoreticalMaxDailyContactSeconds(geo)).toBeLessThan(86_400);
+  });
 });
