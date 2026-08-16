@@ -83,6 +83,16 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
 };
 
 /**
+ * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
+ * whole-percent string like `37%`. Values are clamped to the 0-1 range before
+ * rounding, so out-of-range inputs read as `0%` or `100%`.
+ */
+export const formatEclipseFraction = (fraction: number): string => {
+  const clamped = Math.min(1, Math.max(0, fraction));
+  return `${Math.round(clamped * 100)}%`;
+};
+
+/**
  * Builds the ops warning-badge label for a given number of active conjunctions,
  * pluralising the noun (for example `1 ACTIVE CONJUNCTION WARNING` versus
  * `3 ACTIVE CONJUNCTION WARNINGS`). Negative counts are clamped to zero.

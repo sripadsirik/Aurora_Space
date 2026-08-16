@@ -4,6 +4,7 @@ import {
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
+  formatEclipseFraction,
   formatManeuverDeltaV,
   formatOrbitalPeriod,
   formatProbability,
@@ -110,6 +111,23 @@ describe("formatOrbitalPeriod", () => {
 
   it("clamps negative inputs to zero", () => {
     expect(formatOrbitalPeriod(-5)).toBe("0m");
+  });
+});
+
+describe("formatEclipseFraction", () => {
+  it("renders a fraction as a rounded whole percent", () => {
+    expect(formatEclipseFraction(0.373)).toBe("37%");
+    expect(formatEclipseFraction(0.048)).toBe("5%");
+  });
+
+  it("clamps out-of-range inputs to 0 and 100 percent", () => {
+    expect(formatEclipseFraction(-0.2)).toBe("0%");
+    expect(formatEclipseFraction(1.4)).toBe("100%");
+  });
+
+  it("renders the exact endpoints", () => {
+    expect(formatEclipseFraction(0)).toBe("0%");
+    expect(formatEclipseFraction(1)).toBe("100%");
   });
 });
 
