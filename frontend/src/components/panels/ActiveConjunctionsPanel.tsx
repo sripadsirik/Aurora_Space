@@ -6,7 +6,7 @@ import {
   conjunctionRiskTextClass,
   sortConjunctionsByProbabilityDesc
 } from "../../utils/conjunctionRisk";
-import { formatDurationToTca, formatProbability } from "../../utils/format";
+import { formatDurationToTca, formatMissDistance, formatProbability } from "../../utils/format";
 
 export const ActiveConjunctionsPanel = (): JSX.Element | null => {
   const activePanels = useAuroraStore((s) => s.activePanels);
@@ -39,7 +39,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
               <th className="px-1 py-1 text-left">PAIR</th>
               <th className="px-1 py-1 text-right">Pc</th>
               <th className="px-1 py-1 text-right">TCA</th>
-              <th className="px-1 py-1 text-right">MISS (m)</th>
+              <th className="px-1 py-1 text-right">MISS</th>
             </tr>
           </thead>
           <tbody>
@@ -61,7 +61,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
                   </td>
                   <td className="px-1 py-1.5 text-right">{formatProbability(conj.probability)}</td>
                   <td className="px-1 py-1.5 text-right">{formatDurationToTca(conj.tca)}</td>
-                  <td className="px-1 py-1.5 text-right">{conj.missDistanceM}</td>
+                  <td className="px-1 py-1.5 text-right">{formatMissDistance(conj.missDistanceM)}</td>
                 </tr>
               );
             })}

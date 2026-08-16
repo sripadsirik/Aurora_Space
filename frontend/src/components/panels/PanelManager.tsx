@@ -6,8 +6,17 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { getKpColor } from "../../utils/colors";
 import { conjunctionPeerName } from "../../utils/conjunctionLabels";
-import { classifyConjunctionRisk } from "../../utils/conjunctionRisk";
-import { formatCountdownToTca, formatProbability, formatUtcTime } from "../../utils/format";
+import {
+  classifyConjunctionRisk,
+  conjunctionRiskTextClass,
+  missDistanceSeverityTextClass
+} from "../../utils/conjunctionRisk";
+import {
+  formatCountdownToTca,
+  formatMissDistance,
+  formatProbability,
+  formatUtcTime
+} from "../../utils/format";
 import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
@@ -156,7 +165,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
                 <div key={conjunction.id} className="rounded-sm border border-white/10 px-2 py-1">
                   <p className="truncate text-[11px] text-white">{conjunctionPeerName(selectedSatellite, conjunction)}</p>
                   <p className="text-[10px] text-[#9cc2de]">
-                    TCA {formatCountdownToTca(conjunction.tca)} | {conjunction.missDistanceM}m | Pc {formatProbability(conjunction.probability)}
+                    TCA {formatCountdownToTca(conjunction.tca)} | {formatMissDistance(conjunction.missDistanceM)} | Pc {formatProbability(conjunction.probability)}
                   </p>
                 </div>
               ))}
@@ -198,19 +207,9 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
   const object1 = satelliteByNorad.get(selectedConjunction.object1.noradId);
   const object2 = satelliteByNorad.get(selectedConjunction.object2.noradId);
 
-  const missDistanceClass =
-    selectedConjunction.missDistanceM < 500
-      ? "text-[#ff7d7d]"
-      : selectedConjunction.missDistanceM < 1000
-        ? "text-[#ffcd73]"
-        : "text-[#7de6b1]";
+  const missDistanceClass = missDistanceSeverityTextClass(selectedConjunction.missDistanceM);
   const probabilityRisk = classifyConjunctionRisk(selectedConjunction.probability);
-  const probabilityClass =
-    probabilityRisk === "critical"
-      ? "text-[#ff7d7d]"
-      : probabilityRisk === "warning"
-        ? "text-[#ffcd73]"
-        : "text-[#7de6b1]";
+  const probabilityClass = conjunctionRiskTextClass(probabilityRisk, "text-[#7de6b1]");
   const gaugeValue = normalizeProbability(selectedConjunction.probability);
   const action = getConjunctionAction(selectedConjunction.probability);
 
@@ -247,7 +246,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>Time until TCA</span>
             <span className="text-right">{formatCountdownToTca(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
-            <span className={`text-right ${missDistanceClass}`}>{selectedConjunction.missDistanceM} m</span>
+            <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>
             <span className="text-right">{selectedConjunction.relativeVelocityKms.toFixed(2)} km/s</span>
             <span>Collision probability</span>
