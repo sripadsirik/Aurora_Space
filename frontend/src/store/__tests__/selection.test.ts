@@ -67,6 +67,15 @@ describe("conjunction selection", () => {
     expect(state.activePanels.has("conjunction-detail")).toBe(true);
   });
 
+  it("closes the detail panel when the selection is cleared", () => {
+    const store = useAuroraStore.getState();
+    store.setSelectedConjunction(conjunction);
+    store.setSelectedConjunction(null);
+    const state = useAuroraStore.getState();
+    expect(state.selectedConjunction).toBeNull();
+    expect(state.activePanels.has("conjunction-detail")).toBe(false);
+  });
+
   it("clears the selection when the detail panel is closed directly", () => {
     const store = useAuroraStore.getState();
     store.setSelectedConjunction(conjunction);

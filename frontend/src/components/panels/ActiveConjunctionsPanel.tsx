@@ -1,5 +1,6 @@
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
+import { formatConjunctionPairLabel } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
@@ -56,7 +57,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
                 >
                   <td className="px-1 py-1.5">{idx + 1}</td>
                   <td className="px-1 py-1.5 truncate max-w-[200px]">
-                    {conj.object1.name} x {conj.object2.name}
+                    {formatConjunctionPairLabel(conj)}
                   </td>
                   <td className="px-1 py-1.5 text-right">{formatProbability(conj.probability)}</td>
                   <td className="px-1 py-1.5 text-right">{formatDurationToTca(conj.tca)}</td>
