@@ -104,6 +104,28 @@ above its horizon), while higher orbits widen it: a single geostationary satelli
 42% of the globe down to the horizon. All figures derive from the same central angle, so they
 stay mutually consistent.
 
+## Ground-Station Passes
+
+How long a ground station can talk to a satellite on a single revolution comes from the pure
+geometry helpers in `frontend/src/utils/satellitePasses.ts`. They combine the coverage-cap
+geometry (`coverageFootprint.ts`) with the orbital period (`orbit.ts`), and each takes an optional
+minimum ground elevation angle (defaulting to `0`, the geometric horizon):
+
+| Helper | Returns |
+| --- | --- |
+| `maxPassSweepDeg` | Horizon-to-horizon true-anomaly arc swept during an overhead pass |
+| `maxPassDurationSeconds` | Longest per-revolution contact window, in seconds |
+| `maxPassDurationMinutes` | The same contact window, in minutes |
+| `theoreticalMaxDailyContactSeconds` | Upper bound on daily contact if every revolution were a zenith pass |
+| `summarizePass` | All of the above bundled into one `PassSummary` for a `Satellite` |
+
+A pass is longest when the ground track carries the satellite straight overhead: it rises at one
+edge of the coverage cap, climbs to the zenith, and sets at the opposite edge, sweeping twice the
+Earth central angle. The figures are idealised upper bounds — they assume a directly overhead pass
+and ignore Earth's rotation beneath the orbit — so they size the *maximum* contact window rather
+than a typical one. Raising the elevation mask always shortens the pass, and higher orbits lengthen
+it as both the coverage cap and the orbital period grow.
+
 ## Orbital Eclipse
 
 How much of each orbit a satellite spends in Earth's shadow versus sunlight comes from the pure
