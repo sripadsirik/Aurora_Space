@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { historicalEvents } from "../data/mock/historicalEvents";
 import { useAuroraStore } from "../store/auroraStore";
 import type { HistoricalEvent } from "../types/space";
+import { clamp01 } from "../utils/clamp";
 import {
   dateToFraction as dateToFractionInWindow,
   formatTimelineDate,
@@ -60,7 +61,7 @@ export const Timeline = (): JSX.Element | null => {
       const track = trackRef.current;
       if (!track) return;
       const rect = track.getBoundingClientRect();
-      const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const fraction = clamp01((clientX - rect.left) / rect.width);
       const date = fractionToDate(fraction);
       setTimelinePosition(date);
 

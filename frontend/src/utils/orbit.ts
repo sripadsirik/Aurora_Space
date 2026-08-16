@@ -86,6 +86,16 @@ export const kpToAuroraRadiusDegrees = (kpIndex: number): number => {
   return 20 + ((clampedKp - 4) / 5) * 20;
 };
 
+/**
+ * Estimates the equatorward boundary latitude of the auroral oval for a Kp
+ * index, in degrees. Each whole Kp step pushes the visible aurora roughly 5.5°
+ * further from the pole, starting from ~90° at Kp 0. The result is clamped to
+ * the `[35, 90]` band so it never falls below typical mid-latitude visibility
+ * or exceeds the pole.
+ */
+export const kpToAuroraBoundaryLatitude = (kpIndex: number): number =>
+  Math.max(35, Math.min(90, 90 - kpIndex * 5.5));
+
 /** Converts the auroral oval radius for a Kp index into metres along Earth's surface. */
 export const auroraRadiusMeters = (kpIndex: number, multiplier = 1): number => {
   const radiusDegrees = kpToAuroraRadiusDegrees(kpIndex) * multiplier;

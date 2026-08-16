@@ -17,7 +17,13 @@ import {
   formatProbability,
   formatUtcTime
 } from "../../utils/format";
-import { earthRadiusMeters, getOrbitalPeriod, kpToAuroraRadiusDegrees } from "../../utils/orbit";
+import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
+import {
+  earthRadiusMeters,
+  getOrbitalPeriod,
+  kpToAuroraBoundaryLatitude,
+  kpToAuroraRadiusDegrees
+} from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
@@ -283,8 +289,8 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const closePanel = useAuroraStore((state) => state.closePanel);
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
   const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
-  const kpPosition = Math.max(0, Math.min(100, (spaceWeather.kpIndex / 9) * 100));
-  const auroraLatitude = Math.max(35, Math.min(90, 90 - spaceWeather.kpIndex * 5.5));
+  const kpPosition = kpToPercent(spaceWeather.kpIndex);
+  const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
 
   const forecast = useMemo(
@@ -384,7 +390,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
               const barWidth = 28;
               const spacing = 10;
               const x = 8 + index * (barWidth + spacing);
-              const barHeight = (item.kp / 9) * 58;
+              const barHeight = kpToBarHeight(item.kp, 58);
               const y = 70 - barHeight;
               return (
                 <g key={item.hoursAhead}>

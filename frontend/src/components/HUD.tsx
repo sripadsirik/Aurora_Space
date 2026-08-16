@@ -6,6 +6,7 @@ import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { describeFeedFreshness } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
   satellites: Satellite[];
@@ -35,7 +36,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   const bzDisplay = timelineEvent?.bzComponent ?? spaceWeather.bzComponent;
   const stormDisplay = timelineEvent?.stormLevel ?? spaceWeather.stormLevel;
 
-  const kpPosition = Math.max(0, Math.min(100, (kpDisplay / 9) * 100));
+  const kpPosition = kpToPercent(kpDisplay);
 
   // Mode-dependent color styles
   const isIntel = currentMode === "INTEL";
