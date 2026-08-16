@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import { earthCentralAngleDeg, slantRangeToHorizonKm } from "../coverageFootprint";
 import { getOrbitParams, getOrbitalPeriod } from "../orbit";
+import { getRevolutionsPerDay } from "../orbitSummary";
 import {
   maxPassDurationMinutes,
   maxPassDurationSeconds,
   maxPassSweepDeg,
-  summarizePass
+  summarizePass,
+  theoreticalMaxDailyContactSeconds
 } from "../satellitePasses";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -102,5 +104,25 @@ describe("summarizePass", () => {
     const summary = summarizePass(makeSatellite({ altitudeKm: 550 }));
     expect(summary.minElevationDeg).toBe(0);
     expect(summary.sweepDeg).toBeCloseTo(2 * earthCentralAngleDeg(550), 10);
+  });
+});
+
+describe("theoreticalMaxDailyContactSeconds", () => {
+  it("is the per-pass duration scaled by revolutions per day", () => {
+    const satellite = makeSatellite({ altitudeKm: 550 });
+    const expected = maxPassDurationSeconds(satellite) * getRevolutionsPerDay(satellite);
+    expect(theoreticalMaxDailyContactSeconds(satellite)).toBeCloseTo(expected, 6);
+  });
+
+  it("never exceeds the number of seconds in a day", () => {
+    const satellite = makeSatellite({ altitudeKm: 550 });
+    expect(theoreticalMaxDailyContactSeconds(satellite)).toBeLessThan(86_400);
+  });
+
+  it("drops under a stricter elevation mask", () => {
+    const satellite = makeSatellite({ altitudeKm: 550 });
+    expect(theoreticalMaxDailyContactSeconds(satellite, 10)).toBeLessThan(
+      theoreticalMaxDailyContactSeconds(satellite, 0)
+    );
   });
 });
