@@ -174,23 +174,29 @@ and the count never disagree.
 
 Owner-level breakdowns of the catalog come from the pure helpers in
 `frontend/src/utils/catalogOwners.ts`, complementing `filterByOwner` in `catalogFilters` with
-a way to enumerate and rank the operators behind a `Satellite[]`:
+a way to enumerate, rank, and summarise the operators behind a `Satellite[]`:
 
 | Helper | Returns |
 | --- | --- |
 | `normalizeOwner` | An owner label trimmed and case-folded for grouping |
+| `canonicalOwner` | An owner's display label; blank collapses to `UNKNOWN_OWNER` |
 | `countByOwner` | Object counts keyed by operator |
 | `uniqueOwners` | Distinct operators sorted case-insensitively |
 | `topOwnersByCount` | Operators ranked by fleet size (optional top-N limit) |
 | `conjunctionsByOwner` | Per-operator sum of active conjunction counts |
 | `topOwnersByConjunctions` | Operators ranked by total active conjunctions |
 | `ownerShare` | An operator's fraction of the catalog, in `[0, 1]` |
+| `ownerRank` | 1-based leaderboard position of an operator, or `null` |
+| `elevatedRiskByOwner` | Per-operator counts of objects at or above a risk threshold |
 | `summarizeOwners` | The aggregates bundled into one `OwnerSummary` struct |
 
 Operators are grouped by their normalised label so spacing and capitalisation differences never
 split one operator across several buckets, while the first spelling encountered is kept as the
-display key. Both ranking helpers break count ties alphabetically so the ordering is
-deterministic, and `ownerShare` returns `0` rather than `NaN` for an empty catalog.
+display key. Blank owner fields collapse into a single `UNKNOWN` bucket, which a blank argument
+and an explicit `UNKNOWN` both address. Both ranking helpers break count ties alphabetically so
+the ordering is deterministic; `elevatedRiskByOwner` reuses `filterElevatedRisk` from
+`catalogFilters` and omits operators with nothing flagged; and `ownerShare` returns `0` (and
+`ownerRank` `null`) rather than `NaN` for an empty catalog or an absent operator.
 
 ## Conjunction Risk Tiers
 

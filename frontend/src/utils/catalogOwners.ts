@@ -1,4 +1,12 @@
-import type { Satellite } from "../types/space";
+import type { RiskLevel, Satellite } from "../types/space";
+import { filterElevatedRisk } from "./catalogFilters";
+
+/**
+ * Display label used when a satellite's owner field is blank or whitespace
+ * only. Grouping still needs a stable key for these objects, and surfacing them
+ * under an explicit bucket is clearer than silently dropping them.
+ */
+export const UNKNOWN_OWNER = "UNKNOWN";
 
 /**
  * Normalises an owner label for grouping and comparison: trims surrounding
@@ -8,25 +16,50 @@ import type { Satellite } from "../types/space";
 export const normalizeOwner = (owner: string): string => owner.trim().toLowerCase();
 
 /**
+ * Normalises an owner string to the label under which it should be displayed:
+ * surrounding whitespace is trimmed, and a blank result collapses to
+ * {@link UNKNOWN_OWNER}.
+ */
+export const canonicalOwner = (owner: string): string => {
+  const trimmed = owner.trim();
+  return trimmed.length === 0 ? UNKNOWN_OWNER : trimmed;
+};
+
+/**
+ * The grouping key for an owner. Blank owners share the key of
+ * {@link UNKNOWN_OWNER}, so an explicit `"UNKNOWN"` argument and an empty owner
+ * field address the same bucket.
+ */
+const ownerKey = (owner: string): string => normalizeOwner(canonicalOwner(owner));
+
+/** Accumulates a per-owner total, keyed for grouping and labelled for display. */
+const tallyByOwner = (
+  satellites: readonly Satellite[],
+  valueOf: (satellite: Satellite) => number
+): Record<string, number> => {
+  const totals: Record<string, number> = {};
+  const displayFor: Record<string, string> = {};
+  for (const satellite of satellites) {
+    const key = ownerKey(satellite.owner);
+    if (displayFor[key] === undefined) {
+      displayFor[key] = canonicalOwner(satellite.owner);
+    }
+    const display = displayFor[key];
+    totals[display] = (totals[display] ?? 0) + valueOf(satellite);
+  }
+  return totals;
+};
+
+/**
  * Counts how many satellites each owner operates. Owners are grouped by their
  * {@link normalizeOwner normalised} label so that spacing and capitalisation
  * differences do not split a single operator across several buckets. The first
  * spelling encountered for an owner is used as the display key in the returned
- * record, preserving the catalog's own casing. The input is not mutated.
+ * record, preserving the catalog's own casing; blank owners are reported under
+ * {@link UNKNOWN_OWNER}. The input is not mutated.
  */
-export const countByOwner = (satellites: readonly Satellite[]): Record<string, number> => {
-  const counts: Record<string, number> = {};
-  const displayFor: Record<string, string> = {};
-  for (const satellite of satellites) {
-    const key = normalizeOwner(satellite.owner);
-    if (displayFor[key] === undefined) {
-      displayFor[key] = satellite.owner.trim();
-    }
-    const display = displayFor[key];
-    counts[display] = (counts[display] ?? 0) + 1;
-  }
-  return counts;
-};
+export const countByOwner = (satellites: readonly Satellite[]): Record<string, number> =>
+  tallyByOwner(satellites, () => 1);
 
 /**
  * Returns the distinct operators in the catalog, sorted alphabetically
@@ -77,35 +110,54 @@ export const topOwnersByCount = (
  */
 export const conjunctionsByOwner = (
   satellites: readonly Satellite[]
-): Record<string, number> => {
-  const totals: Record<string, number> = {};
-  const displayFor: Record<string, string> = {};
-  for (const satellite of satellites) {
-    const key = normalizeOwner(satellite.owner);
-    if (displayFor[key] === undefined) {
-      displayFor[key] = satellite.owner.trim();
-    }
-    const display = displayFor[key];
-    totals[display] = (totals[display] ?? 0) + satellite.conjunctionCount;
-  }
-  return totals;
-};
+): Record<string, number> => tallyByOwner(satellites, (s) => s.conjunctionCount);
 
 /**
  * Fraction of the catalog operated by `owner`, in the range `[0, 1]`. The owner
  * is matched by its {@link normalizeOwner normalised} label, so spacing and case
- * do not matter. Returns 0 for an empty catalog or an owner absent from it, so
- * the figure is always finite rather than `NaN`. The input is not mutated.
+ * do not matter, and a blank argument matches the {@link UNKNOWN_OWNER} bucket.
+ * Returns 0 for an empty catalog or an owner absent from it, so the figure is
+ * always finite rather than `NaN`. The input is not mutated.
  */
 export const ownerShare = (satellites: readonly Satellite[], owner: string): number => {
   if (satellites.length === 0) return 0;
-  const target = normalizeOwner(owner);
+  const target = ownerKey(owner);
   const owned = satellites.reduce(
-    (count, satellite) => (normalizeOwner(satellite.owner) === target ? count + 1 : count),
+    (count, satellite) => (ownerKey(satellite.owner) === target ? count + 1 : count),
     0
   );
   return owned / satellites.length;
 };
+
+/**
+ * The 1-based rank of `owner` in the descending fleet-size ordering of
+ * {@link topOwnersByCount}, or `null` when the operator is absent from the
+ * catalog. The busiest operator ranks 1. Matching is case- and
+ * whitespace-insensitive, and a blank argument ranks the {@link UNKNOWN_OWNER}
+ * bucket. The input is not mutated.
+ */
+export const ownerRank = (satellites: readonly Satellite[], owner: string): number | null => {
+  const target = ownerKey(owner);
+  const index = topOwnersByCount(satellites).findIndex(
+    (entry) => ownerKey(entry.owner) === target
+  );
+  return index === -1 ? null : index + 1;
+};
+
+/**
+ * Tallies, per operator, the objects whose risk level is at or above
+ * `threshold` in the ascending-severity order used across the catalog helpers.
+ * This surfaces which operators carry the most flagged objects. It reuses
+ * `filterElevatedRisk` for the threshold test and {@link topOwnersByCount} for
+ * the grouping, so it shares their ordering and normalisation: results are
+ * ordered most-to-least flagged objects, ties broken alphabetically, and
+ * operators with no flagged objects are omitted entirely. The input is not
+ * mutated.
+ */
+export const elevatedRiskByOwner = (
+  satellites: Satellite[],
+  threshold: RiskLevel = "watch"
+): OwnerCount[] => topOwnersByCount(filterElevatedRisk(satellites, threshold));
 
 /** An operator paired with its total number of active conjunctions. */
 export interface OwnerConjunctions {
@@ -153,6 +205,8 @@ export interface OwnerSummary {
   topOwners: OwnerCount[];
   /** The single largest operator, or `null` for an empty catalog. */
   largestOwner: OwnerCount | null;
+  /** Fraction of the catalog held by the largest operator, in `[0, 1]`. */
+  largestShare: number;
 }
 
 /**
@@ -164,10 +218,12 @@ export interface OwnerSummary {
  */
 export const summarizeOwners = (satellites: readonly Satellite[]): OwnerSummary => {
   const ranked = topOwnersByCount(satellites);
+  const largestOwner = ranked[0] ?? null;
   return {
     totalOwners: ranked.length,
     byOwner: countByOwner(satellites),
     topOwners: ranked.slice(0, OWNER_LEADERBOARD_SIZE),
-    largestOwner: ranked[0] ?? null
+    largestOwner,
+    largestShare: largestOwner === null ? 0 : ownerShare(satellites, largestOwner.owner)
   };
 };

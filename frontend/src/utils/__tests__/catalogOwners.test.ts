@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Satellite } from "../../types/space";
+import type { RiskLevel, Satellite } from "../../types/space";
 import {
+  UNKNOWN_OWNER,
+  canonicalOwner,
   conjunctionsByOwner,
   countByOwner,
+  elevatedRiskByOwner,
   normalizeOwner,
+  ownerRank,
   ownerShare,
   OWNER_LEADERBOARD_SIZE,
   summarizeOwners,
@@ -220,5 +224,103 @@ describe("summarizeOwners", () => {
     expect(summary.byOwner).toEqual({});
     expect(summary.topOwners).toEqual([]);
     expect(summary.largestOwner).toBeNull();
+  });
+});
+
+describe("canonicalOwner", () => {
+  it("trims surrounding whitespace", () => {
+    expect(canonicalOwner("  SpaceX  ")).toBe("SpaceX");
+  });
+
+  it("collapses a blank owner to the UNKNOWN label", () => {
+    expect(canonicalOwner("   ")).toBe(UNKNOWN_OWNER);
+    expect(canonicalOwner("")).toBe(UNKNOWN_OWNER);
+  });
+});
+
+describe("blank owner bucketing", () => {
+  it("groups blank owners under the UNKNOWN label", () => {
+    const catalog = makeCatalog(["SpaceX", "", "   "]);
+    expect(countByOwner(catalog)).toEqual({ SpaceX: 1, [UNKNOWN_OWNER]: 2 });
+  });
+
+  it("addresses the UNKNOWN bucket from a blank or explicit argument", () => {
+    const catalog = makeCatalog(["SpaceX", "", "  "]);
+    expect(ownerShare(catalog, "")).toBeCloseTo(2 / 3);
+    expect(ownerShare(catalog, UNKNOWN_OWNER)).toBeCloseTo(2 / 3);
+    expect(ownerRank(catalog, "")).toBe(1);
+  });
+});
+
+describe("ownerRank", () => {
+  it("ranks operators from busiest to least busy", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA", "NASA", "ESA"]);
+    expect(ownerRank(catalog, "SpaceX")).toBe(1);
+    expect(ownerRank(catalog, "NASA")).toBe(2);
+    expect(ownerRank(catalog, "ESA")).toBe(3);
+  });
+
+  it("returns null for an operator not in the catalog", () => {
+    expect(ownerRank(makeCatalog(["NASA"]), "SpaceX")).toBeNull();
+  });
+
+  it("matches owners case- and whitespace-insensitively", () => {
+    const catalog = makeCatalog(["SpaceX", "SpaceX", "NASA"]);
+    expect(ownerRank(catalog, "  spacex ")).toBe(1);
+  });
+
+  it("returns null for an empty catalog", () => {
+    expect(ownerRank([], "NASA")).toBeNull();
+  });
+});
+
+describe("elevatedRiskByOwner", () => {
+  const makeFlagged = (rows: Array<[string, RiskLevel]>): Satellite[] =>
+    rows.map(([owner, riskLevel], index) =>
+      makeSatellite({ noradId: index + 1, owner, riskLevel })
+    );
+
+  it("counts only objects at or above the default watch threshold, per owner", () => {
+    const catalog = makeFlagged([
+      ["SpaceX", "critical"],
+      ["SpaceX", "warning"],
+      ["SpaceX", "nominal"],
+      ["NASA", "watch"],
+      ["ESA", "nominal"]
+    ]);
+    expect(elevatedRiskByOwner(catalog)).toEqual([
+      { owner: "SpaceX", count: 2 },
+      { owner: "NASA", count: 1 }
+    ]);
+  });
+
+  it("honours a stricter threshold", () => {
+    const catalog = makeFlagged([
+      ["SpaceX", "warning"],
+      ["NASA", "watch"]
+    ]);
+    expect(elevatedRiskByOwner(catalog, "warning")).toEqual([{ owner: "SpaceX", count: 1 }]);
+  });
+
+  it("returns an empty array when nothing is flagged", () => {
+    expect(elevatedRiskByOwner(makeFlagged([["SpaceX", "nominal"]]))).toEqual([]);
+  });
+
+  it("returns an empty array for an empty catalog", () => {
+    expect(elevatedRiskByOwner([])).toEqual([]);
+  });
+});
+
+describe("summarizeOwners largestShare", () => {
+  it("reports the leading operator's share of the catalog", () => {
+    const summary = summarizeOwners(makeCatalog(["SpaceX", "SpaceX", "SpaceX", "NASA"]));
+    expect(summary.largestOwner).toEqual({ owner: "SpaceX", count: 3 });
+    expect(summary.largestShare).toBeCloseTo(0.75);
+  });
+
+  it("reports a zero share for an empty catalog", () => {
+    const summary = summarizeOwners([]);
+    expect(summary.largestOwner).toBeNull();
+    expect(summary.largestShare).toBe(0);
   });
 });
