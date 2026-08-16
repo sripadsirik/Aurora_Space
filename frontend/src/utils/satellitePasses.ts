@@ -1,5 +1,6 @@
 import type { Satellite } from "../types/space";
 import { earthCentralAngleDeg } from "./coverageFootprint";
+import { getOrbitParams, getOrbitalPeriod } from "./orbit";
 
 /**
  * Total arc, in degrees of true anomaly, that a satellite sweeps while above a
@@ -14,3 +15,19 @@ import { earthCentralAngleDeg } from "./coverageFootprint";
  */
 export const maxPassSweepDeg = (altitudeKm: number, minElevationDeg = 0): number =>
   2 * earthCentralAngleDeg(altitudeKm, minElevationDeg);
+
+/**
+ * Longest time, in seconds, that a satellite can stay above a ground station's
+ * horizon on a single revolution, for the given minimum elevation mask. The
+ * satellite covers the horizon-to-horizon sweep at its mean angular rate, so the
+ * duration is the fraction `sweep / 360` of the orbital period.
+ *
+ * This is an idealised upper bound: it assumes a directly overhead pass and
+ * ignores Earth's rotation beneath the orbit, which nudges real passes slightly
+ * shorter or longer. It is still the standard first-order figure for sizing the
+ * maximum contact window per pass.
+ */
+export const maxPassDurationSeconds = (satellite: Satellite, minElevationDeg = 0): number => {
+  const periodSeconds = getOrbitalPeriod(getOrbitParams(satellite).radius);
+  return (maxPassSweepDeg(satellite.altitudeKm, minElevationDeg) / 360) * periodSeconds;
+};
