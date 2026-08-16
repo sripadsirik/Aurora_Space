@@ -1,6 +1,7 @@
 import type { Satellite } from "../types/space";
 import { earthCentralAngleDeg, slantRangeToHorizonKm } from "./coverageFootprint";
 import { getOrbitParams, getOrbitalPeriod } from "./orbit";
+import { getRevolutionsPerDay } from "./orbitSummary";
 
 /**
  * Total arc, in degrees of true anomaly, that a satellite sweeps while above a
@@ -39,6 +40,21 @@ export const maxPassDurationSeconds = (satellite: Satellite, minElevationDeg = 0
  */
 export const maxPassDurationMinutes = (satellite: Satellite, minElevationDeg = 0): number =>
   maxPassDurationSeconds(satellite, minElevationDeg) / 60;
+
+/**
+ * Theoretical upper bound, in seconds, on the total time a single station could
+ * see a satellite across a full day. It assumes the best case that *every*
+ * revolution produces a zenith pass of the maximum duration, so it multiplies
+ * {@link maxPassDurationSeconds} by the revolutions completed per day.
+ *
+ * Real stations see only a handful of passes per day and most are off-zenith, so
+ * actual contact time is far lower — this figure is a ceiling for capacity
+ * planning, not an estimate of a typical day.
+ */
+export const theoreticalMaxDailyContactSeconds = (
+  satellite: Satellite,
+  minElevationDeg = 0
+): number => maxPassDurationSeconds(satellite, minElevationDeg) * getRevolutionsPerDay(satellite);
 
 /** Derived best-case pass figures for a single satellite over a ground station. */
 export interface PassSummary {
