@@ -170,6 +170,28 @@ derive directly from store state. `filterByAltitudeRange` normalises swapped bou
 reuses the same `RISK_LEVELS` ordering as `countElevatedRisk` in `catalogStats` so the list
 and the count never disagree.
 
+## Catalog Operators
+
+Owner-level breakdowns of the catalog come from the pure helpers in
+`frontend/src/utils/catalogOwners.ts`, complementing `filterByOwner` in `catalogFilters` with
+a way to enumerate and rank the operators behind a `Satellite[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `normalizeOwner` | An owner label trimmed and case-folded for grouping |
+| `countByOwner` | Object counts keyed by operator |
+| `uniqueOwners` | Distinct operators sorted case-insensitively |
+| `topOwnersByCount` | Operators ranked by fleet size (optional top-N limit) |
+| `conjunctionsByOwner` | Per-operator sum of active conjunction counts |
+| `topOwnersByConjunctions` | Operators ranked by total active conjunctions |
+| `ownerShare` | An operator's fraction of the catalog, in `[0, 1]` |
+| `summarizeOwners` | The aggregates bundled into one `OwnerSummary` struct |
+
+Operators are grouped by their normalised label so spacing and capitalisation differences never
+split one operator across several buckets, while the first spelling encountered is kept as the
+display key. Both ranking helpers break count ties alphabetically so the ordering is
+deterministic, and `ownerShare` returns `0` rather than `NaN` for an empty catalog.
+
 ## Conjunction Risk Tiers
 
 Conjunction warnings are ranked by collision probability into four risk tiers, defined once in
