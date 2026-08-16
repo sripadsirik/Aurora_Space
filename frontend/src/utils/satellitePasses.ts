@@ -18,6 +18,15 @@ export const maxPassSweepDeg = (altitudeKm: number, minElevationDeg = 0): number
   2 * earthCentralAngleDeg(altitudeKm, minElevationDeg);
 
 /**
+ * Fraction of a full revolution, in the range 0-1, that a satellite spends above
+ * a ground station's horizon during an ideal overhead pass — the sweep expressed
+ * as a share of the 360° orbit. Multiply by the orbital period for a per-pass
+ * contact window, or by a day for the theoretical daily ceiling.
+ */
+export const passOrbitFraction = (altitudeKm: number, minElevationDeg = 0): number =>
+  maxPassSweepDeg(altitudeKm, minElevationDeg) / 360;
+
+/**
  * Longest time, in seconds, that a satellite can stay above a ground station's
  * horizon on a single revolution, for the given minimum elevation mask. The
  * satellite covers the horizon-to-horizon sweep at its mean angular rate, so the
