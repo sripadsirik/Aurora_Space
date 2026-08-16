@@ -1,5 +1,5 @@
 import type { Satellite } from "../types/space";
-import { earthCentralAngleDeg } from "./coverageFootprint";
+import { earthCentralAngleDeg, slantRangeToHorizonKm } from "./coverageFootprint";
 import { getOrbitParams, getOrbitalPeriod } from "./orbit";
 
 /**
@@ -39,3 +39,35 @@ export const maxPassDurationSeconds = (satellite: Satellite, minElevationDeg = 0
  */
 export const maxPassDurationMinutes = (satellite: Satellite, minElevationDeg = 0): number =>
   maxPassDurationSeconds(satellite, minElevationDeg) / 60;
+
+/** Derived best-case pass figures for a single satellite over a ground station. */
+export interface PassSummary {
+  /** Minimum ground elevation angle the pass was computed for, in degrees. */
+  minElevationDeg: number;
+  /** Horizon-to-horizon true-anomaly arc swept during the pass, in degrees. */
+  sweepDeg: number;
+  /** Longest per-revolution contact window, in seconds. */
+  durationSeconds: number;
+  /** Longest per-revolution contact window, in minutes. */
+  durationMinutes: number;
+  /** Line-of-sight range to the satellite as it crosses the horizon, in kilometres. */
+  horizonSlantRangeKm: number;
+}
+
+/**
+ * Bundles the best-case pass figures for a satellite into a single summary:
+ * the elevation mask, horizon-to-horizon sweep, contact duration in seconds and
+ * minutes, and the slant range at the horizon. All values derive from the same
+ * altitude and orbital period, so they stay mutually consistent — mirroring
+ * `summarizeOrbit` and `getCoverageFootprint`.
+ */
+export const summarizePass = (satellite: Satellite, minElevationDeg = 0): PassSummary => {
+  const durationSeconds = maxPassDurationSeconds(satellite, minElevationDeg);
+  return {
+    minElevationDeg,
+    sweepDeg: maxPassSweepDeg(satellite.altitudeKm, minElevationDeg),
+    durationSeconds,
+    durationMinutes: durationSeconds / 60,
+    horizonSlantRangeKm: slantRangeToHorizonKm(satellite.altitudeKm, minElevationDeg)
+  };
+};
