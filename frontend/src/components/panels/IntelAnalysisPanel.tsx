@@ -6,7 +6,6 @@ import { formatConjunctionPairLabel } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
-  estimateManeuverDeltaVMs,
   sortConjunctionsByProbabilityDesc
 } from "../../utils/conjunctionRisk";
 import { formatDurationToTca, formatManeuverDeltaV, formatProbability } from "../../utils/format";
@@ -98,11 +97,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
               {sorted.map((conj, idx) => {
                 const risk = classifyConjunctionRisk(conj.probability);
                 const rowColor = conjunctionRiskTextClass(risk, "text-white");
-<<<<<<< HEAD
-                const deltaV = `~${estimateManeuverDeltaVMs(conj.probability).toFixed(1)} m/s`;
-=======
                 const deltaV = formatManeuverDeltaV(conj.probability);
->>>>>>> origin/main
                 return (
                   <tr
                     key={conj.id}
