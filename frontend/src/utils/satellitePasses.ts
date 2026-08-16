@@ -1,7 +1,8 @@
 import type { Satellite } from "../types/space";
 import { earthCentralAngleDeg, slantRangeToHorizonKm } from "./coverageFootprint";
 import { getOrbitParams, getOrbitalPeriod } from "./orbit";
-import { getRevolutionsPerDay } from "./orbitSummary";
+
+const SECONDS_PER_DAY = 86_400;
 
 /**
  * Total arc, in degrees of true anomaly, that a satellite sweeps while above a
@@ -39,7 +40,7 @@ export const passOrbitFraction = (altitudeKm: number, minElevationDeg = 0): numb
  */
 export const maxPassDurationSeconds = (satellite: Satellite, minElevationDeg = 0): number => {
   const periodSeconds = getOrbitalPeriod(getOrbitParams(satellite).radius);
-  return (maxPassSweepDeg(satellite.altitudeKm, minElevationDeg) / 360) * periodSeconds;
+  return passOrbitFraction(satellite.altitudeKm, minElevationDeg) * periodSeconds;
 };
 
 /**
@@ -53,8 +54,9 @@ export const maxPassDurationMinutes = (satellite: Satellite, minElevationDeg = 0
 /**
  * Theoretical upper bound, in seconds, on the total time a single station could
  * see a satellite across a full day. It assumes the best case that *every*
- * revolution produces a zenith pass of the maximum duration, so it multiplies
- * {@link maxPassDurationSeconds} by the revolutions completed per day.
+ * revolution produces a zenith pass of the maximum duration; the per-pass and
+ * per-revolution period factors cancel, leaving the orbit fraction spread across
+ * a whole day.
  *
  * Real stations see only a handful of passes per day and most are off-zenith, so
  * actual contact time is far lower — this figure is a ceiling for capacity
@@ -63,7 +65,7 @@ export const maxPassDurationMinutes = (satellite: Satellite, minElevationDeg = 0
 export const theoreticalMaxDailyContactSeconds = (
   satellite: Satellite,
   minElevationDeg = 0
-): number => maxPassDurationSeconds(satellite, minElevationDeg) * getRevolutionsPerDay(satellite);
+): number => passOrbitFraction(satellite.altitudeKm, minElevationDeg) * SECONDS_PER_DAY;
 
 /** Derived best-case pass figures for a single satellite over a ground station. */
 export interface PassSummary {
