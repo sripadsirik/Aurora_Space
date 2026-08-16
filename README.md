@@ -289,6 +289,27 @@ Every helper leaves its input array unmutated. Extremes return `null` for an emp
 reports every category, so a timeline header derived from these helpers renders a stable set of
 rows without guards.
 
+## CME Library Statistics
+
+Summary figures for the modelled CME library come from the pure helpers in
+`frontend/src/utils/cmeStats.ts`, which aggregate over a `MockCME[]`:
+
+| Helper | Returns |
+| --- | --- |
+| `isImpactingCme` | Whether a CME reaches Earth (direct hit or glancing blow) |
+| `countImpactingCmes` | Number of Earth-directed ejections, excluding clean misses |
+| `isPendingCme` | Whether a CME is inbound and not yet arrived |
+| `nextArrival` | The soonest inbound CME (or `null`) |
+| `fastestCme` | The highest-speed ejection (or `null`) |
+| `peakPredictedKp` | Highest predicted Kp across the feed |
+| `averageConfidence` | Mean forecast confidence as a percentage |
+| `summarizeCmeLibrary` | All of the above bundled into one `CmeLibrarySummary` |
+
+Clean misses (`impactStatus` of `NO IMPACT — MISS`) are excluded from the impact and arrival
+figures but still counted in `total` and considered for `fastestCme`, since speed is a physical
+property of the ejection. Extremes return `null` and numeric aggregates return 0 for an empty
+feed, so a HUD or panel header can render every figure without a guard.
+
 ## Repo Layout
 
 ```text
@@ -517,8 +538,7 @@ The app boots with mock satellites, conjunctions, and space weather until `VITE_
 The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently covering the
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
 `catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
-`conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`), the Zustand store,
-and the mock datasets under `src/data/mock/`
+`conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
