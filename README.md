@@ -114,6 +114,7 @@ minimum ground elevation angle (defaulting to `0`, the geometric horizon):
 | Helper | Returns |
 | --- | --- |
 | `maxPassSweepDeg` | Horizon-to-horizon true-anomaly arc swept during an overhead pass |
+| `passOrbitFraction` | Share of a full revolution (0-1) spent above the horizon |
 | `maxPassDurationSeconds` | Longest per-revolution contact window, in seconds |
 | `maxPassDurationMinutes` | The same contact window, in minutes |
 | `theoreticalMaxDailyContactSeconds` | Upper bound on daily contact if every revolution were a zenith pass |
