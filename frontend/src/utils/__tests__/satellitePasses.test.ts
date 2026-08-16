@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { earthCentralAngleDeg } from "../coverageFootprint";
+import { earthCentralAngleDeg, slantRangeToHorizonKm } from "../coverageFootprint";
 import { getOrbitParams, getOrbitalPeriod } from "../orbit";
 import {
   maxPassDurationMinutes,
   maxPassDurationSeconds,
-  maxPassSweepDeg
+  maxPassSweepDeg,
+  summarizePass
 } from "../satellitePasses";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
@@ -83,5 +84,23 @@ describe("maxPassDurationMinutes", () => {
       maxPassDurationSeconds(satellite, 15) / 60,
       10
     );
+  });
+});
+
+describe("summarizePass", () => {
+  it("bundles figures that agree with the standalone helpers", () => {
+    const satellite = makeSatellite({ altitudeKm: 550 });
+    const summary = summarizePass(satellite, 5);
+    expect(summary.minElevationDeg).toBe(5);
+    expect(summary.sweepDeg).toBeCloseTo(maxPassSweepDeg(550, 5), 10);
+    expect(summary.durationSeconds).toBeCloseTo(maxPassDurationSeconds(satellite, 5), 10);
+    expect(summary.durationMinutes).toBeCloseTo(summary.durationSeconds / 60, 10);
+    expect(summary.horizonSlantRangeKm).toBeCloseTo(slantRangeToHorizonKm(550, 5), 10);
+  });
+
+  it("defaults to the horizon (0 degree) elevation mask", () => {
+    const summary = summarizePass(makeSatellite({ altitudeKm: 550 }));
+    expect(summary.minElevationDeg).toBe(0);
+    expect(summary.sweepDeg).toBeCloseTo(2 * earthCentralAngleDeg(550), 10);
   });
 });
