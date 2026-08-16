@@ -31,3 +31,11 @@ export const maxPassDurationSeconds = (satellite: Satellite, minElevationDeg = 0
   const periodSeconds = getOrbitalPeriod(getOrbitParams(satellite).radius);
   return (maxPassSweepDeg(satellite.altitudeKm, minElevationDeg) / 360) * periodSeconds;
 };
+
+/**
+ * Longest per-revolution contact window expressed in minutes — the same figure
+ * as {@link maxPassDurationSeconds}, rescaled for display next to the
+ * minute-based orbital period figures elsewhere in the UI.
+ */
+export const maxPassDurationMinutes = (satellite: Satellite, minElevationDeg = 0): number =>
+  maxPassDurationSeconds(satellite, minElevationDeg) / 60;

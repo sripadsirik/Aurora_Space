@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import { earthCentralAngleDeg } from "../coverageFootprint";
 import { getOrbitParams, getOrbitalPeriod } from "../orbit";
-import { maxPassDurationSeconds, maxPassSweepDeg } from "../satellitePasses";
+import {
+  maxPassDurationMinutes,
+  maxPassDurationSeconds,
+  maxPassSweepDeg
+} from "../satellitePasses";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -64,5 +68,20 @@ describe("maxPassDurationSeconds", () => {
     const low = maxPassDurationSeconds(makeSatellite({ altitudeKm: 400 }));
     const high = maxPassDurationSeconds(makeSatellite({ altitudeKm: 1200 }));
     expect(high).toBeGreaterThan(low);
+  });
+});
+
+describe("maxPassDurationMinutes", () => {
+  it("is the seconds figure divided by 60", () => {
+    const satellite = makeSatellite({ altitudeKm: 780 });
+    expect(maxPassDurationMinutes(satellite)).toBeCloseTo(maxPassDurationSeconds(satellite) / 60, 10);
+  });
+
+  it("carries the elevation mask through to the minute figure", () => {
+    const satellite = makeSatellite({ altitudeKm: 780 });
+    expect(maxPassDurationMinutes(satellite, 15)).toBeCloseTo(
+      maxPassDurationSeconds(satellite, 15) / 60,
+      10
+    );
   });
 });
