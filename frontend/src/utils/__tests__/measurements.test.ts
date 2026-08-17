@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatKpIndex, formatMagneticFieldNt } from "../measurements";
+import { formatAltitudeKm, formatKpIndex, formatMagneticFieldNt } from "../measurements";
 
 describe("formatKpIndex", () => {
   it("renders one decimal place", () => {
@@ -26,5 +26,16 @@ describe("formatMagneticFieldNt", () => {
 
   it("renders a non-finite value as an em dash", () => {
     expect(formatMagneticFieldNt(NaN)).toBe("—");
+  });
+});
+
+describe("formatAltitudeKm", () => {
+  it("renders one decimal place with the km unit", () => {
+    expect(formatAltitudeKm(412.53)).toBe("412.5 km");
+    expect(formatAltitudeKm(0)).toBe("0.0 km");
+  });
+
+  it("renders a non-finite value as an em dash", () => {
+    expect(formatAltitudeKm(NaN)).toBe("—");
   });
 });

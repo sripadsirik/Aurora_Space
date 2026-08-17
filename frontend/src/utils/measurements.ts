@@ -26,3 +26,11 @@ export const formatKpIndex = (kp: number): string =>
  */
 export const formatMagneticFieldNt = (nanotesla: number): string =>
   Number.isFinite(nanotesla) ? `${nanotesla.toFixed(1)} nT` : EM_DASH;
+
+/**
+ * Formats an altitude in kilometres to one decimal place with its unit (for
+ * example `412.5 km`), used for the selected-satellite readout. A non-finite
+ * value renders as an em dash.
+ */
+export const formatAltitudeKm = (km: number): string =>
+  Number.isFinite(km) ? `${km.toFixed(1)} km` : EM_DASH;
