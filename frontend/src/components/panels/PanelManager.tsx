@@ -18,7 +18,7 @@ import {
   formatUtcTime
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
-import { formatAltitudeKm, formatSpeedKms } from "../../utils/measurements";
+import { formatAltitudeKm, formatKpIndex, formatSpeedKms } from "../../utils/measurements";
 import {
   earthRadiusMeters,
   getOrbitalPeriod,
@@ -317,7 +317,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Kp Index</p>
             <p className="text-lg font-semibold" style={{ color: getKpColor(spaceWeather.kpIndex) }}>
-              {spaceWeather.kpIndex.toFixed(1)}
+              {formatKpIndex(spaceWeather.kpIndex)}
             </p>
             <div className="relative mt-1 h-1.5 rounded bg-gradient-to-r from-[#6dff79] via-[#ffcb3b] to-[#ff2a2a]">
               <div className="absolute -top-1 h-3 w-[2px] bg-white" style={{ left: `calc(${kpPosition}% - 1px)` }} />
