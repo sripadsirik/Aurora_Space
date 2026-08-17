@@ -18,7 +18,12 @@ import {
   formatUtcTime
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
-import { formatAltitudeKm, formatKpIndex, formatSpeedKms } from "../../utils/measurements";
+import {
+  formatAltitudeKm,
+  formatKpIndex,
+  formatMagneticFieldNt,
+  formatSpeedKms
+} from "../../utils/measurements";
 import {
   earthRadiusMeters,
   getOrbitalPeriod,
@@ -338,7 +343,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
               className={spaceWeather.bzComponent < 0 ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
-              {spaceWeather.bzComponent.toFixed(1)} nT
+              {formatMagneticFieldNt(spaceWeather.bzComponent)}
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
