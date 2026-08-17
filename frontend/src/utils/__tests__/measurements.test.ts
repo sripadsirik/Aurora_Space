@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatAltitudeKm, formatKpIndex, formatMagneticFieldNt } from "../measurements";
+import {
+  formatAltitudeKm,
+  formatKpIndex,
+  formatMagneticFieldNt,
+  formatSpeedKms
+} from "../measurements";
 
 describe("formatKpIndex", () => {
   it("renders one decimal place", () => {
@@ -37,5 +42,20 @@ describe("formatAltitudeKm", () => {
 
   it("renders a non-finite value as an em dash", () => {
     expect(formatAltitudeKm(NaN)).toBe("—");
+  });
+});
+
+describe("formatSpeedKms", () => {
+  it("defaults to one fraction digit", () => {
+    expect(formatSpeedKms(7.65)).toBe("7.7 km/s");
+  });
+
+  it("honours a custom fraction-digit count", () => {
+    expect(formatSpeedKms(7.123, 3)).toBe("7.123 km/s");
+    expect(formatSpeedKms(11.5, 2)).toBe("11.50 km/s");
+  });
+
+  it("renders a non-finite value as an em dash", () => {
+    expect(formatSpeedKms(NaN)).toBe("—");
   });
 });

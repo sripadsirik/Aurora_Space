@@ -34,3 +34,12 @@ export const formatMagneticFieldNt = (nanotesla: number): string =>
  */
 export const formatAltitudeKm = (km: number): string =>
   Number.isFinite(km) ? `${km.toFixed(1)} km` : EM_DASH;
+
+/**
+ * Formats a speed in kilometres per second with its unit (for example
+ * `7.123 km/s`). The number of fraction digits is configurable because the
+ * orbital-velocity and relative-velocity readouts display different precision;
+ * it defaults to one. A non-finite value renders as an em dash.
+ */
+export const formatSpeedKms = (kms: number, fractionDigits = 1): string =>
+  Number.isFinite(kms) ? `${kms.toFixed(fractionDigits)} km/s` : EM_DASH;
