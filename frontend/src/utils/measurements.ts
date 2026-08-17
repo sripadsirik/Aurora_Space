@@ -17,3 +17,12 @@ const EM_DASH = "—";
  */
 export const formatKpIndex = (kp: number): string =>
   Number.isFinite(kp) ? kp.toFixed(1) : EM_DASH;
+
+/**
+ * Formats a magnetic-field strength in nanotesla to one decimal place with its
+ * unit (for example `-5.2 nT`), used for the interplanetary Bz component. The
+ * sign is preserved so a southward (negative) field reads clearly. A non-finite
+ * value renders as an em dash.
+ */
+export const formatMagneticFieldNt = (nanotesla: number): string =>
+  Number.isFinite(nanotesla) ? `${nanotesla.toFixed(1)} nT` : EM_DASH;
