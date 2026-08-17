@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
+import { formatKpIndex } from "../../utils/measurements";
 import { kpToGScale } from "../../utils/spaceWeatherScales";
 
 export const StormOverlay = (): JSX.Element | null => {
@@ -70,7 +71,7 @@ export const StormOverlay = (): JSX.Element | null => {
             animation: "storm-pulse 2s ease-in-out infinite"
           }}
         >
-          GEOMAGNETIC STORM ACTIVE - {stormLevel.toUpperCase()} ({kpToGScale(kp)}) - Kp {kp.toFixed(1)}
+          GEOMAGNETIC STORM ACTIVE - {stormLevel.toUpperCase()} ({kpToGScale(kp)}) - Kp {formatKpIndex(kp)}
         </div>
       </div>
 
@@ -78,7 +79,7 @@ export const StormOverlay = (): JSX.Element | null => {
       {stormAutoTriggered && !bannerDismissed && currentMode === "STORM" && (
         <div className="pointer-events-auto absolute left-0 right-0 top-12 flex justify-center pt-2">
           <div className="flex items-center gap-3 rounded border border-red-500/40 bg-[rgba(80,10,0,0.8)] px-4 py-2 font-mono text-[11px] tracking-[0.15em] text-[#ffaa66] backdrop-blur-sm">
-            <span>STORM MODE AUTO-ACTIVATED — Kp {kp.toFixed(1)} detected</span>
+            <span>STORM MODE AUTO-ACTIVATED — Kp {formatKpIndex(kp)} detected</span>
             <button
               type="button"
               onClick={() => setBannerDismissed(true)}
