@@ -83,7 +83,7 @@ export const HelioOverlay = (): JSX.Element | null => {
         <div className="mt-3 space-y-2">
           <HelioRow color="#00d4ff" label="SOLAR WIND @ L1" value={`${spaceWeather.solarWindSpeed} km/s`} />
           <HelioRow color={bzColor} label="BZ COMPONENT" value={formatMagneticFieldNt(spaceWeather.bzComponent)} />
-          <HelioRow color={kpColor} label="KP INDEX" value={spaceWeather.kpIndex.toFixed(1)} />
+          <HelioRow color={kpColor} label="KP INDEX" value={formatKpIndex(spaceWeather.kpIndex)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
           <HelioRow color={bzShieldColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
         </div>
