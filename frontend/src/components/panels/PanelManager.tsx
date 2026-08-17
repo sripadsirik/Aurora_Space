@@ -18,6 +18,7 @@ import {
   formatUtcTime
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
+import { formatAltitudeKm } from "../../utils/measurements";
 import {
   earthRadiusMeters,
   getOrbitalPeriod,
@@ -149,7 +150,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
               {selectedSatellite.orbitType} ({ORBIT_LABELS[selectedSatellite.orbitType]})
             </span>
             <span>Current Altitude</span>
-            <span className="text-right">{selectedSatellite.altitudeKm.toFixed(1)} km</span>
+            <span className="text-right">{formatAltitudeKm(selectedSatellite.altitudeKm)}</span>
             <span>Velocity</span>
             <span className="text-right">{selectedSatellite.velocityKms.toFixed(3)} km/s</span>
             <span>Orbital Period</span>
