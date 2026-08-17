@@ -255,7 +255,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>
-            <span className="text-right">{selectedConjunction.relativeVelocityKms.toFixed(2)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedConjunction.relativeVelocityKms, 2)}</span>
             <span>Collision probability</span>
             <span className={`text-right ${probabilityClass}`}>{formatProbability(selectedConjunction.probability)}</span>
           </div>
