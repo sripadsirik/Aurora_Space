@@ -13,3 +13,14 @@
  * northward "closed magnetosphere" branch.
  */
 export const isBzSouthward = (bz: number): boolean => bz < 0;
+
+/** Magnetosphere shield status labels driven by the Bz sign. */
+export type BzMagnetosphereLabel = "SHIELD WEAKENED" | "SHIELD CLOSED";
+
+/**
+ * Maps a Bz reading to the magnetosphere "shield" label the heliocentric
+ * overlay shows: a southward field reads as `SHIELD WEAKENED`, a northward
+ * field as `SHIELD CLOSED`.
+ */
+export const bzMagnetosphereLabel = (bz: number): BzMagnetosphereLabel =>
+  isBzSouthward(bz) ? "SHIELD WEAKENED" : "SHIELD CLOSED";
