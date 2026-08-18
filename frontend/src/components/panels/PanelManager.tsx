@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
+import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import {
@@ -334,7 +335,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Bz Component</p>
             <p
-              className={spaceWeather.bzComponent < 0 ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
+              className={isBzSouthward(spaceWeather.bzComponent) ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
               {spaceWeather.bzComponent.toFixed(1)} nT
