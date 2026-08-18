@@ -3,6 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
+import { formatBzComponent } from "../../utils/format";
 import { formatHelioArrivalLabel, getHelioRemainingSeconds } from "../../utils/helio";
 
 interface HelioRowProps {
@@ -81,7 +82,7 @@ export const HelioOverlay = (): JSX.Element | null => {
         <div className="mt-2 h-px w-full bg-[repeating-linear-gradient(90deg,rgba(0,212,255,0.4)_0_10px,rgba(0,212,255,0.08)_10px_18px)]" />
         <div className="mt-3 space-y-2">
           <HelioRow color="#00d4ff" label="SOLAR WIND @ L1" value={`${spaceWeather.solarWindSpeed} km/s`} />
-          <HelioRow color={bzColor} label="BZ COMPONENT" value={`${spaceWeather.bzComponent.toFixed(1)} nT`} />
+          <HelioRow color={bzColor} label="BZ COMPONENT" value={formatBzComponent(spaceWeather.bzComponent)} />
           <HelioRow color={kpColor} label="KP INDEX" value={spaceWeather.kpIndex.toFixed(1)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
           <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
@@ -168,7 +169,7 @@ export const HelioOverlay = (): JSX.Element | null => {
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Bz</span>
-              <span style={{ color: bzColor }}>{spaceWeather.bzComponent.toFixed(1)} nT</span>
+              <span style={{ color: bzColor }}>{formatBzComponent(spaceWeather.bzComponent)}</span>
             </div>
           </div>
         </div>
