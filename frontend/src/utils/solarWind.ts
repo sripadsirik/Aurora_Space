@@ -13,3 +13,10 @@ export const ELEVATED_SOLAR_WIND_KMS = 450;
 /** True when the solar-wind bulk speed is at or above the elevated threshold. */
 export const isElevatedSolarWind = (speedKms: number): boolean =>
   speedKms >= ELEVATED_SOLAR_WIND_KMS;
+
+/**
+ * Arrow glyph the readouts show next to a solar-wind speed: an up arrow when the
+ * stream is elevated, a down arrow when it is at or below the ambient level.
+ */
+export const solarWindSpeedArrow = (speedKms: number): "↑" | "↓" =>
+  isElevatedSolarWind(speedKms) ? "↑" : "↓";
