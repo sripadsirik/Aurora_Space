@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ELEVATED_SOLAR_WIND_KMS, isElevatedSolarWind } from "../solarWind";
+import { ELEVATED_SOLAR_WIND_KMS, isElevatedSolarWind, solarWindSpeedArrow } from "../solarWind";
 
 describe("isElevatedSolarWind", () => {
   it("is false for a calm stream below the threshold", () => {
@@ -16,5 +16,19 @@ describe("isElevatedSolarWind", () => {
 
   it("is false just below the threshold", () => {
     expect(isElevatedSolarWind(ELEVATED_SOLAR_WIND_KMS - 1)).toBe(false);
+  });
+});
+
+describe("solarWindSpeedArrow", () => {
+  it("points up for an elevated stream", () => {
+    expect(solarWindSpeedArrow(560)).toBe("↑");
+  });
+
+  it("points down for a calm stream", () => {
+    expect(solarWindSpeedArrow(360)).toBe("↓");
+  });
+
+  it("points up at exactly the threshold", () => {
+    expect(solarWindSpeedArrow(ELEVATED_SOLAR_WIND_KMS)).toBe("↑");
   });
 });
