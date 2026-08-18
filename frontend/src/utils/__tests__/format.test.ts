@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
+  formatBzComponent,
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
@@ -44,6 +45,20 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
+  });
+});
+
+describe("formatBzComponent", () => {
+  it("renders a northward field with one fraction digit and its unit", () => {
+    expect(formatBzComponent(3)).toBe("3.0 nT");
+  });
+
+  it("preserves the sign of a southward field", () => {
+    expect(formatBzComponent(-4.25)).toBe("-4.3 nT");
+  });
+
+  it("renders zero as 0.0 nT", () => {
+    expect(formatBzComponent(0)).toBe("0.0 nT");
   });
 });
 
