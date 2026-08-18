@@ -13,6 +13,7 @@ import {
   missDistanceSeverityTextClass
 } from "../../utils/conjunctionRisk";
 import {
+  formatBzComponent,
   formatCountdownToTca,
   formatMissDistance,
   formatProbability,
@@ -339,7 +340,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
               className={isBzSouthward(spaceWeather.bzComponent) ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
-              {spaceWeather.bzComponent.toFixed(1)} nT
+              {formatBzComponent(spaceWeather.bzComponent)}
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
