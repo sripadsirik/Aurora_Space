@@ -61,8 +61,7 @@ export const HelioOverlay = (): JSX.Element | null => {
   const playbackLabel = helioPlaybackRate === 0 ? `PAUSED @ x${helioSelectedPlaybackRate}` : `PLAY x${helioPlaybackRate}`;
   const intensityPercent = Math.round(helioBurstIntensity * 100);
 
-  // Bz shield status
-  const bzShieldColor = isBzSouthward(spaceWeather.bzComponent) ? "#ff5a5a" : "#7dff6a";
+  // Bz shield status shares the Bz readout colour and adds a magnetosphere label.
   const bzShieldLabel = bzMagnetosphereLabel(spaceWeather.bzComponent);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -85,7 +84,7 @@ export const HelioOverlay = (): JSX.Element | null => {
           <HelioRow color={bzColor} label="BZ COMPONENT" value={`${spaceWeather.bzComponent.toFixed(1)} nT`} />
           <HelioRow color={kpColor} label="KP INDEX" value={spaceWeather.kpIndex.toFixed(1)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
-          <HelioRow color={bzShieldColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
+          <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-cyan-500/10 pt-2 text-[10px] tracking-[0.18em] text-[#6d8ea9]">
           <span>VIEW WIDTH ~ 2.0 AU</span>
