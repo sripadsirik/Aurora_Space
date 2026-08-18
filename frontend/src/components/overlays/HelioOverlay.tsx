@@ -1,6 +1,7 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
+import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import { formatHelioArrivalLabel, getHelioRemainingSeconds } from "../../utils/helio";
 
@@ -55,14 +56,14 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   const remainingSeconds = getHelioRemainingSeconds(helioSimulationSeconds);
   const isCmeImminent = remainingSeconds < 24 * 3600;
-  const bzColor = spaceWeather.bzComponent < 0 ? "#ff5a5a" : "#7dff6a";
+  const bzColor = isBzSouthward(spaceWeather.bzComponent) ? "#ff5a5a" : "#7dff6a";
   const kpColor = getKpColor(spaceWeather.kpIndex);
   const playbackLabel = helioPlaybackRate === 0 ? `PAUSED @ x${helioSelectedPlaybackRate}` : `PLAY x${helioPlaybackRate}`;
   const intensityPercent = Math.round(helioBurstIntensity * 100);
 
   // Bz shield status
-  const bzShieldColor = spaceWeather.bzComponent < 0 ? "#ff5a5a" : "#7dff6a";
-  const bzShieldLabel = spaceWeather.bzComponent < 0 ? "SHIELD WEAKENED" : "SHIELD CLOSED";
+  const bzShieldColor = isBzSouthward(spaceWeather.bzComponent) ? "#ff5a5a" : "#7dff6a";
+  const bzShieldLabel = bzMagnetosphereLabel(spaceWeather.bzComponent);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
