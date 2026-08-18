@@ -60,6 +60,13 @@ export const formatCountdownToTca = (tca: Date | string): string => {
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
 /**
+ * Formats an IMF Bz component reading in nanoteslas with one fraction digit and
+ * its unit, for example `-4.2 nT`. The sign is preserved so a southward
+ * (negative) field reads with its leading minus.
+ */
+export const formatBzComponent = (bz: number): string => `${bz.toFixed(1)} nT`;
+
+/**
  * Formats a conjunction miss distance for display. Distances below 10 km are
  * shown in whole metres with thousands separators (for example `8,500 m`);
  * larger distances switch to kilometres with one fraction digit (for example
