@@ -27,6 +27,7 @@ import {
 } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
+import { isElevatedSolarWind } from "../../utils/solarWind";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
@@ -327,7 +328,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
             <p className="text-[10px] text-[#9cc2de]">Solar Wind Speed</p>
             <p className="text-lg">
               {spaceWeather.solarWindSpeed} km/s{" "}
-              <span className={spaceWeather.solarWindSpeed >= 450 ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
+              <span className={isElevatedSolarWind(spaceWeather.solarWindSpeed) ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
                 {spaceWeather.solarWindSpeed >= 450 ? "↑" : "↓"}
               </span>
             </p>
