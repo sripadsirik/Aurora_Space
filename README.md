@@ -49,9 +49,10 @@ Current backend split:
 
 The space weather utilities model all three of NOAA SWPC's
 [space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation) in
-`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel currently surfaces the
-G and R scales; the S scale helpers are ready for the panel to consume once a proton-flux
-reading is added to the feed:
+`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel surfaces all three
+scales — the G and R levels alongside the S level derived from the feed's proton-flux
+reading — and leads with a combined NOAA status line (see `summarizeNoaaScales`) that
+highlights the most severe active scale:
 
 | Scale | Driver | Levels | Helpers |
 | --- | --- | --- | --- |
