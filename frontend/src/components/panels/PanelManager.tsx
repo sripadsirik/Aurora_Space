@@ -401,6 +401,21 @@ const SpaceWeatherPanel = (): JSX.Element => {
         </div>
 
         <div className="space-y-1 border-t border-white/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">SOLAR RADIATION STORM LEVELS (NOAA)</p>
+          {solarRadiationStormScale.map((row) => (
+            <div
+              key={row.level}
+              className={`rounded-sm border px-2 py-1 ${sInfo.code === row.code ? "border-[#00d4ff]/60 bg-[#0f2b46]/50" : "border-white/10"}`}
+            >
+              <p className="text-[11px] text-white">
+                {row.level} {sInfo.code === row.code ? "(CURRENT)" : ""}
+              </p>
+              <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-1 border-t border-white/10 pt-2">
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">24H FORECAST (3H STEPS)</p>
           <svg viewBox="0 0 320 86" className="h-[86px] w-full rounded-sm border border-white/10 bg-[#081423]">
             {forecast.map((item, index) => {
