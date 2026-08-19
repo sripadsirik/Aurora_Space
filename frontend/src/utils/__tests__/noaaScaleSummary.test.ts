@@ -33,3 +33,32 @@ describe("summarizeNoaaScales resolution", () => {
     expect(summary.radioBlackout.color).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });
+
+describe("summarizeNoaaScales peak selection", () => {
+  it("picks the single most severe scale by code", () => {
+    const summary = summarizeNoaaScales({ kpIndex: 3, xrayFlux: "X10", protonFlux: 5 });
+    expect(summary.peak.kind).toBe("R");
+    expect(summary.peak.level).toBe("R4");
+  });
+
+  it("breaks ties in G > S > R order", () => {
+    // Kp 8 -> G4 (code 4), proton 1e4 -> S4 (code 4), X-ray X10 -> R4 (code 4).
+    const summary = summarizeNoaaScales({ kpIndex: 8, xrayFlux: "X10", protonFlux: 1e4 });
+    expect(summary.peak.code).toBe(4);
+    expect(summary.peak.kind).toBe("G");
+  });
+
+  it("prefers S over R when they tie above G", () => {
+    // Kp 3 -> G0, proton 1000 -> S3, X-ray X1 -> R3: S wins the S-over-R tie-break.
+    const summary = summarizeNoaaScales({ kpIndex: 3, xrayFlux: "X1", protonFlux: 1000 });
+    expect(summary.peak.code).toBe(3);
+    expect(summary.peak.kind).toBe("S");
+  });
+
+  it("returns a quiet geomagnetic peak when every scale is quiet", () => {
+    const summary = summarizeNoaaScales({ kpIndex: 2, xrayFlux: "B1", protonFlux: 0 });
+    expect(summary.peak.kind).toBe("G");
+    expect(summary.peak.level).toBe("G0");
+    expect(summary.peak.code).toBe(0);
+  });
+});
