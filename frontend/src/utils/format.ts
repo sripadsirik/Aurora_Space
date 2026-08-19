@@ -96,6 +96,18 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
 };
 
 /**
+ * Formats a peak >=10 MeV proton flux (in particle flux units, pfu) for display.
+ * Values render with thousands separators and a `pfu` suffix (for example
+ * `1,200 pfu`); fractional inputs are rounded to whole particles. Negative or
+ * non-finite inputs render as an em dash so a bad feed value never shows as
+ * `NaN pfu`.
+ */
+export const formatProtonFlux = (fluxPfu: number): string => {
+  if (!Number.isFinite(fluxPfu) || fluxPfu < 0) return "—";
+  return `${Math.round(fluxPfu).toLocaleString("en-US")} pfu`;
+};
+
+/**
  * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
  * whole-percent string like `37%`. Values are clamped to the 0-1 range before
  * rounding, so out-of-range inputs read as `0%` or `100%`.
