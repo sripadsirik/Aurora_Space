@@ -25,6 +25,7 @@ import {
   kpToAuroraBoundaryLatitude,
   kpToAuroraRadiusDegrees
 } from "../../utils/orbit";
+import { summarizeNoaaScales } from "../../utils/noaaScaleSummary";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
@@ -295,6 +296,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
   const protonFlux = spaceWeather.protonFlux ?? 0;
   const sInfo = protonFluxToSScaleInfo(protonFlux);
+  const noaa = summarizeNoaaScales(spaceWeather);
   const kpPosition = kpToPercent(spaceWeather.kpIndex);
   const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
@@ -316,6 +318,19 @@ const SpaceWeatherPanel = (): JSX.Element => {
         <div>
           <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--aurora-accent)]">SPACE WEATHER | NOAA SWPC</p>
           <p className="text-[10px] text-[#9cc2de]">Last updated {spaceWeather.lastUpdated.toISOString().replace("T", " ").replace(".000Z", " UTC")}</p>
+          <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+            <span className="text-[#9cc2de]">NOAA</span>
+            {[noaa.geomagnetic, noaa.solarRadiation, noaa.radioBlackout].map((scale) => (
+              <span
+                key={scale.kind}
+                className={`rounded-sm border px-1 py-0.5 font-semibold ${scale.kind === noaa.peak.kind && noaa.peak.code > 0 ? "" : "opacity-70"}`}
+                style={{ borderColor: `${scale.color}55`, color: scale.color }}
+                title={`${scale.level} · ${scale.label}`}
+              >
+                {scale.level}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-2">
