@@ -65,6 +65,10 @@ Each scale exposes a metadata table (`geomagneticStormScale` / `radioBlackoutSca
 plus a colour map that escalates from quiet green to extreme red. `G0`/`R0`/`S0` denote
 sub-storm quiet conditions.
 
+`summarizeNoaaScales` (`frontend/src/utils/noaaScaleSummary.ts`) resolves a space-weather
+snapshot into all three current levels and picks the single most severe one (`peak`), breaking
+ties in G → S → R order. It backs the panel's compact NOAA status line.
+
 ## Orbit Summary
 
 Derived orbital characteristics for a satellite come from the pure helpers in
