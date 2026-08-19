@@ -15,6 +15,7 @@ import {
   formatCountdownToTca,
   formatMissDistance,
   formatProbability,
+  formatProtonFlux,
   formatUtcTime
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
@@ -29,8 +30,11 @@ import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
+  protonFluxToSScaleInfo,
   radioBlackoutScale,
   rScaleColor,
+  sScaleColor,
+  solarRadiationStormScale,
   xrayClassToRScaleInfo
 } from "../../utils/spaceWeatherScales";
 
