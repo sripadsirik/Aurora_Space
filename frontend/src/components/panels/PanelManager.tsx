@@ -357,6 +357,17 @@ const SpaceWeatherPanel = (): JSX.Element => {
               </p>
             )}
           </div>
+          <div className="rounded-sm border border-white/10 px-2 py-1">
+            <p className="text-[10px] text-[#9cc2de]">Proton Flux (&gt;=10 MeV)</p>
+            <p className="text-lg" style={{ color: sScaleColor(sInfo.level) }}>
+              {formatProtonFlux(protonFlux)}
+            </p>
+            {sInfo.level !== "S0" && (
+              <p className="text-[10px]" style={{ color: sScaleColor(sInfo.level) }}>
+                Radiation storm {sInfo.level} · {sInfo.label}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1 border-t border-white/10 pt-2">
