@@ -293,6 +293,8 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const closePanel = useAuroraStore((state) => state.closePanel);
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
   const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
+  const protonFlux = spaceWeather.protonFlux ?? 0;
+  const sInfo = protonFluxToSScaleInfo(protonFlux);
   const kpPosition = kpToPercent(spaceWeather.kpIndex);
   const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
