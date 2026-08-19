@@ -5,7 +5,7 @@ import { getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { describeFeedFreshness } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
-import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime, isCriticalConjunction } from "../utils/format";
 import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
@@ -133,6 +133,12 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
               <span>X-ray Flux</span>
               <span>{spaceWeather.xrayFlux}</span>
             </div>
+            {spaceWeather.protonFlux !== undefined && (
+              <div className="flex justify-between">
+                <span>Proton Flux</span>
+                <span>{formatProtonFlux(spaceWeather.protonFlux)}</span>
+              </div>
+            )}
           </div>
         </div>
 
