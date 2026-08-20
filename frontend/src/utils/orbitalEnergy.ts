@@ -23,3 +23,12 @@ export const specificOrbitalEnergyMJ = (radiusMeters: number): number =>
  */
 export const escapeVelocityKms = (radiusMeters: number): number =>
   Math.sqrt((2 * MU_EARTH) / radiusMeters) / 1000;
+
+/**
+ * Specific angular momentum of a circular orbit at the given radius, in km^2/s.
+ * For a circular orbit this reduces to `sqrt(mu * r)`, the conserved quantity
+ * `r * v` that stays constant along the orbit. Higher orbits carry more angular
+ * momentum per unit mass despite their slower speeds.
+ */
+export const specificAngularMomentumKm2s = (radiusMeters: number): number =>
+  Math.sqrt(MU_EARTH * radiusMeters) / 1e6;
