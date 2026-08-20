@@ -14,3 +14,12 @@ const MU_EARTH = 3.986004418e14;
  */
 export const specificOrbitalEnergyMJ = (radiusMeters: number): number =>
   -MU_EARTH / (2 * radiusMeters) / 1e6;
+
+/**
+ * Escape velocity at the given orbit radius, in km/s. This is the speed at which
+ * an object's total orbital energy reaches zero, `sqrt(2 * mu / r)`, so it marks
+ * the boundary between a bound orbit and an escape trajectory. It is always a
+ * factor of `sqrt(2)` above the circular orbital speed at the same radius.
+ */
+export const escapeVelocityKms = (radiusMeters: number): number =>
+  Math.sqrt((2 * MU_EARTH) / radiusMeters) / 1000;
