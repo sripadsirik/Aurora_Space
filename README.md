@@ -83,6 +83,26 @@ relation `v = sqrt(mu / r)`), and `formatOrbitalPeriod` in `frontend/src/utils/f
 renders a period in minutes as a compact `Hh Mm` (or bare `Mm`) string. All values are derived
 from the same deterministic orbit radius so they stay mutually consistent.
 
+## Orbital Energy
+
+Energy and dynamics figures for a satellite's orbit come from the pure helpers in
+`frontend/src/utils/orbitalEnergy.ts`, which build on the same orbital-mechanics primitives in
+`frontend/src/utils/orbit.ts` as the orbit summary above:
+
+| Helper | Returns |
+| --- | --- |
+| `specificOrbitalEnergyMJ` | Specific orbital energy in MJ/kg (`-mu / 2r`, negative for a bound orbit) |
+| `escapeVelocityKms` | Escape velocity at the orbit radius (`sqrt(2 mu / r)`) |
+| `specificAngularMomentumKm2s` | Specific angular momentum in km²/s (`sqrt(mu r)`) |
+| `escapeDeltaVKms` | Impulsive prograde delta-V from the circular orbit to escape |
+| `orbitalEnergyProfile` | All of the above bundled into one `OrbitalEnergyProfile` for a `Satellite` |
+
+Escape velocity is always a factor of `sqrt(2)` above the circular orbital speed at the same
+radius, so `escapeDeltaVKms` reduces to `(sqrt(2) - 1) * v_circular`. `formatOrbitalSpeed` and
+`formatSpecificEnergy` in `frontend/src/utils/format.ts` render the speeds (`7.66 km/s`) and the
+specific energy (`-29.3 MJ/kg`) for display. Every figure derives from the same deterministic
+orbit radius, so it stays mutually consistent with the periods and speeds reported elsewhere.
+
 ## Coverage Footprint
 
 How much of Earth a satellite can see or serve comes from the pure geometry helpers in
