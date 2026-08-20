@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
+import { getOrbitParams } from "../orbit";
 import {
   escapeDeltaVKms,
   escapeVelocityKms,
+  orbitalEnergyProfile,
   specificAngularMomentumKm2s,
   specificOrbitalEnergyMJ
 } from "../orbitalEnergy";
@@ -92,5 +94,36 @@ describe("escapeDeltaVKms", () => {
     const radius = 8_000_000;
     const circularKms = Math.sqrt(3.986004418e14 / radius) / 1000;
     expect(circularKms + escapeDeltaVKms(radius)).toBeCloseTo(escapeVelocityKms(radius), 9);
+  });
+});
+
+describe("orbitalEnergyProfile", () => {
+  it("derives every figure from the satellite's deterministic orbit radius", () => {
+    const satellite = makeSatellite({ altitudeKm: 700 });
+    const { radius } = getOrbitParams(satellite);
+    const profile = orbitalEnergyProfile(satellite);
+    expect(profile.radiusMeters).toBe(radius);
+    expect(profile.specificEnergyMJ).toBeCloseTo(specificOrbitalEnergyMJ(radius), 9);
+    expect(profile.escapeVelocityKms).toBeCloseTo(escapeVelocityKms(radius), 9);
+    expect(profile.escapeDeltaVKms).toBeCloseTo(escapeDeltaVKms(radius), 9);
+    expect(profile.specificAngularMomentumKm2s).toBeCloseTo(
+      specificAngularMomentumKm2s(radius),
+      9
+    );
+  });
+
+  it("keeps circular speed, escape speed, and delta-V mutually consistent", () => {
+    const profile = orbitalEnergyProfile(makeSatellite({ altitudeKm: 550 }));
+    expect(profile.circularVelocityKms + profile.escapeDeltaVKms).toBeCloseTo(
+      profile.escapeVelocityKms,
+      9
+    );
+  });
+
+  it("reports a higher (less negative) specific energy for a higher orbit", () => {
+    const low = orbitalEnergyProfile(makeSatellite({ altitudeKm: 420 }));
+    const high = orbitalEnergyProfile(makeSatellite({ altitudeKm: 35_786, orbitType: "GEO" }));
+    expect(high.specificEnergyMJ).toBeGreaterThan(low.specificEnergyMJ);
+    expect(high.circularVelocityKms).toBeLessThan(low.circularVelocityKms);
   });
 });
