@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { escapeVelocityKms, specificOrbitalEnergyMJ } from "../orbitalEnergy";
+import {
+  escapeVelocityKms,
+  specificAngularMomentumKm2s,
+  specificOrbitalEnergyMJ
+} from "../orbitalEnergy";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -50,5 +54,21 @@ describe("escapeVelocityKms", () => {
     const radius = 7_000_000;
     const circular = Math.sqrt(3.986004418e14 / radius) / 1000;
     expect(escapeVelocityKms(radius)).toBeCloseTo(circular * Math.SQRT2, 9);
+  });
+});
+
+describe("specificAngularMomentumKm2s", () => {
+  it("is positive and grows with the orbit radius", () => {
+    const low = specificAngularMomentumKm2s(6_800_000);
+    const high = specificAngularMomentumKm2s(42_164_000);
+    expect(low).toBeGreaterThan(0);
+    expect(high).toBeGreaterThan(low);
+  });
+
+  it("equals the radius times the circular speed (r * v)", () => {
+    const radius = 7_000_000;
+    const circularKms = Math.sqrt(3.986004418e14 / radius) / 1000;
+    const radiusKm = radius / 1000;
+    expect(specificAngularMomentumKm2s(radius)).toBeCloseTo(radiusKm * circularKms, 3);
   });
 });
