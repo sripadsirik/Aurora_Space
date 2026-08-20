@@ -42,3 +42,39 @@ export const specificAngularMomentumKm2s = (radiusMeters: number): number =>
  */
 export const escapeDeltaVKms = (radiusMeters: number): number =>
   escapeVelocityKms(radiusMeters) - circularOrbitalVelocityKms(radiusMeters);
+
+/** Derived energy and dynamics figures for a single satellite's orbit. */
+export interface OrbitalEnergyProfile {
+  /** Orbit radius the figures were derived from, in metres. */
+  radiusMeters: number;
+  /** Specific orbital energy of the orbit, in MJ/kg (negative for a bound orbit). */
+  specificEnergyMJ: number;
+  /** Circular orbital speed at the radius, in km/s. */
+  circularVelocityKms: number;
+  /** Escape velocity at the radius, in km/s. */
+  escapeVelocityKms: number;
+  /** Impulsive prograde delta-V from the circular orbit to escape, in km/s. */
+  escapeDeltaVKms: number;
+  /** Specific angular momentum of the orbit, in km^2/s. */
+  specificAngularMomentumKm2s: number;
+}
+
+/**
+ * Bundles the derived energy and dynamics figures for a satellite into a single
+ * profile: specific orbital energy, circular and escape speeds, the delta-V gap
+ * to escape, and specific angular momentum. All values come from the same
+ * deterministic orbit radius that `getOrbitParams` builds from the satellite's
+ * altitude, so they stay mutually consistent with the period and speed figures
+ * reported elsewhere.
+ */
+export const orbitalEnergyProfile = (satellite: Satellite): OrbitalEnergyProfile => {
+  const { radius } = getOrbitParams(satellite);
+  return {
+    radiusMeters: radius,
+    specificEnergyMJ: specificOrbitalEnergyMJ(radius),
+    circularVelocityKms: circularOrbitalVelocityKms(radius),
+    escapeVelocityKms: escapeVelocityKms(radius),
+    escapeDeltaVKms: escapeDeltaVKms(radius),
+    specificAngularMomentumKm2s: specificAngularMomentumKm2s(radius)
+  };
+};
