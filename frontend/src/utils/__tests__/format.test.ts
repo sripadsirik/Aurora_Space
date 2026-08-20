@@ -10,6 +10,7 @@ import {
   formatOrbitalPeriod,
   formatOrbitalSpeed,
   formatProbability,
+  formatSpecificEnergy,
   formatUtcTime,
   isCriticalConjunction
 } from "../format";
@@ -157,6 +158,21 @@ describe("formatOrbitalSpeed", () => {
   it("renders an em dash for negative or non-finite speeds", () => {
     expect(formatOrbitalSpeed(-1)).toBe("—");
     expect(formatOrbitalSpeed(Number.NaN)).toBe("—");
+  });
+});
+
+describe("formatSpecificEnergy", () => {
+  it("renders a bound orbit's energy as a negative MJ/kg value", () => {
+    expect(formatSpecificEnergy(-29.3)).toBe("-29.3 MJ/kg");
+  });
+
+  it("rounds to one fraction digit", () => {
+    expect(formatSpecificEnergy(-29.34)).toBe("-29.3 MJ/kg");
+  });
+
+  it("renders an em dash for non-finite inputs", () => {
+    expect(formatSpecificEnergy(Number.NaN)).toBe("—");
+    expect(formatSpecificEnergy(Number.POSITIVE_INFINITY)).toBe("—");
   });
 });
 
