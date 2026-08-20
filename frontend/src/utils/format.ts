@@ -96,6 +96,17 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
 };
 
 /**
+ * Formats an orbital speed given in km/s for display, such as a circular or
+ * escape velocity. Renders two fraction digits with a `km/s` suffix (for example
+ * `7.66 km/s`). Negative or non-finite inputs render as an em dash so a bad
+ * value never shows as `NaN km/s`.
+ */
+export const formatOrbitalSpeed = (speedKms: number): string => {
+  if (!Number.isFinite(speedKms) || speedKms < 0) return "—";
+  return `${speedKms.toFixed(2)} km/s`;
+};
+
+/**
  * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
  * whole-percent string like `37%`. Values are clamped to the 0-1 range before
  * rounding, so out-of-range inputs read as `0%` or `100%`.
