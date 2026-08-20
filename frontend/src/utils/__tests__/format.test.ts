@@ -8,6 +8,7 @@ import {
   formatManeuverDeltaV,
   formatMissDistance,
   formatOrbitalPeriod,
+  formatOrbitalSpeed,
   formatProbability,
   formatUtcTime,
   isCriticalConjunction
@@ -137,6 +138,25 @@ describe("formatOrbitalPeriod", () => {
 
   it("clamps negative inputs to zero", () => {
     expect(formatOrbitalPeriod(-5)).toBe("0m");
+  });
+});
+
+describe("formatOrbitalSpeed", () => {
+  it("renders a circular orbital speed with two fraction digits and a km/s suffix", () => {
+    expect(formatOrbitalSpeed(7.66)).toBe("7.66 km/s");
+  });
+
+  it("rounds to two fraction digits", () => {
+    expect(formatOrbitalSpeed(11.186)).toBe("11.19 km/s");
+  });
+
+  it("pads a whole-number speed to two fraction digits", () => {
+    expect(formatOrbitalSpeed(3)).toBe("3.00 km/s");
+  });
+
+  it("renders an em dash for negative or non-finite speeds", () => {
+    expect(formatOrbitalSpeed(-1)).toBe("—");
+    expect(formatOrbitalSpeed(Number.NaN)).toBe("—");
   });
 });
 
