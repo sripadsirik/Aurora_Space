@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import {
+  escapeDeltaVKms,
   escapeVelocityKms,
   specificAngularMomentumKm2s,
   specificOrbitalEnergyMJ
@@ -70,5 +71,26 @@ describe("specificAngularMomentumKm2s", () => {
     const circularKms = Math.sqrt(3.986004418e14 / radius) / 1000;
     const radiusKm = radius / 1000;
     expect(specificAngularMomentumKm2s(radius)).toBeCloseTo(radiusKm * circularKms, 3);
+  });
+});
+
+describe("escapeDeltaVKms", () => {
+  it("is positive and smaller than the escape velocity itself", () => {
+    const radius = 6_800_000;
+    const deltaV = escapeDeltaVKms(radius);
+    expect(deltaV).toBeGreaterThan(0);
+    expect(deltaV).toBeLessThan(escapeVelocityKms(radius));
+  });
+
+  it("is (sqrt(2) - 1) times the circular orbital speed", () => {
+    const radius = 7_000_000;
+    const circularKms = Math.sqrt(3.986004418e14 / radius) / 1000;
+    expect(escapeDeltaVKms(radius)).toBeCloseTo(circularKms * (Math.SQRT2 - 1), 9);
+  });
+
+  it("bridges the gap between circular and escape speed", () => {
+    const radius = 8_000_000;
+    const circularKms = Math.sqrt(3.986004418e14 / radius) / 1000;
+    expect(circularKms + escapeDeltaVKms(radius)).toBeCloseTo(escapeVelocityKms(radius), 9);
   });
 });
