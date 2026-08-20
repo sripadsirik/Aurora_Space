@@ -1,5 +1,5 @@
 import type { Satellite } from "../types/space";
-import { getOrbitParams } from "./orbit";
+import { circularOrbitalVelocityKms, getOrbitParams } from "./orbit";
 
 // Standard gravitational parameter (GM) for Earth, in m^3/s^2. Kept in step with
 // the value used by the orbit helpers so every derived energy figure lines up
@@ -32,3 +32,13 @@ export const escapeVelocityKms = (radiusMeters: number): number =>
  */
 export const specificAngularMomentumKm2s = (radiusMeters: number): number =>
   Math.sqrt(MU_EARTH * radiusMeters) / 1e6;
+
+/**
+ * Additional speed, in km/s, a satellite in a circular orbit would need to reach
+ * escape velocity at its current radius — the gap between escape velocity and
+ * the circular orbital speed, `(sqrt(2) - 1) * v_circular`. This is the ideal
+ * (impulsive, prograde) delta-V budget to break free of Earth from that orbit,
+ * ignoring any subsequent gravity losses.
+ */
+export const escapeDeltaVKms = (radiusMeters: number): number =>
+  escapeVelocityKms(radiusMeters) - circularOrbitalVelocityKms(radiusMeters);
