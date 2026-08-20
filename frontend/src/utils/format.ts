@@ -107,6 +107,17 @@ export const formatOrbitalSpeed = (speedKms: number): string => {
 };
 
 /**
+ * Formats a specific orbital energy given in MJ/kg for display. Renders one
+ * fraction digit with a `MJ/kg` suffix (for example `-29.3 MJ/kg`); the sign is
+ * preserved so a bound orbit reads as negative. Non-finite inputs render as an
+ * em dash so a bad value never shows as `NaN MJ/kg`.
+ */
+export const formatSpecificEnergy = (energyMJ: number): string => {
+  if (!Number.isFinite(energyMJ)) return "—";
+  return `${energyMJ.toFixed(1)} MJ/kg`;
+};
+
+/**
  * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
  * whole-percent string like `37%`. Values are clamped to the 0-1 range before
  * rounding, so out-of-range inputs read as `0%` or `100%`.
