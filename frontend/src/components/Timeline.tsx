@@ -7,6 +7,7 @@ import { clamp01 } from "../utils/clamp";
 import { findNearestEvent } from "../utils/timelineEvents";
 import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
 import {
+  buildYearTicks,
   dateToFraction as dateToFractionInWindow,
   formatTimelineDate,
   fractionToDate as fractionToDateInWindow
@@ -113,13 +114,7 @@ export const Timeline = (): JSX.Element | null => {
   const currentFraction = dateToFraction(timelinePosition);
 
   // Year tick marks
-  const startYear = TIMELINE_START.getUTCFullYear();
-  const endYear = TIMELINE_END.getUTCFullYear();
-  const yearTicks: { year: number; fraction: number }[] = [];
-  for (let y = startYear; y <= endYear; y += 2) {
-    const d = new Date(`${y}-01-01T00:00:00Z`);
-    yearTicks.push({ year: y, fraction: dateToFraction(d) });
-  }
+  const yearTicks = buildYearTicks(TIMELINE_START, TIMELINE_END);
 
   return (
     <div className="pointer-events-auto fixed bottom-16 left-4 right-4 z-[90]">
