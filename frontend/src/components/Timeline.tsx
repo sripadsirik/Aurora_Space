@@ -4,6 +4,7 @@ import { historicalEvents } from "../data/mock/historicalEvents";
 import { useAuroraStore } from "../store/auroraStore";
 import type { HistoricalEvent } from "../types/space";
 import { clamp01 } from "../utils/clamp";
+import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
 import {
   dateToFraction as dateToFractionInWindow,
   formatTimelineDate,
@@ -16,17 +17,6 @@ const TIMELINE_END = new Date();
 const dateToFraction = (date: Date): number => dateToFractionInWindow(date, TIMELINE_START, TIMELINE_END);
 
 const fractionToDate = (fraction: number): Date => fractionToDateInWindow(fraction, TIMELINE_START, TIMELINE_END);
-
-const getMarkerColor = (event: HistoricalEvent): string => {
-  if (event.type === "solar_storm") return "#ff6622";
-  if (event.type === "conjunction") return "#ff2222";
-  return "#ff4488";
-};
-
-const getMarkerShape = (event: HistoricalEvent): "dot" | "x" => {
-  if (event.type === "conjunction") return "x";
-  return "dot";
-};
 
 export const Timeline = (): JSX.Element | null => {
   const timelineActive = useAuroraStore((s) => s.timelineActive);
@@ -199,8 +189,8 @@ export const Timeline = (): JSX.Element | null => {
           {/* Event markers */}
           {historicalEvents.map((event) => {
             const fraction = dateToFraction(event.date);
-            const color = getMarkerColor(event);
-            const shape = getMarkerShape(event);
+            const color = markerColorForEvent(event);
+            const shape = markerShapeForEvent(event);
             const isActive = timelineEvent?.id === event.id;
 
             return (
