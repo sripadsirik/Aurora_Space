@@ -43,6 +43,15 @@ export const buildYearTicks = (start: Date, end: Date, stepYears = 2): YearTick[
   return ticks;
 };
 
+/**
+ * Whether a scrubber `position` sits at the live edge of the timeline — within
+ * `toleranceMs` (default one minute) of `now`. The timeline treats the live edge
+ * as "following real time", so the caller uses this to decide when to show the
+ * LIVE state rather than a historical-playback label.
+ */
+export const isAtLiveEdge = (position: Date, now: Date, toleranceMs = 60_000): boolean =>
+  Math.abs(position.getTime() - now.getTime()) < toleranceMs;
+
 /** Formats a date as a zero-padded UTC `YYYY-MM-DD` calendar day. */
 export const formatTimelineDate = (date: Date): string => {
   const year = date.getUTCFullYear();
