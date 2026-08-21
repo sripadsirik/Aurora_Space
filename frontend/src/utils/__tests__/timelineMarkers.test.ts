@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markerColorForEvent } from "../timelineMarkers";
+import { markerColorForEvent, markerShapeForEvent } from "../timelineMarkers";
 
 describe("markerColorForEvent", () => {
   it("uses amber for solar storms", () => {
@@ -12,5 +12,16 @@ describe("markerColorForEvent", () => {
 
   it("uses pink for satellite losses", () => {
     expect(markerColorForEvent({ type: "satellite_loss" })).toBe("#ff4488");
+  });
+});
+
+describe("markerShapeForEvent", () => {
+  it("draws conjunctions as an x", () => {
+    expect(markerShapeForEvent({ type: "conjunction" })).toBe("x");
+  });
+
+  it("draws other categories as a dot", () => {
+    expect(markerShapeForEvent({ type: "solar_storm" })).toBe("dot");
+    expect(markerShapeForEvent({ type: "satellite_loss" })).toBe("dot");
   });
 });
