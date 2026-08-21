@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildYearTicks, dateToFraction, formatTimelineDate, fractionToDate } from "../timelineScale";
+import { buildYearTicks, dateToFraction, formatTimelineDate, fractionToDate, isAtLiveEdge } from "../timelineScale";
 
 const start = new Date("2003-01-01T00:00:00Z");
 const end = new Date("2023-01-01T00:00:00Z");
@@ -76,5 +76,24 @@ describe("buildYearTicks", () => {
   it("coerces a non-positive step to a single year so it always advances", () => {
     const ticks = buildYearTicks(new Date("2020-01-01T00:00:00Z"), new Date("2022-01-01T00:00:00Z"), 0);
     expect(ticks.map((t) => t.year)).toEqual([2020, 2021, 2022]);
+  });
+});
+
+describe("isAtLiveEdge", () => {
+  const now = new Date("2026-08-21T12:00:00Z");
+
+  it("is true within the default one-minute tolerance", () => {
+    expect(isAtLiveEdge(new Date("2026-08-21T12:00:30Z"), now)).toBe(true);
+    expect(isAtLiveEdge(new Date("2026-08-21T11:59:30Z"), now)).toBe(true);
+  });
+
+  it("is false once the position drifts past the tolerance", () => {
+    expect(isAtLiveEdge(new Date("2026-08-21T12:02:00Z"), now)).toBe(false);
+  });
+
+  it("honours a custom tolerance", () => {
+    const position = new Date("2026-08-21T12:04:00Z");
+    expect(isAtLiveEdge(position, now, 5 * 60_000)).toBe(true);
+    expect(isAtLiveEdge(position, now, 60_000)).toBe(false);
   });
 });
