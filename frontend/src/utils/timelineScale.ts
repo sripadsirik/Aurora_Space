@@ -19,6 +19,30 @@ export const fractionToDate = (fraction: number, start: Date, end: Date): Date =
   return new Date(start.getTime() + fraction * total);
 };
 
+/** A labelled year gridline on the timeline: the year and its `0-1` position. */
+export interface YearTick {
+  year: number;
+  fraction: number;
+}
+
+/**
+ * Builds the year gridlines spanning the `[start, end]` window, one every
+ * `stepYears` (default two) from the start year through the end year inclusive.
+ * Each tick pairs its calendar year with the `0-1` track position of that year's
+ * 1 January (UTC), so the caller can place it without re-deriving the geometry.
+ */
+export const buildYearTicks = (start: Date, end: Date, stepYears = 2): YearTick[] => {
+  const ticks: YearTick[] = [];
+  const startYear = start.getUTCFullYear();
+  const endYear = end.getUTCFullYear();
+  const step = Math.max(1, Math.trunc(stepYears));
+  for (let year = startYear; year <= endYear; year += step) {
+    const date = new Date(`${year}-01-01T00:00:00Z`);
+    ticks.push({ year, fraction: dateToFraction(date, start, end) });
+  }
+  return ticks;
+};
+
 /** Formats a date as a zero-padded UTC `YYYY-MM-DD` calendar day. */
 export const formatTimelineDate = (date: Date): string => {
   const year = date.getUTCFullYear();
