@@ -4,6 +4,7 @@ import { historicalEvents } from "../data/mock/historicalEvents";
 import { useAuroraStore } from "../store/auroraStore";
 import type { HistoricalEvent } from "../types/space";
 import { clamp01 } from "../utils/clamp";
+import { findNearestEvent } from "../utils/timelineEvents";
 import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
 import {
   dateToFraction as dateToFractionInWindow,
@@ -55,18 +56,8 @@ export const Timeline = (): JSX.Element | null => {
       const date = fractionToDate(fraction);
       setTimelinePosition(date);
 
-      // Find the nearest event within a tolerance
-      const tolerance = 0.015;
-      let nearest: HistoricalEvent | null = null;
-      let nearestDist = Infinity;
-      for (const event of historicalEvents) {
-        const ef = dateToFraction(event.date);
-        const dist = Math.abs(ef - fraction);
-        if (dist < tolerance && dist < nearestDist) {
-          nearest = event;
-          nearestDist = dist;
-        }
-      }
+      // Snap to the nearest historical event within the shared tolerance.
+      const nearest = findNearestEvent(historicalEvents, fraction, (event) => dateToFraction(event.date));
 
       if (nearest) {
         setTimelineEvent(nearest);
