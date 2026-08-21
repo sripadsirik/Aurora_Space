@@ -10,7 +10,8 @@ import {
   buildYearTicks,
   dateToFraction as dateToFractionInWindow,
   formatTimelineDate,
-  fractionToDate as fractionToDateInWindow
+  fractionToDate as fractionToDateInWindow,
+  isAtLiveEdge
 } from "../utils/timelineScale";
 
 const TIMELINE_START = new Date("2003-01-01T00:00:00Z");
@@ -34,7 +35,7 @@ export const Timeline = (): JSX.Element | null => {
   const [hoveredEvent, setHoveredEvent] = useState<HistoricalEvent | null>(null);
   const [tooltipX, setTooltipX] = useState(0);
 
-  const isLive = !timelineEvent && Math.abs(timelinePosition.getTime() - Date.now()) < 60_000;
+  const isLive = !timelineEvent && isAtLiveEdge(timelinePosition, new Date());
 
   // Toggle timeline with T key
   useEffect(() => {
