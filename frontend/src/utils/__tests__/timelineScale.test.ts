@@ -19,6 +19,16 @@ describe("dateToFraction", () => {
     expect(dateToFraction(new Date("2000-01-01T00:00:00Z"), start, end)).toBe(0);
     expect(dateToFraction(new Date("2030-01-01T00:00:00Z"), start, end)).toBe(1);
   });
+
+  it("collapses a zero-width window to 0 instead of NaN", () => {
+    expect(dateToFraction(start, start, start)).toBe(0);
+    expect(dateToFraction(end, start, start)).toBe(0);
+  });
+
+  it("collapses an inverted window to 0 instead of a spurious fraction", () => {
+    const mid = new Date("2013-01-01T00:00:00Z");
+    expect(dateToFraction(mid, end, start)).toBe(0);
+  });
 });
 
 describe("fractionToDate", () => {
