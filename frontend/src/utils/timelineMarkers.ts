@@ -20,3 +20,14 @@ const MARKER_COLORS: Record<HistoricalEvent["type"], string> = {
  */
 export const markerColorForEvent = (event: Pick<HistoricalEvent, "type">): string =>
   MARKER_COLORS[event.type];
+
+/** The two glyphs the timeline draws for a historical-event marker. */
+export type MarkerShape = "dot" | "x";
+
+/**
+ * Glyph used to draw the timeline marker for a historical event. Conjunctions
+ * render as an `x` to echo the `object1 x object2` pairing shown elsewhere;
+ * every other category renders as a `dot`.
+ */
+export const markerShapeForEvent = (event: Pick<HistoricalEvent, "type">): MarkerShape =>
+  event.type === "conjunction" ? "x" : "dot";
