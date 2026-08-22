@@ -52,6 +52,15 @@ export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity
 };
 
 /**
+ * Tailwind text-colour utility class for the interplanetary magnetic field Bz
+ * component. A southward (negative) Bz couples the solar wind to Earth's
+ * magnetosphere and drives geomagnetic activity, so it reads as an alert red; a
+ * northward (zero or positive) Bz is quiet and reads green.
+ */
+export const bzComponentTextClass = (bz: number): string =>
+  bz < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]";
+
+/**
  * Maps solar wind speed in km/s to a Cesium colour: calm below 400, elevated
  * through the 400-600 band, and high-speed above 600.
  */
