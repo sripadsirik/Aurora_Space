@@ -5,8 +5,8 @@ import { bzComponentTextClass, getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { resolveDisplayedWeather } from "../utils/displayedWeather";
 import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
-import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { buildHudDataLayers } from "../utils/hudDataLayers";
 import { deriveHudTheme } from "../utils/hudTheme";
 import { kpToPercent } from "../utils/kpScale";
 
@@ -14,14 +14,6 @@ interface HUDProps {
   satellites: Satellite[];
   conjunctions: ConjunctionWarning[];
   spaceWeather: SpaceWeather;
-}
-
-interface LayerRow {
-  name: string;
-  source: string;
-  freshness: string;
-  count: number;
-  status: FreshnessStatus;
 }
 
 export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element | null => {
@@ -45,40 +37,13 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   // Mode-dependent color styles
   const { isIntel, textColor, accentColor, subTextColor } = deriveHudTheme(currentMode, kpDisplay);
 
-  const satFresh = describeFeedFreshness(feedLastUpdated.satellites, now);
-  const conjFresh = describeFeedFreshness(feedLastUpdated.conjunctions, now);
-  const wxFresh = describeFeedFreshness(feedLastUpdated.spaceWeather, now);
-
-  const layers: LayerRow[] = [
-    {
-      name: "Satellites",
-      source: "CelesTrak",
-      freshness: satFresh.label,
-      count: satellites.length,
-      status: satFresh.status
-    },
-    {
-      name: "Conjunctions",
-      source: "Space-Track",
-      freshness: conjFresh.label,
-      count: conjunctions.length,
-      status: conjFresh.status
-    },
-    {
-      name: "Space Weather",
-      source: "NOAA SWPC",
-      freshness: wxFresh.label,
-      count: 1,
-      status: wxFresh.status
-    },
-    {
-      name: "Aurora Forecast",
-      source: "NOAA Ovation",
-      freshness: wxFresh.label,
-      count: 2,
-      status: wxFresh.status
-    }
-  ];
+  const layers = buildHudDataLayers({
+    satelliteCount: satellites.length,
+    satelliteFreshness: describeFeedFreshness(feedLastUpdated.satellites, now),
+    conjunctionCount: conjunctions.length,
+    conjunctionFreshness: describeFeedFreshness(feedLastUpdated.conjunctions, now),
+    weatherFreshness: describeFeedFreshness(feedLastUpdated.spaceWeather, now)
+  });
 
   if (currentMode === "HELIO") {
     return null;
