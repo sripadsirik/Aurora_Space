@@ -6,6 +6,7 @@ import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { deriveHudTheme } from "../utils/hudTheme";
 import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
@@ -39,11 +40,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   const kpPosition = kpToPercent(kpDisplay);
 
   // Mode-dependent color styles
-  const isIntel = currentMode === "INTEL";
-  const isStorm = currentMode === "STORM" || kpDisplay > 5;
-  const textColor = isIntel ? "#ffffff" : isStorm ? "#ffd8b8" : "var(--aurora-text)";
-  const accentColor = isIntel ? "#ff6600" : isStorm ? "#ff8844" : "var(--aurora-accent)";
-  const subTextColor = isIntel ? "#cccccc" : isStorm ? "#ffccaa" : "#cde4f6";
+  const { isIntel, textColor, accentColor, subTextColor } = deriveHudTheme(currentMode, kpDisplay);
 
   const satFresh = describeFeedFreshness(feedLastUpdated.satellites, now);
   const conjFresh = describeFeedFreshness(feedLastUpdated.conjunctions, now);
