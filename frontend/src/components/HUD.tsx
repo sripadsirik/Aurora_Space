@@ -1,7 +1,7 @@
 import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
-import { getKpColor } from "../utils/colors";
+import { bzComponentTextClass, getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { resolveDisplayedWeather } from "../utils/displayedWeather";
 import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
@@ -125,7 +125,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             </div>
             <div className="flex justify-between">
               <span>Bz Component</span>
-              <span className={bzDisplay < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]"}>
+              <span className={bzComponentTextClass(bzDisplay)}>
                 {bzDisplay.toFixed(1)} nT
               </span>
             </div>
