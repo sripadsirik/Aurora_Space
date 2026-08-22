@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
+import { resolveDisplayedWeather } from "../../utils/displayedWeather";
 import { gScaleColor, kpSparklineColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 import { countStormExposedAssets } from "../../utils/stormExposure";
@@ -20,7 +21,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
   const timelineEvent = useAuroraStore((s) => s.timelineEvent);
   const openPanel = useAuroraStore((s) => s.openPanel);
 
-  const kp = timelineEvent?.kpIndex ?? spaceWeather.kpIndex;
+  const { kpIndex: kp } = resolveDisplayedWeather(spaceWeather, timelineEvent);
 
   useEffect(() => {
     if (currentMode === "STORM") {
