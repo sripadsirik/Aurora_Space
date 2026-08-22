@@ -3,7 +3,7 @@ import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
-import { describeFeedFreshness } from "../utils/feedFreshness";
+import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
 import { kpToPercent } from "../utils/kpScale";
@@ -184,7 +184,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           <div className="mt-2 space-y-1 text-xs">
             {layers.map((layer) => (
               <div key={layer.name} className="grid grid-cols-[8px_1.2fr_1fr_0.8fr_0.6fr] items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${layer.status === "live" ? (isIntel ? "bg-[#ff6600]" : "bg-[#00ff88]") : layer.status === "stale" ? "bg-[#ffcc00]" : "bg-[#ff4444]"}`} />
+                <span className={`h-2 w-2 rounded-full ${freshnessStatusDotClass(layer.status, { intel: isIntel })}`} />
                 <span>{layer.name}</span>
                 <span style={{ color: isIntel ? "#999999" : "#9ec3df" }}>{layer.source}</span>
                 <span>{layer.freshness}</span>
