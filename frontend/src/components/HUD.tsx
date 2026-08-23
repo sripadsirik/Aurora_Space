@@ -3,6 +3,7 @@ import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
+import { resolveEffectiveWeather } from "../utils/effectiveWeather";
 import { describeFeedFreshness } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
@@ -31,10 +32,12 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   const timelineEvent = useAuroraStore((state) => state.timelineEvent);
   const feedLastUpdated = useAuroraStore((state) => state.feedLastUpdated);
 
-  const kpDisplay = timelineEvent?.kpIndex ?? spaceWeather.kpIndex;
-  const windDisplay = timelineEvent?.solarWindSpeed ?? spaceWeather.solarWindSpeed;
-  const bzDisplay = timelineEvent?.bzComponent ?? spaceWeather.bzComponent;
-  const stormDisplay = timelineEvent?.stormLevel ?? spaceWeather.stormLevel;
+  const {
+    kpIndex: kpDisplay,
+    solarWindSpeed: windDisplay,
+    bzComponent: bzDisplay,
+    stormLevel: stormDisplay
+  } = resolveEffectiveWeather(timelineEvent, spaceWeather);
 
   const kpPosition = kpToPercent(kpDisplay);
 
