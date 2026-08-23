@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { resolveEffectiveWeather } from "../../utils/effectiveWeather";
 import { kpToGScale } from "../../utils/spaceWeatherScales";
+import { isStormModeActive } from "../../utils/visualMode";
 
 export const StormOverlay = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -15,7 +16,7 @@ export const StormOverlay = (): JSX.Element | null => {
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const { kpIndex: kp, stormLevel } = resolveEffectiveWeather(timelineEvent, spaceWeather);
-  const isStormActive = currentMode === "STORM" || kp > 5;
+  const isStormActive = isStormModeActive(currentMode, kp);
 
   // Auto-trigger STORM mode when kp > 5
   useEffect(() => {
