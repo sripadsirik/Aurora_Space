@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
+import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import {
@@ -15,22 +16,34 @@ import {
   formatCountdownToTca,
   formatMissDistance,
   formatProbability,
+  formatProtonFlux,
   formatUtcTime
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
+import {
+  formatAltitudeKm,
+  formatKpIndex,
+  formatMagneticFieldNt,
+  formatSpeedKms
+} from "../../utils/measurements";
 import {
   earthRadiusMeters,
   getOrbitalPeriod,
   kpToAuroraBoundaryLatitude,
   kpToAuroraRadiusDegrees
 } from "../../utils/orbit";
+import { summarizeNoaaScales } from "../../utils/noaaScaleSummary";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
+import { isElevatedSolarWind, solarWindSpeedArrow } from "../../utils/solarWind";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
+  protonFluxToSScaleInfo,
   radioBlackoutScale,
   rScaleColor,
+  sScaleColor,
+  solarRadiationStormScale,
   xrayClassToRScaleInfo
 } from "../../utils/spaceWeatherScales";
 
@@ -149,9 +162,9 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
               {selectedSatellite.orbitType} ({ORBIT_LABELS[selectedSatellite.orbitType]})
             </span>
             <span>Current Altitude</span>
-            <span className="text-right">{selectedSatellite.altitudeKm.toFixed(1)} km</span>
+            <span className="text-right">{formatAltitudeKm(selectedSatellite.altitudeKm)}</span>
             <span>Velocity</span>
-            <span className="text-right">{selectedSatellite.velocityKms.toFixed(3)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedSatellite.velocityKms, 3)}</span>
             <span>Orbital Period</span>
             <span className="text-right">{periodMinutes.toFixed(1)} min</span>
             <span>Inclination</span>
@@ -254,7 +267,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>
-            <span className="text-right">{selectedConjunction.relativeVelocityKms.toFixed(2)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedConjunction.relativeVelocityKms, 2)}</span>
             <span>Collision probability</span>
             <span className={`text-right ${probabilityClass}`}>{formatProbability(selectedConjunction.probability)}</span>
           </div>
@@ -289,6 +302,9 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const closePanel = useAuroraStore((state) => state.closePanel);
   const gLevel = kpToGScaleInfo(spaceWeather.kpIndex).code;
   const rInfo = xrayClassToRScaleInfo(spaceWeather.xrayFlux);
+  const protonFlux = spaceWeather.protonFlux ?? 0;
+  const sInfo = protonFluxToSScaleInfo(protonFlux);
+  const noaa = summarizeNoaaScales(spaceWeather);
   const kpPosition = kpToPercent(spaceWeather.kpIndex);
   const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
@@ -310,13 +326,26 @@ const SpaceWeatherPanel = (): JSX.Element => {
         <div>
           <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--aurora-accent)]">SPACE WEATHER | NOAA SWPC</p>
           <p className="text-[10px] text-[#9cc2de]">Last updated {spaceWeather.lastUpdated.toISOString().replace("T", " ").replace(".000Z", " UTC")}</p>
+          <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+            <span className="text-[#9cc2de]">NOAA</span>
+            {[noaa.geomagnetic, noaa.solarRadiation, noaa.radioBlackout].map((scale) => (
+              <span
+                key={scale.kind}
+                className={`rounded-sm border px-1 py-0.5 font-semibold ${scale.kind === noaa.peak.kind && noaa.peak.code > 0 ? "" : "opacity-70"}`}
+                style={{ borderColor: `${scale.color}55`, color: scale.color }}
+                title={`${scale.level} · ${scale.label}`}
+              >
+                {scale.level}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-2">
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Kp Index</p>
             <p className="text-lg font-semibold" style={{ color: getKpColor(spaceWeather.kpIndex) }}>
-              {spaceWeather.kpIndex.toFixed(1)}
+              {formatKpIndex(spaceWeather.kpIndex)}
             </p>
             <div className="relative mt-1 h-1.5 rounded bg-gradient-to-r from-[#6dff79] via-[#ffcb3b] to-[#ff2a2a]">
               <div className="absolute -top-1 h-3 w-[2px] bg-white" style={{ left: `calc(${kpPosition}% - 1px)` }} />
@@ -326,18 +355,18 @@ const SpaceWeatherPanel = (): JSX.Element => {
             <p className="text-[10px] text-[#9cc2de]">Solar Wind Speed</p>
             <p className="text-lg">
               {spaceWeather.solarWindSpeed} km/s{" "}
-              <span className={spaceWeather.solarWindSpeed >= 450 ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
-                {spaceWeather.solarWindSpeed >= 450 ? "↑" : "↓"}
+              <span className={isElevatedSolarWind(spaceWeather.solarWindSpeed) ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
+                {solarWindSpeedArrow(spaceWeather.solarWindSpeed)}
               </span>
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Bz Component</p>
             <p
-              className={spaceWeather.bzComponent < 0 ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
+              className={isBzSouthward(spaceWeather.bzComponent) ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
-              {spaceWeather.bzComponent.toFixed(1)} nT
+              {formatMagneticFieldNt(spaceWeather.bzComponent)}
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
@@ -348,6 +377,17 @@ const SpaceWeatherPanel = (): JSX.Element => {
             {rInfo.level !== "R0" && (
               <p className="text-[10px]" style={{ color: rScaleColor(rInfo.level) }}>
                 Radio blackout {rInfo.level} · {rInfo.label}
+              </p>
+            )}
+          </div>
+          <div className="rounded-sm border border-white/10 px-2 py-1">
+            <p className="text-[10px] text-[#9cc2de]">Proton Flux (&gt;=10 MeV)</p>
+            <p className="text-lg" style={{ color: sScaleColor(sInfo.level) }}>
+              {formatProtonFlux(protonFlux)}
+            </p>
+            {sInfo.level !== "S0" && (
+              <p className="text-[10px]" style={{ color: sScaleColor(sInfo.level) }}>
+                Radiation storm {sInfo.level} · {sInfo.label}
               </p>
             )}
           </div>
@@ -377,6 +417,21 @@ const SpaceWeatherPanel = (): JSX.Element => {
             >
               <p className="text-[11px] text-white">
                 {row.level} {rInfo.code === row.code ? "(CURRENT)" : ""}
+              </p>
+              <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-1 border-t border-white/10 pt-2">
+          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">SOLAR RADIATION STORM LEVELS (NOAA)</p>
+          {solarRadiationStormScale.map((row) => (
+            <div
+              key={row.level}
+              className={`rounded-sm border px-2 py-1 ${sInfo.code === row.code ? "border-[#00d4ff]/60 bg-[#0f2b46]/50" : "border-white/10"}`}
+            >
+              <p className="text-[11px] text-white">
+                {row.level} {sInfo.code === row.code ? "(CURRENT)" : ""}
               </p>
               <p className="text-[10px] text-[#9cc2de]">{row.impact}</p>
             </div>

@@ -8,7 +8,11 @@ import {
   formatManeuverDeltaV,
   formatMissDistance,
   formatOrbitalPeriod,
+  formatOrbitalSpeed,
+  formatPassDuration,
   formatProbability,
+  formatProtonFlux,
+  formatSpecificEnergy,
   formatUtcTime,
   isCriticalConjunction
 } from "../format";
@@ -69,6 +73,26 @@ describe("formatMissDistance", () => {
     expect(formatMissDistance(-5)).toBe("—");
     expect(formatMissDistance(NaN)).toBe("—");
     expect(formatMissDistance(Infinity)).toBe("—");
+  });
+});
+
+describe("formatProtonFlux", () => {
+  it("renders a whole proton flux with a pfu suffix", () => {
+    expect(formatProtonFlux(42)).toBe("42 pfu");
+  });
+
+  it("rounds fractional flux to whole particles", () => {
+    expect(formatProtonFlux(9.6)).toBe("10 pfu");
+  });
+
+  it("groups thousands with separators", () => {
+    expect(formatProtonFlux(12500)).toBe("12,500 pfu");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatProtonFlux(-1)).toBe("—");
+    expect(formatProtonFlux(NaN)).toBe("—");
+    expect(formatProtonFlux(Infinity)).toBe("—");
   });
 });
 
@@ -137,6 +161,65 @@ describe("formatOrbitalPeriod", () => {
 
   it("clamps negative inputs to zero", () => {
     expect(formatOrbitalPeriod(-5)).toBe("0m");
+  });
+});
+
+describe("formatOrbitalSpeed", () => {
+  it("renders a circular orbital speed with two fraction digits and a km/s suffix", () => {
+    expect(formatOrbitalSpeed(7.66)).toBe("7.66 km/s");
+  });
+
+  it("rounds to two fraction digits", () => {
+    expect(formatOrbitalSpeed(11.186)).toBe("11.19 km/s");
+  });
+
+  it("pads a whole-number speed to two fraction digits", () => {
+    expect(formatOrbitalSpeed(3)).toBe("3.00 km/s");
+  });
+
+  it("renders an em dash for negative or non-finite speeds", () => {
+    expect(formatOrbitalSpeed(-1)).toBe("—");
+    expect(formatOrbitalSpeed(Number.NaN)).toBe("—");
+  });
+});
+
+describe("formatSpecificEnergy", () => {
+  it("renders a bound orbit's energy as a negative MJ/kg value", () => {
+    expect(formatSpecificEnergy(-29.3)).toBe("-29.3 MJ/kg");
+  });
+
+  it("rounds to one fraction digit", () => {
+    expect(formatSpecificEnergy(-29.34)).toBe("-29.3 MJ/kg");
+  });
+
+  it("renders an em dash for non-finite inputs", () => {
+    expect(formatSpecificEnergy(Number.NaN)).toBe("—");
+    expect(formatSpecificEnergy(Number.POSITIVE_INFINITY)).toBe("—");
+  });
+});
+
+describe("formatPassDuration", () => {
+  it("renders a sub-minute pass in whole seconds", () => {
+    expect(formatPassDuration(45)).toBe("45s");
+  });
+
+  it("renders a minutes-long pass as minutes and zero-padded seconds", () => {
+    expect(formatPassDuration(522)).toBe("8m 42s");
+    expect(formatPassDuration(305)).toBe("5m 05s");
+  });
+
+  it("renders an hour-plus contact window as hours and minutes", () => {
+    expect(formatPassDuration(3900)).toBe("1h 5m");
+  });
+
+  it("rounds fractional seconds to the nearest second", () => {
+    expect(formatPassDuration(59.4)).toBe("59s");
+    expect(formatPassDuration(59.6)).toBe("1m 00s");
+  });
+
+  it("clamps negative and non-finite inputs to zero seconds", () => {
+    expect(formatPassDuration(-10)).toBe("0s");
+    expect(formatPassDuration(Number.NaN)).toBe("0s");
   });
 });
 

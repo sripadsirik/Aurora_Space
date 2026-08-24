@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
 import { resolveDisplayedWeather } from "../../utils/displayedWeather";
+import { formatKpIndex } from "../../utils/measurements";
 import { gScaleColor, kpSparklineColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 import { countStormExposedAssets } from "../../utils/stormExposure";
@@ -71,7 +72,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
             </span>
             <div>
               <p className="text-lg font-semibold" style={{ color: getKpColor(kp) }}>
-                Kp {kp.toFixed(1)}
+                Kp {formatKpIndex(kp)}
               </p>
             </div>
           </div>

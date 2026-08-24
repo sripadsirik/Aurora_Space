@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { STORM_EXPOSURE_THRESHOLDS, countStormExposedAssets } from "../stormExposure";
+import { DEBRIS_OWNER, STORM_EXPOSURE_THRESHOLDS, countStormExposedAssets } from "../stormExposure";
 
 const makeSatellite = (overrides: Partial<Satellite> = {}): Satellite => ({
   noradId: 1,
@@ -30,6 +30,14 @@ describe("countStormExposedAssets", () => {
   it("counts debris-owned objects separately", () => {
     const catalog = [makeSatellite({ owner: "DEBRIS" }), makeSatellite({ owner: "NASA" })];
     expect(countStormExposedAssets(catalog).debris).toBe(1);
+  });
+
+  it("matches the debris owner case-insensitively and ignores surrounding whitespace", () => {
+    const catalog = [
+      makeSatellite({ owner: DEBRIS_OWNER.toLowerCase() }),
+      makeSatellite({ owner: `  ${DEBRIS_OWNER}  ` })
+    ];
+    expect(countStormExposedAssets(catalog).debris).toBe(2);
   });
 
   it("lets a single object contribute to overlapping buckets", () => {

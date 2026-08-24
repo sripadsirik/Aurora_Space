@@ -2,6 +2,7 @@ import { Color } from "cesium";
 import type { RiskLevel } from "../types/space";
 import type { ConjunctionFleetSeverity } from "./conjunctionRisk";
 import { conjunctionRiskTextClass } from "./conjunctionRisk";
+import { isBzSouthward } from "./bzComponent";
 
 /** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
@@ -58,7 +59,7 @@ export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity
  * northward (zero or positive) Bz is quiet and reads green.
  */
 export const bzComponentTextClass = (bz: number): string =>
-  bz < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]";
+  isBzSouthward(bz) ? "text-[#ff4f4f]" : "text-[#7dff6a]";
 
 /**
  * Maps solar wind speed in km/s to a Cesium colour: calm below 400, elevated

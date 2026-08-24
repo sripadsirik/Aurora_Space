@@ -4,10 +4,14 @@ import { historicalEvents } from "../data/mock/historicalEvents";
 import { useAuroraStore } from "../store/auroraStore";
 import type { HistoricalEvent } from "../types/space";
 import { clamp01 } from "../utils/clamp";
+import { findNearestEvent } from "../utils/timelineEvents";
+import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
 import {
+  buildYearTicks,
   dateToFraction as dateToFractionInWindow,
   formatTimelineDate,
-  fractionToDate as fractionToDateInWindow
+  fractionToDate as fractionToDateInWindow,
+  isAtLiveEdge
 } from "../utils/timelineScale";
 
 const TIMELINE_START = new Date("2003-01-01T00:00:00Z");
@@ -16,17 +20,6 @@ const TIMELINE_END = new Date();
 const dateToFraction = (date: Date): number => dateToFractionInWindow(date, TIMELINE_START, TIMELINE_END);
 
 const fractionToDate = (fraction: number): Date => fractionToDateInWindow(fraction, TIMELINE_START, TIMELINE_END);
-
-const getMarkerColor = (event: HistoricalEvent): string => {
-  if (event.type === "solar_storm") return "#ff6622";
-  if (event.type === "conjunction") return "#ff2222";
-  return "#ff4488";
-};
-
-const getMarkerShape = (event: HistoricalEvent): "dot" | "x" => {
-  if (event.type === "conjunction") return "x";
-  return "dot";
-};
 
 export const Timeline = (): JSX.Element | null => {
   const timelineActive = useAuroraStore((s) => s.timelineActive);
@@ -42,7 +35,7 @@ export const Timeline = (): JSX.Element | null => {
   const [hoveredEvent, setHoveredEvent] = useState<HistoricalEvent | null>(null);
   const [tooltipX, setTooltipX] = useState(0);
 
-  const isLive = !timelineEvent && Math.abs(timelinePosition.getTime() - Date.now()) < 60_000;
+  const isLive = !timelineEvent && isAtLiveEdge(timelinePosition, new Date());
 
   // Toggle timeline with T key
   useEffect(() => {
@@ -65,18 +58,8 @@ export const Timeline = (): JSX.Element | null => {
       const date = fractionToDate(fraction);
       setTimelinePosition(date);
 
-      // Find the nearest event within a tolerance
-      const tolerance = 0.015;
-      let nearest: HistoricalEvent | null = null;
-      let nearestDist = Infinity;
-      for (const event of historicalEvents) {
-        const ef = dateToFraction(event.date);
-        const dist = Math.abs(ef - fraction);
-        if (dist < tolerance && dist < nearestDist) {
-          nearest = event;
-          nearestDist = dist;
-        }
-      }
+      // Snap to the nearest historical event within the shared tolerance.
+      const nearest = findNearestEvent(historicalEvents, fraction, (event) => dateToFraction(event.date));
 
       if (nearest) {
         setTimelineEvent(nearest);
@@ -132,13 +115,7 @@ export const Timeline = (): JSX.Element | null => {
   const currentFraction = dateToFraction(timelinePosition);
 
   // Year tick marks
-  const startYear = TIMELINE_START.getUTCFullYear();
-  const endYear = TIMELINE_END.getUTCFullYear();
-  const yearTicks: { year: number; fraction: number }[] = [];
-  for (let y = startYear; y <= endYear; y += 2) {
-    const d = new Date(`${y}-01-01T00:00:00Z`);
-    yearTicks.push({ year: y, fraction: dateToFraction(d) });
-  }
+  const yearTicks = buildYearTicks(TIMELINE_START, TIMELINE_END);
 
   return (
     <div className="pointer-events-auto fixed bottom-16 left-4 right-4 z-[90]">
@@ -199,8 +176,8 @@ export const Timeline = (): JSX.Element | null => {
           {/* Event markers */}
           {historicalEvents.map((event) => {
             const fraction = dateToFraction(event.date);
-            const color = getMarkerColor(event);
-            const shape = getMarkerShape(event);
+            const color = markerColorForEvent(event);
+            const shape = markerShapeForEvent(event);
             const isActive = timelineEvent?.id === event.id;
 
             return (
