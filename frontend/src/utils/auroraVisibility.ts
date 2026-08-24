@@ -53,3 +53,24 @@ export const auroraBoundaryLatitude = (kp: number): number => {
   const upperLat = AURORA_BOUNDARY_LATITUDES_BY_KP[upper];
   return lowerLat + (upperLat - lowerLat) * (safeKp - lower);
 };
+
+/**
+ * Degrees of latitude, equatorward of the overhead boundary, from which a bright
+ * aurora can still be glimpsed low on the poleward horizon. Aurora seen near the
+ * horizon originates hundreds of kilometres poleward of the observer, so the
+ * viewable zone extends this far below the overhead edge. A modelling
+ * approximation rather than a hard cutoff.
+ */
+export const AURORA_HORIZON_ALLOWANCE_DEG = 8;
+
+/**
+ * Signed latitude margin, in degrees, between an observer and the aurora's
+ * overhead boundary for a given Kp. Positive when the observer is poleward of
+ * the boundary (aurora overhead or beyond); negative when equatorward of it. The
+ * observer latitude is compared by magnitude, so the helper works for either
+ * hemisphere. Returns `NaN` when the observer latitude is not finite.
+ */
+export const auroraVisibilityMargin = (kp: number, observerLatitude: number): number => {
+  if (!Number.isFinite(observerLatitude)) return Number.NaN;
+  return Math.abs(observerLatitude) - auroraBoundaryLatitude(kp);
+};
