@@ -96,6 +96,28 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
 };
 
 /**
+ * Formats an orbital speed given in km/s for display, such as a circular or
+ * escape velocity. Renders two fraction digits with a `km/s` suffix (for example
+ * `7.66 km/s`). Negative or non-finite inputs render as an em dash so a bad
+ * value never shows as `NaN km/s`.
+ */
+export const formatOrbitalSpeed = (speedKms: number): string => {
+  if (!Number.isFinite(speedKms) || speedKms < 0) return "—";
+  return `${speedKms.toFixed(2)} km/s`;
+};
+
+/**
+ * Formats a specific orbital energy given in MJ/kg for display. Renders one
+ * fraction digit with a `MJ/kg` suffix (for example `-29.3 MJ/kg`); the sign is
+ * preserved so a bound orbit reads as negative. Non-finite inputs render as an
+ * em dash so a bad value never shows as `NaN MJ/kg`.
+ */
+export const formatSpecificEnergy = (energyMJ: number): string => {
+  if (!Number.isFinite(energyMJ)) return "—";
+  return `${energyMJ.toFixed(1)} MJ/kg`;
+};
+
+/**
  * Formats a peak >=10 MeV proton flux (in particle flux units, pfu) for display.
  * Values render with thousands separators and a `pfu` suffix (for example
  * `1,200 pfu`); fractional inputs are rounded to whole particles. Negative or
