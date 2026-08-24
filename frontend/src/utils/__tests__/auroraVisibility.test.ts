@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   AURORA_BOUNDARY_LATITUDES_BY_KP,
-  auroraBoundaryLatitude
+  AURORA_HORIZON_ALLOWANCE_DEG,
+  auroraBoundaryLatitude,
+  auroraVisibilityMargin
 } from "../auroraVisibility";
 
 describe("AURORA_BOUNDARY_LATITUDES_BY_KP", () => {
@@ -47,5 +49,35 @@ describe("auroraBoundaryLatitude", () => {
 
   it("treats non-finite readings as Kp 0", () => {
     expect(auroraBoundaryLatitude(Number.NaN)).toBe(AURORA_BOUNDARY_LATITUDES_BY_KP[0]);
+  });
+});
+
+describe("AURORA_HORIZON_ALLOWANCE_DEG", () => {
+  it("is a positive, modest number of degrees", () => {
+    expect(AURORA_HORIZON_ALLOWANCE_DEG).toBeGreaterThan(0);
+    expect(AURORA_HORIZON_ALLOWANCE_DEG).toBeLessThan(20);
+  });
+});
+
+describe("auroraVisibilityMargin", () => {
+  it("is zero when the observer sits exactly on the overhead boundary", () => {
+    const boundary = auroraBoundaryLatitude(5);
+    expect(auroraVisibilityMargin(5, boundary)).toBeCloseTo(0, 10);
+  });
+
+  it("is positive when the observer is poleward of the boundary", () => {
+    expect(auroraVisibilityMargin(5, 70)).toBeGreaterThan(0);
+  });
+
+  it("is negative when the observer is equatorward of the boundary", () => {
+    expect(auroraVisibilityMargin(5, 40)).toBeLessThan(0);
+  });
+
+  it("uses latitude magnitude so southern observers match", () => {
+    expect(auroraVisibilityMargin(5, -70)).toBeCloseTo(auroraVisibilityMargin(5, 70), 10);
+  });
+
+  it("returns NaN for a non-finite observer latitude", () => {
+    expect(auroraVisibilityMargin(5, Number.NaN)).toBeNaN();
   });
 });
