@@ -1,12 +1,13 @@
 import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
-import { isBzSouthward } from "../utils/bzComponent";
-import { getKpColor } from "../utils/colors";
+import { bzComponentTextClass, getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
-import { describeFeedFreshness } from "../utils/feedFreshness";
-import type { FreshnessStatus } from "../utils/feedFreshness";
+import { resolveDisplayedWeather } from "../utils/displayedWeather";
+import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { buildHudDataLayers } from "../utils/hudDataLayers";
+import { deriveHudTheme } from "../utils/hudTheme";
 import { formatKpIndex, formatMagneticFieldNt } from "../utils/measurements";
 import { kpToPercent } from "../utils/kpScale";
 
@@ -14,14 +15,6 @@ interface HUDProps {
   satellites: Satellite[];
   conjunctions: ConjunctionWarning[];
   spaceWeather: SpaceWeather;
-}
-
-interface LayerRow {
-  name: string;
-  source: string;
-  freshness: string;
-  count: number;
-  status: FreshnessStatus;
 }
 
 export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.Element | null => {
@@ -33,54 +26,25 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   const timelineEvent = useAuroraStore((state) => state.timelineEvent);
   const feedLastUpdated = useAuroraStore((state) => state.feedLastUpdated);
 
-  const kpDisplay = timelineEvent?.kpIndex ?? spaceWeather.kpIndex;
-  const windDisplay = timelineEvent?.solarWindSpeed ?? spaceWeather.solarWindSpeed;
-  const bzDisplay = timelineEvent?.bzComponent ?? spaceWeather.bzComponent;
-  const stormDisplay = timelineEvent?.stormLevel ?? spaceWeather.stormLevel;
+  const {
+    kpIndex: kpDisplay,
+    solarWindSpeed: windDisplay,
+    bzComponent: bzDisplay,
+    stormLevel: stormDisplay
+  } = resolveDisplayedWeather(spaceWeather, timelineEvent);
 
   const kpPosition = kpToPercent(kpDisplay);
 
   // Mode-dependent color styles
-  const isIntel = currentMode === "INTEL";
-  const isStorm = currentMode === "STORM" || kpDisplay > 5;
-  const textColor = isIntel ? "#ffffff" : isStorm ? "#ffd8b8" : "var(--aurora-text)";
-  const accentColor = isIntel ? "#ff6600" : isStorm ? "#ff8844" : "var(--aurora-accent)";
-  const subTextColor = isIntel ? "#cccccc" : isStorm ? "#ffccaa" : "#cde4f6";
+  const { isIntel, textColor, accentColor, subTextColor } = deriveHudTheme(currentMode, kpDisplay);
 
-  const satFresh = describeFeedFreshness(feedLastUpdated.satellites, now);
-  const conjFresh = describeFeedFreshness(feedLastUpdated.conjunctions, now);
-  const wxFresh = describeFeedFreshness(feedLastUpdated.spaceWeather, now);
-
-  const layers: LayerRow[] = [
-    {
-      name: "Satellites",
-      source: "CelesTrak",
-      freshness: satFresh.label,
-      count: satellites.length,
-      status: satFresh.status
-    },
-    {
-      name: "Conjunctions",
-      source: "Space-Track",
-      freshness: conjFresh.label,
-      count: conjunctions.length,
-      status: conjFresh.status
-    },
-    {
-      name: "Space Weather",
-      source: "NOAA SWPC",
-      freshness: wxFresh.label,
-      count: 1,
-      status: wxFresh.status
-    },
-    {
-      name: "Aurora Forecast",
-      source: "NOAA Ovation",
-      freshness: wxFresh.label,
-      count: 2,
-      status: wxFresh.status
-    }
-  ];
+  const layers = buildHudDataLayers({
+    satelliteCount: satellites.length,
+    satelliteFreshness: describeFeedFreshness(feedLastUpdated.satellites, now),
+    conjunctionCount: conjunctions.length,
+    conjunctionFreshness: describeFeedFreshness(feedLastUpdated.conjunctions, now),
+    weatherFreshness: describeFeedFreshness(feedLastUpdated.spaceWeather, now)
+  });
 
   if (currentMode === "HELIO") {
     return null;
@@ -127,7 +91,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             </div>
             <div className="flex justify-between">
               <span>Bz Component</span>
-              <span className={isBzSouthward(bzDisplay) ? "text-[#ff4f4f]" : "text-[#7dff6a]"}>
+              <span className={bzComponentTextClass(bzDisplay)}>
                 {formatMagneticFieldNt(bzDisplay)}
               </span>
             </div>
@@ -192,7 +156,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           <div className="mt-2 space-y-1 text-xs">
             {layers.map((layer) => (
               <div key={layer.name} className="grid grid-cols-[8px_1.2fr_1fr_0.8fr_0.6fr] items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${layer.status === "live" ? (isIntel ? "bg-[#ff6600]" : "bg-[#00ff88]") : layer.status === "stale" ? "bg-[#ffcc00]" : "bg-[#ff4444]"}`} />
+                <span className={`h-2 w-2 rounded-full ${freshnessStatusDotClass(layer.status, { intel: isIntel })}`} />
                 <span>{layer.name}</span>
                 <span style={{ color: isIntel ? "#999999" : "#9ec3df" }}>{layer.source}</span>
                 <span>{layer.freshness}</span>

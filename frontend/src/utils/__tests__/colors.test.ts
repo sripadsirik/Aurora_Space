@@ -1,6 +1,7 @@
 import { Color } from "cesium";
 import { describe, expect, it } from "vitest";
 import {
+  bzComponentTextClass,
   conjunctionFleetSeverityColor,
   conjunctionRowTextClass,
   getKpColor,
@@ -72,6 +73,18 @@ describe("conjunctionRowTextClass", () => {
   it("uses calm blue-white text for the watch and nominal tiers", () => {
     expect(conjunctionRowTextClass("watch")).toBe("text-[#d8ebff]");
     expect(conjunctionRowTextClass("nominal")).toBe("text-[#d8ebff]");
+  });
+});
+
+describe("bzComponentTextClass", () => {
+  it("uses alert red for a southward (negative) Bz", () => {
+    expect(bzComponentTextClass(-0.1)).toBe("text-[#ff4f4f]");
+    expect(bzComponentTextClass(-12)).toBe("text-[#ff4f4f]");
+  });
+
+  it("uses quiet green for a northward (zero or positive) Bz", () => {
+    expect(bzComponentTextClass(0)).toBe("text-[#7dff6a]");
+    expect(bzComponentTextClass(4.5)).toBe("text-[#7dff6a]");
   });
 });
 
