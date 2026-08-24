@@ -49,9 +49,10 @@ Current backend split:
 
 The space weather utilities model all three of NOAA SWPC's
 [space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation) in
-`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel currently surfaces the
-G and R scales; the S scale helpers are ready for the panel to consume once a proton-flux
-reading is added to the feed:
+`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel surfaces all three
+scales — the G and R levels alongside the S level derived from the feed's proton-flux
+reading — and leads with a combined NOAA status line (see `summarizeNoaaScales`) that
+highlights the most severe active scale:
 
 | Scale | Driver | Levels | Helpers |
 | --- | --- | --- | --- |
@@ -63,6 +64,10 @@ Each scale exposes a metadata table (`geomagneticStormScale` / `radioBlackoutSca
 `solarRadiationStormScale`) with a severity code, short label, and one-line operational impact,
 plus a colour map that escalates from quiet green to extreme red. `G0`/`R0`/`S0` denote
 sub-storm quiet conditions.
+
+`summarizeNoaaScales` (`frontend/src/utils/noaaScaleSummary.ts`) resolves a space-weather
+snapshot into all three current levels and picks the single most severe one (`peak`), breaking
+ties in G → S → R order. It backs the panel's compact NOAA status line.
 
 ## Orbit Summary
 

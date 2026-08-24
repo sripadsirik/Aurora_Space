@@ -10,6 +10,7 @@ import {
   formatOrbitalPeriod,
   formatPassDuration,
   formatProbability,
+  formatProtonFlux,
   formatUtcTime,
   isCriticalConjunction
 } from "../format";
@@ -70,6 +71,26 @@ describe("formatMissDistance", () => {
     expect(formatMissDistance(-5)).toBe("—");
     expect(formatMissDistance(NaN)).toBe("—");
     expect(formatMissDistance(Infinity)).toBe("—");
+  });
+});
+
+describe("formatProtonFlux", () => {
+  it("renders a whole proton flux with a pfu suffix", () => {
+    expect(formatProtonFlux(42)).toBe("42 pfu");
+  });
+
+  it("rounds fractional flux to whole particles", () => {
+    expect(formatProtonFlux(9.6)).toBe("10 pfu");
+  });
+
+  it("groups thousands with separators", () => {
+    expect(formatProtonFlux(12500)).toBe("12,500 pfu");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatProtonFlux(-1)).toBe("—");
+    expect(formatProtonFlux(NaN)).toBe("—");
+    expect(formatProtonFlux(Infinity)).toBe("—");
   });
 });
 
