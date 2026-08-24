@@ -8,6 +8,7 @@ import {
   formatManeuverDeltaV,
   formatMissDistance,
   formatOrbitalPeriod,
+  formatPassDuration,
   formatProbability,
   formatProtonFlux,
   formatUtcTime,
@@ -158,6 +159,31 @@ describe("formatOrbitalPeriod", () => {
 
   it("clamps negative inputs to zero", () => {
     expect(formatOrbitalPeriod(-5)).toBe("0m");
+  });
+});
+
+describe("formatPassDuration", () => {
+  it("renders a sub-minute pass in whole seconds", () => {
+    expect(formatPassDuration(45)).toBe("45s");
+  });
+
+  it("renders a minutes-long pass as minutes and zero-padded seconds", () => {
+    expect(formatPassDuration(522)).toBe("8m 42s");
+    expect(formatPassDuration(305)).toBe("5m 05s");
+  });
+
+  it("renders an hour-plus contact window as hours and minutes", () => {
+    expect(formatPassDuration(3900)).toBe("1h 5m");
+  });
+
+  it("rounds fractional seconds to the nearest second", () => {
+    expect(formatPassDuration(59.4)).toBe("59s");
+    expect(formatPassDuration(59.6)).toBe("1m 00s");
+  });
+
+  it("clamps negative and non-finite inputs to zero seconds", () => {
+    expect(formatPassDuration(-10)).toBe("0s");
+    expect(formatPassDuration(Number.NaN)).toBe("0s");
   });
 });
 

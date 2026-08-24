@@ -108,6 +108,25 @@ export const formatProtonFlux = (fluxPfu: number): string => {
 };
 
 /**
+ * Formats a satellite pass (ground-station contact) duration given in seconds as
+ * a compact string. Durations under a minute read as whole seconds (for example
+ * `45s`); durations under an hour read as minutes and seconds (for example
+ * `8m 42s`); an hour or longer reads as hours and minutes (for example `1h 5m`).
+ * Negative or non-finite inputs are clamped to `0s`.
+ */
+export const formatPassDuration = (seconds: number): string => {
+  const totalSeconds = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  if (totalSeconds < 3600) {
+    const minutes = Math.floor(totalSeconds / 60);
+    return `${minutes}m ${pad(totalSeconds % 60)}s`;
+  }
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+};
+
+/**
  * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
  * whole-percent string like `37%`. Values are clamped to the 0-1 range before
  * rounding, so out-of-range inputs read as `0%` or `100%`.

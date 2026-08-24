@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
+import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import {
@@ -20,6 +21,12 @@ import {
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
 import {
+  formatAltitudeKm,
+  formatKpIndex,
+  formatMagneticFieldNt,
+  formatSpeedKms
+} from "../../utils/measurements";
+import {
   earthRadiusMeters,
   getOrbitalPeriod,
   kpToAuroraBoundaryLatitude,
@@ -28,6 +35,7 @@ import {
 import { summarizeNoaaScales } from "../../utils/noaaScaleSummary";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
+import { isElevatedSolarWind, solarWindSpeedArrow } from "../../utils/solarWind";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
@@ -154,9 +162,9 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
               {selectedSatellite.orbitType} ({ORBIT_LABELS[selectedSatellite.orbitType]})
             </span>
             <span>Current Altitude</span>
-            <span className="text-right">{selectedSatellite.altitudeKm.toFixed(1)} km</span>
+            <span className="text-right">{formatAltitudeKm(selectedSatellite.altitudeKm)}</span>
             <span>Velocity</span>
-            <span className="text-right">{selectedSatellite.velocityKms.toFixed(3)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedSatellite.velocityKms, 3)}</span>
             <span>Orbital Period</span>
             <span className="text-right">{periodMinutes.toFixed(1)} min</span>
             <span>Inclination</span>
@@ -259,7 +267,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>
-            <span className="text-right">{selectedConjunction.relativeVelocityKms.toFixed(2)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedConjunction.relativeVelocityKms, 2)}</span>
             <span>Collision probability</span>
             <span className={`text-right ${probabilityClass}`}>{formatProbability(selectedConjunction.probability)}</span>
           </div>
@@ -337,7 +345,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Kp Index</p>
             <p className="text-lg font-semibold" style={{ color: getKpColor(spaceWeather.kpIndex) }}>
-              {spaceWeather.kpIndex.toFixed(1)}
+              {formatKpIndex(spaceWeather.kpIndex)}
             </p>
             <div className="relative mt-1 h-1.5 rounded bg-gradient-to-r from-[#6dff79] via-[#ffcb3b] to-[#ff2a2a]">
               <div className="absolute -top-1 h-3 w-[2px] bg-white" style={{ left: `calc(${kpPosition}% - 1px)` }} />
@@ -347,18 +355,18 @@ const SpaceWeatherPanel = (): JSX.Element => {
             <p className="text-[10px] text-[#9cc2de]">Solar Wind Speed</p>
             <p className="text-lg">
               {spaceWeather.solarWindSpeed} km/s{" "}
-              <span className={spaceWeather.solarWindSpeed >= 450 ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
-                {spaceWeather.solarWindSpeed >= 450 ? "↑" : "↓"}
+              <span className={isElevatedSolarWind(spaceWeather.solarWindSpeed) ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
+                {solarWindSpeedArrow(spaceWeather.solarWindSpeed)}
               </span>
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Bz Component</p>
             <p
-              className={spaceWeather.bzComponent < 0 ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
+              className={isBzSouthward(spaceWeather.bzComponent) ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
-              {spaceWeather.bzComponent.toFixed(1)} nT
+              {formatMagneticFieldNt(spaceWeather.bzComponent)}
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
