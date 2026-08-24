@@ -6,7 +6,8 @@ import {
   auroraBoundaryLatitude,
   auroraVisibilityMargin,
   classifyAuroraChance,
-  minimumKpForOverhead
+  minimumKpForOverhead,
+  summarizeAuroraVisibility
 } from "../auroraVisibility";
 
 describe("AURORA_BOUNDARY_LATITUDES_BY_KP", () => {
@@ -147,5 +148,29 @@ describe("minimumKpForOverhead", () => {
 
   it("returns null for a non-finite latitude", () => {
     expect(minimumKpForOverhead(Number.NaN)).toBeNull();
+  });
+});
+
+describe("summarizeAuroraVisibility", () => {
+  it("agrees with the individual helpers", () => {
+    const kp = 6;
+    const latitude = 55;
+    const summary = summarizeAuroraVisibility(kp, latitude);
+    expect(summary.boundaryLatitude).toBe(auroraBoundaryLatitude(kp));
+    expect(summary.margin).toBe(auroraVisibilityMargin(kp, latitude));
+    expect(summary.chance).toBe(classifyAuroraChance(kp, latitude));
+    expect(summary.chanceLabel).toBe(AURORA_CHANCE_LABELS[summary.chance]);
+    expect(summary.minimumKpForOverhead).toBe(minimumKpForOverhead(latitude));
+  });
+
+  it("describes a high-latitude observer seeing an overhead aurora", () => {
+    const summary = summarizeAuroraVisibility(7, 68);
+    expect(summary.chance).toBe("overhead");
+    expect(summary.margin).toBeGreaterThan(0);
+  });
+
+  it("describes a mid-latitude observer with no aurora during quiet conditions", () => {
+    const summary = summarizeAuroraVisibility(1, 40);
+    expect(summary.chance).toBe("none");
   });
 });
