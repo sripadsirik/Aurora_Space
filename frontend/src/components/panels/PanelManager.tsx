@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
+import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import { conjunctionPeerName } from "../../utils/conjunctionLabels";
 import {
@@ -32,6 +33,7 @@ import {
 } from "../../utils/orbit";
 import { normalizeProbability } from "../../utils/probability";
 import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
+import { isElevatedSolarWind, solarWindSpeedArrow } from "../../utils/solarWind";
 import {
   geomagneticStormScale,
   kpToGScaleInfo,
@@ -332,15 +334,15 @@ const SpaceWeatherPanel = (): JSX.Element => {
             <p className="text-[10px] text-[#9cc2de]">Solar Wind Speed</p>
             <p className="text-lg">
               {spaceWeather.solarWindSpeed} km/s{" "}
-              <span className={spaceWeather.solarWindSpeed >= 450 ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
-                {spaceWeather.solarWindSpeed >= 450 ? "↑" : "↓"}
+              <span className={isElevatedSolarWind(spaceWeather.solarWindSpeed) ? "text-[#ffaf5e]" : "text-[#75e6ad]"}>
+                {solarWindSpeedArrow(spaceWeather.solarWindSpeed)}
               </span>
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Bz Component</p>
             <p
-              className={spaceWeather.bzComponent < 0 ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
+              className={isBzSouthward(spaceWeather.bzComponent) ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
               {formatMagneticFieldNt(spaceWeather.bzComponent)}
