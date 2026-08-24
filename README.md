@@ -382,6 +382,28 @@ lists the tiers most-urgent-first for stable rendering. Every bucket is always p
 the counts and an all-passed or empty feed yields a `null` next lead time, so a timeline or
 HUD header can render from these helpers without a guard.
 
+## Aurora Visibility
+
+The `auroraKp` reading only says *how strong* the aurora is; the pure helpers in
+`frontend/src/utils/auroraVisibility.ts` turn that into *where* it can be seen. As
+geomagnetic activity rises the auroral oval expands toward the equator, so a higher Kp
+lets lower latitudes catch the show. The module follows NOAA SWPC's approximate
+Kp-to-viewing-latitude guidance:
+
+| Helper | Returns |
+| --- | --- |
+| `auroraBoundaryLatitude` | Overhead oval edge (geomagnetic latitude) for a Kp, interpolated |
+| `auroraVisibilityMargin` | Signed degrees between an observer and that boundary |
+| `classifyAuroraChance` | The `overhead`/`horizon`/`none` visibility tier |
+| `minimumKpForOverhead` | Smallest Kp that puts the aurora overhead at a latitude (or `null`) |
+| `summarizeAuroraVisibility` | All of the above bundled into one `AuroraVisibilitySummary` |
+
+`AURORA_BOUNDARY_LATITUDES_BY_KP` holds the reference boundary for each integer Kp 0–9, and
+`AURORA_HORIZON_ALLOWANCE_DEG` models how far equatorward of that edge a bright aurora can
+still be glimpsed low on the poleward horizon. Observer latitude is compared by magnitude, so
+the helpers work for either hemisphere, and non-finite inputs fall back to a safe result
+(`none`/`null`) rather than throwing.
+
 ## Repo Layout
 
 ```text
@@ -611,7 +633,7 @@ The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently coveri
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
 `catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
 `conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`,
-`conjunctionLeadTime`), the Zustand store, and the mock datasets under `src/data/mock/`
+`conjunctionLeadTime`, `auroraVisibility`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
