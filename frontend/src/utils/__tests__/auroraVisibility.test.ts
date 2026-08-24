@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   AURORA_BOUNDARY_LATITUDES_BY_KP,
+  AURORA_CHANCE_LABELS,
   AURORA_HORIZON_ALLOWANCE_DEG,
   auroraBoundaryLatitude,
-  auroraVisibilityMargin
+  auroraVisibilityMargin,
+  classifyAuroraChance
 } from "../auroraVisibility";
 
 describe("AURORA_BOUNDARY_LATITUDES_BY_KP", () => {
@@ -79,5 +81,41 @@ describe("auroraVisibilityMargin", () => {
 
   it("returns NaN for a non-finite observer latitude", () => {
     expect(auroraVisibilityMargin(5, Number.NaN)).toBeNaN();
+  });
+});
+
+describe("classifyAuroraChance", () => {
+  it("reports overhead when the observer is poleward of the boundary", () => {
+    expect(classifyAuroraChance(5, 70)).toBe("overhead");
+  });
+
+  it("reports overhead exactly on the boundary", () => {
+    expect(classifyAuroraChance(5, auroraBoundaryLatitude(5))).toBe("overhead");
+  });
+
+  it("reports a horizon glow just equatorward of the boundary", () => {
+    const boundary = auroraBoundaryLatitude(5);
+    expect(classifyAuroraChance(5, boundary - AURORA_HORIZON_ALLOWANCE_DEG / 2)).toBe("horizon");
+  });
+
+  it("includes the far edge of the horizon allowance", () => {
+    const boundary = auroraBoundaryLatitude(5);
+    expect(classifyAuroraChance(5, boundary - AURORA_HORIZON_ALLOWANCE_DEG)).toBe("horizon");
+  });
+
+  it("reports none well equatorward of the boundary", () => {
+    expect(classifyAuroraChance(5, 20)).toBe("none");
+  });
+
+  it("reports none for a non-finite observer latitude", () => {
+    expect(classifyAuroraChance(5, Number.NaN)).toBe("none");
+  });
+});
+
+describe("AURORA_CHANCE_LABELS", () => {
+  it("labels every chance tier", () => {
+    expect(AURORA_CHANCE_LABELS.overhead).toBeTruthy();
+    expect(AURORA_CHANCE_LABELS.horizon).toBeTruthy();
+    expect(AURORA_CHANCE_LABELS.none).toBeTruthy();
   });
 });
