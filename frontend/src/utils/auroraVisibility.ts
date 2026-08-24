@@ -14,6 +14,7 @@
  */
 
 import { clamp } from "./clamp";
+import { KP_MAX } from "./kpScale";
 
 /**
  * Approximate corrected-geomagnetic latitude, in degrees, of the auroral oval's
@@ -33,9 +34,6 @@ export const AURORA_BOUNDARY_LATITUDES_BY_KP: readonly number[] = [
   50.1, // Kp 8
   48.1 // Kp 9
 ] as const;
-
-/** The largest value the planetary Kp index can take (Kp 9, an extreme storm). */
-export const KP_MAX = 9;
 
 /**
  * Approximate corrected-geomagnetic latitude of the aurora's overhead edge for a
