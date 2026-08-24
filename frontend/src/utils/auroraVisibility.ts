@@ -74,3 +74,35 @@ export const auroraVisibilityMargin = (kp: number, observerLatitude: number): nu
   if (!Number.isFinite(observerLatitude)) return Number.NaN;
   return Math.abs(observerLatitude) - auroraBoundaryLatitude(kp);
 };
+
+/**
+ * How likely the aurora is to be seen from an observer's latitude, ordered from
+ * best to worst: `overhead` (the oval reaches the observer), `horizon` (only a
+ * glow low on the poleward horizon), and `none` (too far equatorward to see it).
+ */
+export type AuroraChance = "overhead" | "horizon" | "none";
+
+/**
+ * Classifies an observer's aurora prospects for a given Kp from their
+ * {@link auroraVisibilityMargin}. A margin at or above zero means the oval is
+ * overhead; a margin within {@link AURORA_HORIZON_ALLOWANCE_DEG} below the edge
+ * means a horizon glow is possible; anything further equatorward is `none`. A
+ * non-finite observer latitude is treated as `none`.
+ */
+export const classifyAuroraChance = (kp: number, observerLatitude: number): AuroraChance => {
+  const margin = auroraVisibilityMargin(kp, observerLatitude);
+  if (!Number.isFinite(margin)) return "none";
+  if (margin >= 0) return "overhead";
+  if (margin >= -AURORA_HORIZON_ALLOWANCE_DEG) return "horizon";
+  return "none";
+};
+
+/**
+ * Short human-readable label for each {@link AuroraChance}, for legends, badges,
+ * and panel copy. Centralised so every display names the tiers identically.
+ */
+export const AURORA_CHANCE_LABELS: Record<AuroraChance, string> = {
+  overhead: "Overhead",
+  horizon: "On the horizon",
+  none: "Not visible"
+};
