@@ -36,7 +36,8 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   const kpPosition = kpToPercent(kpDisplay);
 
   // Mode-dependent color styles
-  const { isIntel, textColor, accentColor, subTextColor } = deriveHudTheme(currentMode, kpDisplay);
+  const { isIntel, textColor, accentColor, subTextColor, alertTextColor, sourceColor, clockColor } =
+    deriveHudTheme(currentMode, kpDisplay);
 
   const layers = buildHudDataLayers({
     satelliteCount: satellites.length,
@@ -114,7 +115,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
         ) : (
           <div className="hud-panel pointer-events-auto ml-auto w-[430px] self-start rounded p-3">
             <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>ACTIVE ALERTS</p>
-            <div className="mt-2 space-y-1 text-xs" style={{ color: isIntel ? "#cccccc" : "#d8ebff" }}>
+            <div className="mt-2 space-y-1 text-xs" style={{ color: alertTextColor }}>
               {conjunctions.map((conjunction) => {
                 const isCritical = isCriticalConjunction(conjunction);
                 const isSelected = selectedConjunction?.id === conjunction.id;
@@ -158,7 +159,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
               <div key={layer.name} className="grid grid-cols-[8px_1.2fr_1fr_0.8fr_0.6fr] items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${freshnessStatusDotClass(layer.status, { intel: isIntel })}`} />
                 <span>{layer.name}</span>
-                <span style={{ color: isIntel ? "#999999" : "#9ec3df" }}>{layer.source}</span>
+                <span style={{ color: sourceColor }}>{layer.source}</span>
                 <span>{layer.freshness}</span>
                 <span className="text-right">{layer.count}</span>
               </div>
@@ -169,7 +170,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
         <div className="ml-auto mt-auto self-end text-right">
           <div className="hud-panel pointer-events-auto inline-block rounded px-4 py-2">
             <p className="text-lg tracking-[0.25em]" style={{ color: accentColor }}>AURORA</p>
-            <p className="text-xs" style={{ color: isIntel ? "#009933" : "#b9d6ee" }}>{formatUtcTime(now)}</p>
+            <p className="text-xs" style={{ color: clockColor }}>{formatUtcTime(now)}</p>
           </div>
         </div>
       </div>

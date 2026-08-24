@@ -9,7 +9,10 @@ describe("deriveHudTheme", () => {
       isStorm: false,
       textColor: "var(--aurora-text)",
       accentColor: "var(--aurora-accent)",
-      subTextColor: "#cde4f6"
+      subTextColor: "#cde4f6",
+      alertTextColor: "#d8ebff",
+      sourceColor: "#9ec3df",
+      clockColor: "#b9d6ee"
     });
   });
 
@@ -19,6 +22,13 @@ describe("deriveHudTheme", () => {
     expect(theme.accentColor).toBe("#ff6600");
     expect(theme.textColor).toBe("#ffffff");
     expect(theme.subTextColor).toBe("#cccccc");
+  });
+
+  it("uses the INTEL secondary colours for alerts, sources and the clock", () => {
+    const theme = deriveHudTheme("INTEL", 8);
+    expect(theme.alertTextColor).toBe("#cccccc");
+    expect(theme.sourceColor).toBe("#999999");
+    expect(theme.clockColor).toBe("#009933");
   });
 
   it("warms the palette in STORM mode", () => {
