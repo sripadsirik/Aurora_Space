@@ -106,3 +106,19 @@ export const AURORA_CHANCE_LABELS: Record<AuroraChance, string> = {
   horizon: "On the horizon",
   none: "Not visible"
 };
+
+/**
+ * Smallest integer Kp level, 0–9, at which the aurora would be overhead at an
+ * observer's latitude, or `null` when even an extreme Kp 9 storm leaves the oval
+ * poleward of them. Latitude is compared by magnitude so either hemisphere
+ * works, and a non-finite latitude yields `null`. Answers "how strong a storm do
+ * I need before the aurora reaches me?".
+ */
+export const minimumKpForOverhead = (observerLatitude: number): number | null => {
+  if (!Number.isFinite(observerLatitude)) return null;
+  const latitude = Math.abs(observerLatitude);
+  for (let kp = 0; kp <= KP_MAX; kp += 1) {
+    if (AURORA_BOUNDARY_LATITUDES_BY_KP[kp] <= latitude) return kp;
+  }
+  return null;
+};
