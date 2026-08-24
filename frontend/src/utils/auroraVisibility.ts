@@ -122,3 +122,37 @@ export const minimumKpForOverhead = (observerLatitude: number): number | null =>
   }
   return null;
 };
+
+/** Aurora outlook for one observer at one Kp, ready to drive a panel or badge. */
+export interface AuroraVisibilitySummary {
+  /** Overhead boundary latitude, in degrees, for this Kp. */
+  boundaryLatitude: number;
+  /** Signed latitude margin between the observer and the boundary, in degrees. */
+  margin: number;
+  /** The observer's visibility tier. */
+  chance: AuroraChance;
+  /** Human-readable label for {@link chance}. */
+  chanceLabel: string;
+  /** Smallest Kp that would put the aurora overhead here, or `null` if none. */
+  minimumKpForOverhead: number | null;
+}
+
+/**
+ * Bundles the aurora-visibility figures for one observer and Kp into a single
+ * struct, so a display can derive every value from one reading and one latitude.
+ * All members reuse the individual helpers in this module, keeping them mutually
+ * consistent.
+ */
+export const summarizeAuroraVisibility = (
+  kp: number,
+  observerLatitude: number
+): AuroraVisibilitySummary => {
+  const chance = classifyAuroraChance(kp, observerLatitude);
+  return {
+    boundaryLatitude: auroraBoundaryLatitude(kp),
+    margin: auroraVisibilityMargin(kp, observerLatitude),
+    chance,
+    chanceLabel: AURORA_CHANCE_LABELS[chance],
+    minimumKpForOverhead: minimumKpForOverhead(observerLatitude)
+  };
+};
