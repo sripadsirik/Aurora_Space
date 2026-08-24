@@ -5,7 +5,8 @@ import {
   AURORA_HORIZON_ALLOWANCE_DEG,
   auroraBoundaryLatitude,
   auroraVisibilityMargin,
-  classifyAuroraChance
+  classifyAuroraChance,
+  minimumKpForOverhead
 } from "../auroraVisibility";
 
 describe("AURORA_BOUNDARY_LATITUDES_BY_KP", () => {
@@ -117,5 +118,34 @@ describe("AURORA_CHANCE_LABELS", () => {
     expect(AURORA_CHANCE_LABELS.overhead).toBeTruthy();
     expect(AURORA_CHANCE_LABELS.horizon).toBeTruthy();
     expect(AURORA_CHANCE_LABELS.none).toBeTruthy();
+  });
+});
+
+describe("minimumKpForOverhead", () => {
+  it("needs no storm at very high latitude", () => {
+    expect(minimumKpForOverhead(67)).toBe(0);
+  });
+
+  it("returns the first Kp whose boundary reaches the latitude", () => {
+    // Kp 4's boundary is 58.3; an observer at 58.3 is reached first at Kp 4.
+    expect(minimumKpForOverhead(58.3)).toBe(4);
+  });
+
+  it("requires a stronger storm at lower latitude", () => {
+    const high = minimumKpForOverhead(60) ?? -1;
+    const low = minimumKpForOverhead(50) ?? -1;
+    expect(low).toBeGreaterThan(high);
+  });
+
+  it("returns null when even Kp 9 cannot reach the latitude", () => {
+    expect(minimumKpForOverhead(30)).toBeNull();
+  });
+
+  it("uses latitude magnitude for southern observers", () => {
+    expect(minimumKpForOverhead(-58.3)).toBe(4);
+  });
+
+  it("returns null for a non-finite latitude", () => {
+    expect(minimumKpForOverhead(Number.NaN)).toBeNull();
   });
 });
