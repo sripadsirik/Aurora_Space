@@ -60,13 +60,6 @@ export const formatCountdownToTca = (tca: Date | string): string => {
 export const formatProbability = (probability: number): string => probability.toExponential(1);
 
 /**
- * Formats an IMF Bz component reading in nanoteslas with one fraction digit and
- * its unit, for example `-4.2 nT`. The sign is preserved so a southward
- * (negative) field reads with its leading minus.
- */
-export const formatBzComponent = (bz: number): string => `${bz.toFixed(1)} nT`;
-
-/**
  * Formats a conjunction miss distance for display. Distances below 10 km are
  * shown in whole metres with thousands separators (for example `8,500 m`);
  * larger distances switch to kilometres with one fraction digit (for example
@@ -99,6 +92,25 @@ export const formatOrbitalPeriod = (periodMinutes: number): string => {
   if (totalMinutes < 60) return `${totalMinutes}m`;
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+};
+
+/**
+ * Formats a satellite pass (ground-station contact) duration given in seconds as
+ * a compact string. Durations under a minute read as whole seconds (for example
+ * `45s`); durations under an hour read as minutes and seconds (for example
+ * `8m 42s`); an hour or longer reads as hours and minutes (for example `1h 5m`).
+ * Negative or non-finite inputs are clamped to `0s`.
+ */
+export const formatPassDuration = (seconds: number): string => {
+  const totalSeconds = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  if (totalSeconds < 3600) {
+    const minutes = Math.floor(totalSeconds / 60);
+    return `${minutes}m ${pad(totalSeconds % 60)}s`;
+  }
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   return `${hours}h ${minutes}m`;
 };
 

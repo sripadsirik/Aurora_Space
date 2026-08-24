@@ -13,13 +13,18 @@ import {
   missDistanceSeverityTextClass
 } from "../../utils/conjunctionRisk";
 import {
-  formatBzComponent,
   formatCountdownToTca,
   formatMissDistance,
   formatProbability,
   formatUtcTime
 } from "../../utils/format";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
+import {
+  formatAltitudeKm,
+  formatKpIndex,
+  formatMagneticFieldNt,
+  formatSpeedKms
+} from "../../utils/measurements";
 import {
   earthRadiusMeters,
   getOrbitalPeriod,
@@ -152,9 +157,9 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
               {selectedSatellite.orbitType} ({ORBIT_LABELS[selectedSatellite.orbitType]})
             </span>
             <span>Current Altitude</span>
-            <span className="text-right">{selectedSatellite.altitudeKm.toFixed(1)} km</span>
+            <span className="text-right">{formatAltitudeKm(selectedSatellite.altitudeKm)}</span>
             <span>Velocity</span>
-            <span className="text-right">{selectedSatellite.velocityKms.toFixed(3)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedSatellite.velocityKms, 3)}</span>
             <span>Orbital Period</span>
             <span className="text-right">{periodMinutes.toFixed(1)} min</span>
             <span>Inclination</span>
@@ -257,7 +262,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
             <span>Relative velocity</span>
-            <span className="text-right">{selectedConjunction.relativeVelocityKms.toFixed(2)} km/s</span>
+            <span className="text-right">{formatSpeedKms(selectedConjunction.relativeVelocityKms, 2)}</span>
             <span>Collision probability</span>
             <span className={`text-right ${probabilityClass}`}>{formatProbability(selectedConjunction.probability)}</span>
           </div>
@@ -319,7 +324,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-[10px] text-[#9cc2de]">Kp Index</p>
             <p className="text-lg font-semibold" style={{ color: getKpColor(spaceWeather.kpIndex) }}>
-              {spaceWeather.kpIndex.toFixed(1)}
+              {formatKpIndex(spaceWeather.kpIndex)}
             </p>
             <div className="relative mt-1 h-1.5 rounded bg-gradient-to-r from-[#6dff79] via-[#ffcb3b] to-[#ff2a2a]">
               <div className="absolute -top-1 h-3 w-[2px] bg-white" style={{ left: `calc(${kpPosition}% - 1px)` }} />
@@ -340,7 +345,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
               className={isBzSouthward(spaceWeather.bzComponent) ? "text-lg text-[#ff6f6f]" : "text-lg text-[#75e6ad]"}
               title="Negative Bz = Earth's magnetic shield weakened"
             >
-              {formatBzComponent(spaceWeather.bzComponent)}
+              {formatMagneticFieldNt(spaceWeather.bzComponent)}
             </p>
           </div>
           <div className="rounded-sm border border-white/10 px-2 py-1">

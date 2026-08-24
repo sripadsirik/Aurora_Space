@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
-  formatBzComponent,
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
@@ -9,6 +8,7 @@ import {
   formatManeuverDeltaV,
   formatMissDistance,
   formatOrbitalPeriod,
+  formatPassDuration,
   formatProbability,
   formatUtcTime,
   isCriticalConjunction
@@ -45,20 +45,6 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
-  });
-});
-
-describe("formatBzComponent", () => {
-  it("renders a northward field with one fraction digit and its unit", () => {
-    expect(formatBzComponent(3)).toBe("3.0 nT");
-  });
-
-  it("preserves the sign of a southward field", () => {
-    expect(formatBzComponent(-4.25)).toBe("-4.3 nT");
-  });
-
-  it("renders zero as 0.0 nT", () => {
-    expect(formatBzComponent(0)).toBe("0.0 nT");
   });
 });
 
@@ -152,6 +138,31 @@ describe("formatOrbitalPeriod", () => {
 
   it("clamps negative inputs to zero", () => {
     expect(formatOrbitalPeriod(-5)).toBe("0m");
+  });
+});
+
+describe("formatPassDuration", () => {
+  it("renders a sub-minute pass in whole seconds", () => {
+    expect(formatPassDuration(45)).toBe("45s");
+  });
+
+  it("renders a minutes-long pass as minutes and zero-padded seconds", () => {
+    expect(formatPassDuration(522)).toBe("8m 42s");
+    expect(formatPassDuration(305)).toBe("5m 05s");
+  });
+
+  it("renders an hour-plus contact window as hours and minutes", () => {
+    expect(formatPassDuration(3900)).toBe("1h 5m");
+  });
+
+  it("rounds fractional seconds to the nearest second", () => {
+    expect(formatPassDuration(59.4)).toBe("59s");
+    expect(formatPassDuration(59.6)).toBe("1m 00s");
+  });
+
+  it("clamps negative and non-finite inputs to zero seconds", () => {
+    expect(formatPassDuration(-10)).toBe("0s");
+    expect(formatPassDuration(Number.NaN)).toBe("0s");
   });
 });
 
