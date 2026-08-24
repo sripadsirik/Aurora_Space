@@ -6,6 +6,7 @@ import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { describeFeedFreshness } from "../utils/feedFreshness";
 import type { FreshnessStatus } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { formatKpIndex, formatMagneticFieldNt } from "../utils/measurements";
 import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
@@ -104,7 +105,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>SPACE WEATHER</p>
           <div className="mt-2 flex items-end gap-3">
             <p className="text-2xl font-semibold" style={{ color: getKpColor(kpDisplay) }}>
-              Kp {kpDisplay.toFixed(1)}
+              Kp {formatKpIndex(kpDisplay)}
             </p>
             <span className="rounded border border-white/20 px-2 py-0.5 text-xs uppercase tracking-[0.12em]">
               {stormDisplay}
@@ -126,7 +127,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             <div className="flex justify-between">
               <span>Bz Component</span>
               <span className={bzDisplay < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]"}>
-                {bzDisplay.toFixed(1)} nT
+                {formatMagneticFieldNt(bzDisplay)}
               </span>
             </div>
             <div className="flex justify-between">
