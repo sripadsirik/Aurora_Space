@@ -1,12 +1,14 @@
 import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
-import { getKpColor } from "../utils/colors";
+import { bzComponentTextClass, getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
-import { buildDataLayerRows } from "../utils/dataLayers";
-import { resolveEffectiveWeather } from "../utils/effectiveWeather";
-import { formatDurationToTca, formatProbability, formatUtcTime, isCriticalConjunction } from "../utils/format";
-import { getHudTheme, hudFreshnessDotClass } from "../utils/hudTheme";
+import { resolveDisplayedWeather } from "../utils/displayedWeather";
+import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
+import { formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime, isCriticalConjunction } from "../utils/format";
+import { buildHudDataLayers } from "../utils/hudDataLayers";
+import { deriveHudTheme } from "../utils/hudTheme";
+import { formatKpIndex, formatMagneticFieldNt } from "../utils/measurements";
 import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
@@ -29,19 +31,21 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
     solarWindSpeed: windDisplay,
     bzComponent: bzDisplay,
     stormLevel: stormDisplay
-  } = resolveEffectiveWeather(timelineEvent, spaceWeather);
+  } = resolveDisplayedWeather(spaceWeather, timelineEvent);
 
   const kpPosition = kpToPercent(kpDisplay);
 
   // Mode-dependent color styles
   const { isIntel, textColor, accentColor, subTextColor, alertTextColor, sourceColor, clockColor } =
-    getHudTheme(currentMode, kpDisplay);
+    deriveHudTheme(currentMode, kpDisplay);
 
-  const layers = buildDataLayerRows(
-    { satellites: satellites.length, conjunctions: conjunctions.length },
-    feedLastUpdated,
-    now
-  );
+  const layers = buildHudDataLayers({
+    satelliteCount: satellites.length,
+    satelliteFreshness: describeFeedFreshness(feedLastUpdated.satellites, now),
+    conjunctionCount: conjunctions.length,
+    conjunctionFreshness: describeFeedFreshness(feedLastUpdated.conjunctions, now),
+    weatherFreshness: describeFeedFreshness(feedLastUpdated.spaceWeather, now)
+  });
 
   if (currentMode === "HELIO") {
     return null;
@@ -67,7 +71,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>SPACE WEATHER</p>
           <div className="mt-2 flex items-end gap-3">
             <p className="text-2xl font-semibold" style={{ color: getKpColor(kpDisplay) }}>
-              Kp {kpDisplay.toFixed(1)}
+              Kp {formatKpIndex(kpDisplay)}
             </p>
             <span className="rounded border border-white/20 px-2 py-0.5 text-xs uppercase tracking-[0.12em]">
               {stormDisplay}
@@ -88,14 +92,20 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             </div>
             <div className="flex justify-between">
               <span>Bz Component</span>
-              <span className={bzDisplay < 0 ? "text-[#ff4f4f]" : "text-[#7dff6a]"}>
-                {bzDisplay.toFixed(1)} nT
+              <span className={bzComponentTextClass(bzDisplay)}>
+                {formatMagneticFieldNt(bzDisplay)}
               </span>
             </div>
             <div className="flex justify-between">
               <span>X-ray Flux</span>
               <span>{spaceWeather.xrayFlux}</span>
             </div>
+            {spaceWeather.protonFlux !== undefined && (
+              <div className="flex justify-between">
+                <span>Proton Flux</span>
+                <span>{formatProtonFlux(spaceWeather.protonFlux)}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -147,7 +157,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           <div className="mt-2 space-y-1 text-xs">
             {layers.map((layer) => (
               <div key={layer.name} className="grid grid-cols-[8px_1.2fr_1fr_0.8fr_0.6fr] items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${hudFreshnessDotClass(layer.status, isIntel)}`} />
+                <span className={`h-2 w-2 rounded-full ${freshnessStatusDotClass(layer.status, { intel: isIntel })}`} />
                 <span>{layer.name}</span>
                 <span style={{ color: sourceColor }}>{layer.source}</span>
                 <span>{layer.freshness}</span>

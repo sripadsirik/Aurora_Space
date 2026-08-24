@@ -28,3 +28,19 @@ export const describeFeedFreshness = (lastUpdated: Date | null, now: Date): Feed
     return { label: "unknown", status: "error" };
   }
 };
+
+/**
+ * Tailwind background-colour utility class for a feed-status indicator dot: a
+ * calm green for `live`, amber for `stale`, and red for `error`. In INTEL mode
+ * the `live` dot switches to the mode's signature orange so the HUD keeps a
+ * single accent hue. Centralises the class strings that were previously inlined
+ * in the HUD's data-layer rows.
+ */
+export const freshnessStatusDotClass = (
+  status: FreshnessStatus,
+  options: { intel?: boolean } = {}
+): string => {
+  if (status === "stale") return "bg-[#ffcc00]";
+  if (status === "error") return "bg-[#ff4444]";
+  return options.intel ? "bg-[#ff6600]" : "bg-[#00ff88]";
+};

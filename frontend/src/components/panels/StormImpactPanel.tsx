@@ -2,7 +2,8 @@ import { useEffect, useMemo } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
-import { resolveEffectiveWeather } from "../../utils/effectiveWeather";
+import { resolveDisplayedWeather } from "../../utils/displayedWeather";
+import { formatKpIndex } from "../../utils/measurements";
 import { gScaleColor, kpSparklineColor, kpToGScale } from "../../utils/spaceWeatherScales";
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 import { countStormExposedAssets } from "../../utils/stormExposure";
@@ -21,7 +22,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
   const timelineEvent = useAuroraStore((s) => s.timelineEvent);
   const openPanel = useAuroraStore((s) => s.openPanel);
 
-  const kp = resolveEffectiveWeather(timelineEvent, spaceWeather).kpIndex;
+  const { kpIndex: kp } = resolveDisplayedWeather(spaceWeather, timelineEvent);
 
   useEffect(() => {
     if (currentMode === "STORM") {
@@ -71,7 +72,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
             </span>
             <div>
               <p className="text-lg font-semibold" style={{ color: getKpColor(kp) }}>
-                Kp {kp.toFixed(1)}
+                Kp {formatKpIndex(kp)}
               </p>
             </div>
           </div>

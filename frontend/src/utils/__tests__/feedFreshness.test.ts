@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeFeedFreshness } from "../feedFreshness";
+import { describeFeedFreshness, freshnessStatusDotClass } from "../feedFreshness";
 
 const now = new Date("2026-07-26T12:00:00Z");
 const agoMs = (ms: number): Date => new Date(now.getTime() - ms);
@@ -40,5 +40,25 @@ describe("describeFeedFreshness", () => {
       }
     } as unknown as Date;
     expect(describeFeedFreshness(agoMs(1000), exploding)).toEqual({ label: "unknown", status: "error" });
+  });
+});
+
+describe("freshnessStatusDotClass", () => {
+  it("maps a live feed to green by default", () => {
+    expect(freshnessStatusDotClass("live")).toBe("bg-[#00ff88]");
+  });
+
+  it("switches the live dot to orange in intel mode", () => {
+    expect(freshnessStatusDotClass("live", { intel: true })).toBe("bg-[#ff6600]");
+  });
+
+  it("keeps a stale feed amber regardless of mode", () => {
+    expect(freshnessStatusDotClass("stale")).toBe("bg-[#ffcc00]");
+    expect(freshnessStatusDotClass("stale", { intel: true })).toBe("bg-[#ffcc00]");
+  });
+
+  it("keeps an error feed red regardless of mode", () => {
+    expect(freshnessStatusDotClass("error")).toBe("bg-[#ff4444]");
+    expect(freshnessStatusDotClass("error", { intel: true })).toBe("bg-[#ff4444]");
   });
 });

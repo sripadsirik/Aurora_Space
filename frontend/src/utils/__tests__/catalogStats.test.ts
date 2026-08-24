@@ -6,6 +6,8 @@ import {
   countByOrbitType,
   countByRiskLevel,
   countElevatedRisk,
+  ORBIT_TYPES,
+  RISK_LEVELS,
   summarizeCatalog,
   totalConjunctions
 } from "../catalogStats";
@@ -148,5 +150,19 @@ describe("summarizeCatalog", () => {
       totalConjunctions: 0,
       elevatedRisk: 0
     });
+  });
+});
+
+describe("scale constants", () => {
+  it("lists every orbit type once", () => {
+    expect(ORBIT_TYPES).toEqual(["LEO", "MEO", "GEO"]);
+    expect(new Set(ORBIT_TYPES).size).toBe(ORBIT_TYPES.length);
+  });
+
+  it("orders risk levels from least to most severe", () => {
+    expect(RISK_LEVELS).toEqual(["nominal", "watch", "warning", "critical"]);
+    // countElevatedRisk relies on this ascending order via indexOf comparisons.
+    expect(RISK_LEVELS.indexOf("warning")).toBeGreaterThan(RISK_LEVELS.indexOf("watch"));
+    expect(RISK_LEVELS.indexOf("critical")).toBe(RISK_LEVELS.length - 1);
   });
 });

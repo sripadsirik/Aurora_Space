@@ -1,18 +1,20 @@
 import type { VisualMode } from "../types/space";
-import type { FreshnessStatus } from "./feedFreshness";
-import { isStormModeActive } from "./visualMode";
+import { STORM_KP_THRESHOLD, isStormModeActive } from "./visualMode";
 
-/** Mode-dependent colour palette used to shade the HUD overlay. */
+/** Resolved colour tokens for the HUD's mode-dependent styling. */
 export interface HudTheme {
-  /** True while INTEL mode is selected. */
+  /** True when the active mode is INTEL (orange monochrome accent). */
   isIntel: boolean;
-  /** True while the storm treatment is active (see {@link isStormModeActive}). */
+  /**
+   * True when storm styling applies — either the STORM mode is active or the
+   * displayed Kp index has climbed above the storm threshold (Kp 5).
+   */
   isStorm: boolean;
-  /** Primary foreground colour for HUD body text. */
+  /** Primary text colour for HUD panels. */
   textColor: string;
-  /** Accent colour for section headings and highlights. */
+  /** Accent colour used for panel headings and highlights. */
   accentColor: string;
-  /** Muted colour for secondary readouts under the space-weather panel. */
+  /** Muted colour used for secondary readouts inside a panel. */
   subTextColor: string;
   /** Foreground colour for the active-alerts list. */
   alertTextColor: string;
@@ -23,14 +25,23 @@ export interface HudTheme {
 }
 
 /**
- * Derives the HUD's colour palette from the current visual mode and effective Kp
- * index. INTEL mode takes precedence with its stark orange-on-black scheme; an
- * active storm warms the palette; otherwise the calm default theme is used.
+ * Displayed Kp above this threshold pulls the HUD into storm styling. Re-exported
+ * from {@link STORM_KP_THRESHOLD} so the HUD and the storm overlay share one
+ * definition of "storm".
  */
-export const getHudTheme = (mode: VisualMode, kpIndex: number): HudTheme => {
-  const isIntel = mode === "INTEL";
-  const isStorm = isStormModeActive(mode, kpIndex);
+export const HUD_STORM_KP_THRESHOLD = STORM_KP_THRESHOLD;
 
+/**
+ * Derives the HUD's mode-dependent colour tokens from the active view mode and
+ * the currently displayed Kp index. INTEL mode wins over storm styling and uses
+ * a monochrome orange accent; storm styling (STORM mode, or any mode once Kp
+ * climbs above {@link HUD_STORM_KP_THRESHOLD}) warms the palette; otherwise the
+ * calm default Aurora tokens apply. Extracted from the HUD component so the
+ * branch logic has a single tested definition.
+ */
+export const deriveHudTheme = (mode: VisualMode, kp: number): HudTheme => {
+  const isIntel = mode === "INTEL";
+  const isStorm = isStormModeActive(mode, kp);
   return {
     isIntel,
     isStorm,
@@ -41,18 +52,4 @@ export const getHudTheme = (mode: VisualMode, kpIndex: number): HudTheme => {
     sourceColor: isIntel ? "#999999" : "#9ec3df",
     clockColor: isIntel ? "#009933" : "#b9d6ee"
   };
-};
-
-/**
- * Tailwind background-colour class for a data-layer freshness dot: green (or
- * INTEL orange) when `live`, amber when `stale`, and red when `error`.
- */
-export const hudFreshnessDotClass = (status: FreshnessStatus, isIntel: boolean): string => {
-  if (status === "live") {
-    return isIntel ? "bg-[#ff6600]" : "bg-[#00ff88]";
-  }
-  if (status === "stale") {
-    return "bg-[#ffcc00]";
-  }
-  return "bg-[#ff4444]";
 };

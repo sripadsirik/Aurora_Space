@@ -2,6 +2,7 @@ import { Color } from "cesium";
 import type { RiskLevel } from "../types/space";
 import type { ConjunctionFleetSeverity } from "./conjunctionRisk";
 import { conjunctionRiskTextClass } from "./conjunctionRisk";
+import { isBzSouthward } from "./bzComponent";
 
 /** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
@@ -50,6 +51,15 @@ export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity
   }
   return "#ffcc00";
 };
+
+/**
+ * Tailwind text-colour utility class for the interplanetary magnetic field Bz
+ * component. A southward (negative) Bz couples the solar wind to Earth's
+ * magnetosphere and drives geomagnetic activity, so it reads as an alert red; a
+ * northward (zero or positive) Bz is quiet and reads green.
+ */
+export const bzComponentTextClass = (bz: number): string =>
+  isBzSouthward(bz) ? "text-[#ff4f4f]" : "text-[#7dff6a]";
 
 /**
  * Maps solar wind speed in km/s to a Cesium colour: calm below 400, elevated
