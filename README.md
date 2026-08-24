@@ -49,9 +49,10 @@ Current backend split:
 
 The space weather utilities model all three of NOAA SWPC's
 [space weather scales](https://www.swpc.noaa.gov/noaa-scales-explanation) in
-`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel currently surfaces the
-G and R scales; the S scale helpers are ready for the panel to consume once a proton-flux
-reading is added to the feed:
+`frontend/src/utils/spaceWeatherScales.ts`. The Space Weather panel surfaces all three
+scales — the G and R levels alongside the S level derived from the feed's proton-flux
+reading — and leads with a combined NOAA status line (see `summarizeNoaaScales`) that
+highlights the most severe active scale:
 
 | Scale | Driver | Levels | Helpers |
 | --- | --- | --- | --- |
@@ -63,6 +64,10 @@ Each scale exposes a metadata table (`geomagneticStormScale` / `radioBlackoutSca
 `solarRadiationStormScale`) with a severity code, short label, and one-line operational impact,
 plus a colour map that escalates from quiet green to extreme red. `G0`/`R0`/`S0` denote
 sub-storm quiet conditions.
+
+`summarizeNoaaScales` (`frontend/src/utils/noaaScaleSummary.ts`) resolves a space-weather
+snapshot into all three current levels and picks the single most severe one (`peak`), breaking
+ties in G → S → R order. It backs the panel's compact NOAA status line.
 
 ## Orbit Summary
 
@@ -123,6 +128,29 @@ Raising the minimum elevation angle narrows the footprint (a station needs the s
 above its horizon), while higher orbits widen it: a single geostationary satellite sees roughly
 42% of the globe down to the horizon. All figures derive from the same central angle, so they
 stay mutually consistent.
+
+## Ground-Station Passes
+
+How long a ground station can talk to a satellite on a single revolution comes from the pure
+geometry helpers in `frontend/src/utils/satellitePasses.ts`. They combine the coverage-cap
+geometry (`coverageFootprint.ts`) with the orbital period (`orbit.ts`), and each takes an optional
+minimum ground elevation angle (defaulting to `0`, the geometric horizon):
+
+| Helper | Returns |
+| --- | --- |
+| `maxPassSweepDeg` | Horizon-to-horizon true-anomaly arc swept during an overhead pass |
+| `passOrbitFraction` | Share of a full revolution (0-1) spent above the horizon |
+| `maxPassDurationSeconds` | Longest per-revolution contact window, in seconds |
+| `maxPassDurationMinutes` | The same contact window, in minutes |
+| `theoreticalMaxDailyContactSeconds` | Upper bound on daily contact if every revolution were a zenith pass |
+| `summarizePass` | All of the above bundled into one `PassSummary` for a `Satellite` |
+
+A pass is longest when the ground track carries the satellite straight overhead: it rises at one
+edge of the coverage cap, climbs to the zenith, and sets at the opposite edge, sweeping twice the
+Earth central angle. The figures are idealised upper bounds — they assume a directly overhead pass
+and ignore Earth's rotation beneath the orbit — so they size the *maximum* contact window rather
+than a typical one. Raising the elevation mask always shortens the pass, and higher orbits lengthen
+it as both the coverage cap and the orbital period grow.
 
 ## Orbital Eclipse
 
@@ -379,6 +407,28 @@ lists the tiers most-urgent-first for stable rendering. Every bucket is always p
 the counts and an all-passed or empty feed yields a `null` next lead time, so a timeline or
 HUD header can render from these helpers without a guard.
 
+## Aurora Visibility
+
+The `auroraKp` reading only says *how strong* the aurora is; the pure helpers in
+`frontend/src/utils/auroraVisibility.ts` turn that into *where* it can be seen. As
+geomagnetic activity rises the auroral oval expands toward the equator, so a higher Kp
+lets lower latitudes catch the show. The module follows NOAA SWPC's approximate
+Kp-to-viewing-latitude guidance:
+
+| Helper | Returns |
+| --- | --- |
+| `auroraBoundaryLatitude` | Overhead oval edge (geomagnetic latitude) for a Kp, interpolated |
+| `auroraVisibilityMargin` | Signed degrees between an observer and that boundary |
+| `classifyAuroraChance` | The `overhead`/`horizon`/`none` visibility tier |
+| `minimumKpForOverhead` | Smallest Kp that puts the aurora overhead at a latitude (or `null`) |
+| `summarizeAuroraVisibility` | All of the above bundled into one `AuroraVisibilitySummary` |
+
+`AURORA_BOUNDARY_LATITUDES_BY_KP` holds the reference boundary for each integer Kp 0–9, and
+`AURORA_HORIZON_ALLOWANCE_DEG` models how far equatorward of that edge a bright aurora can
+still be glimpsed low on the poleward horizon. Observer latitude is compared by magnitude, so
+the helpers work for either hemisphere, and non-finite inputs fall back to a safe result
+(`none`/`null`) rather than throwing.
+
 ## Repo Layout
 
 ```text
@@ -608,7 +658,7 @@ The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently coveri
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
 `catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
 `conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`,
-`conjunctionLeadTime`), the Zustand store, and the mock datasets under `src/data/mock/`
+`conjunctionLeadTime`, `auroraVisibility`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
