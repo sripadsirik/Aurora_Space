@@ -13,6 +13,8 @@
  * of that edge, which {@link AURORA_HORIZON_ALLOWANCE_DEG} accounts for.
  */
 
+import { clamp } from "./clamp";
+
 /**
  * Approximate corrected-geomagnetic latitude, in degrees, of the auroral oval's
  * equatorward (overhead) edge for each integer Kp level 0–9, following NOAA
@@ -31,3 +33,23 @@ export const AURORA_BOUNDARY_LATITUDES_BY_KP: readonly number[] = [
   50.1, // Kp 8
   48.1 // Kp 9
 ] as const;
+
+/** The largest value the planetary Kp index can take (Kp 9, an extreme storm). */
+export const KP_MAX = 9;
+
+/**
+ * Approximate corrected-geomagnetic latitude of the aurora's overhead edge for a
+ * Kp reading, linearly interpolating {@link AURORA_BOUNDARY_LATITUDES_BY_KP}
+ * between integer levels. Kp is clamped to `[0, 9]`, so out-of-range or
+ * non-finite readings collapse to the nearest endpoint and callers never have to
+ * guard the input. A higher Kp yields a lower boundary latitude.
+ */
+export const auroraBoundaryLatitude = (kp: number): number => {
+  const safeKp = Number.isFinite(kp) ? clamp(kp, 0, KP_MAX) : 0;
+  const lower = Math.floor(safeKp);
+  const upper = Math.ceil(safeKp);
+  const lowerLat = AURORA_BOUNDARY_LATITUDES_BY_KP[lower];
+  if (lower === upper) return lowerLat;
+  const upperLat = AURORA_BOUNDARY_LATITUDES_BY_KP[upper];
+  return lowerLat + (upperLat - lowerLat) * (safeKp - lower);
+};
