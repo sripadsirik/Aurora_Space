@@ -4,7 +4,8 @@ import {
   CRITICAL_CONJUNCTION_COLOR,
   WARNING_CONJUNCTION_COLOR,
   WATCH_CONJUNCTION_COLOR,
-  getConjunctionColor
+  getConjunctionColor,
+  getConjunctionLineWidth
 } from "../conjunctionVisual";
 
 describe("conjunction risk palette", () => {
@@ -34,5 +35,17 @@ describe("getConjunctionColor", () => {
     const color = getConjunctionColor("critical");
     color.alpha = 0.2;
     expect(CRITICAL_CONJUNCTION_COLOR.alpha).toBe(1);
+  });
+});
+
+describe("getConjunctionLineWidth", () => {
+  it("draws the watch tier thinner than the actionable tiers", () => {
+    expect(getConjunctionLineWidth("watch")).toBe(2);
+  });
+
+  it("uses the wider stroke for warning, critical, and nominal tiers", () => {
+    expect(getConjunctionLineWidth("warning")).toBe(3);
+    expect(getConjunctionLineWidth("critical")).toBe(3);
+    expect(getConjunctionLineWidth("nominal")).toBe(3);
   });
 });
