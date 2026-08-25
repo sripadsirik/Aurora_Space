@@ -43,6 +43,7 @@ import {
   getConjunctionLineWidth,
   getConjunctionRiskLevel
 } from "../utils/conjunctionVisual";
+import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../utils/satelliteOrbitAnim";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -180,17 +181,6 @@ const clamp = (value: number, min: number, max: number): number => Math.max(min,
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
-
-const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
-  state.initialTheta + (CesiumMath.TWO_PI / state.period) * (elapsedSeconds - state.thetaEpochSeconds);
-
-const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
-  orbitPoint(
-    getSatelliteThetaAtElapsed(state, elapsedSeconds) + (CesiumMath.TWO_PI / state.period) * offsetSeconds,
-    state.radius,
-    state.inclination,
-    state.ascendingNode
-  );
 
 const createConjunctionOrbitArcPositions = (
   state: SatelliteAnimState,
