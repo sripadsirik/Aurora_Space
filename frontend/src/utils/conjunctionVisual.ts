@@ -1,5 +1,6 @@
 import { Color } from "cesium";
-import type { RiskLevel } from "../types/space";
+import type { ConjunctionWarning, RiskLevel } from "../types/space";
+import { classifyConjunctionRisk } from "./conjunctionRisk";
 
 /**
  * RGBA colours used to draw conjunction risk arcs and connecting lines on the
@@ -33,3 +34,14 @@ export const getConjunctionColor = (riskLevel: RiskLevel): Color => {
  */
 export const getConjunctionLineWidth = (riskLevel: RiskLevel): number =>
   riskLevel === "watch" ? 2 : 3;
+
+/**
+ * Resolves the effective {@link RiskLevel} to render a conjunction at. A feed
+ * may already carry an explicit `riskLevel`, in which case it is trusted;
+ * otherwise the level is derived from the collision probability, preferring the
+ * higher-fidelity `pc` field and falling back to `probability`. Accepts a
+ * partial conjunction so it can run against feeds that omit some fields.
+ */
+export const getConjunctionRiskLevel = (
+  conjunction: Partial<Pick<ConjunctionWarning, "riskLevel" | "pc" | "probability">>
+): RiskLevel => conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability ?? 0);
