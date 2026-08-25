@@ -5,8 +5,10 @@ import {
   WARNING_CONJUNCTION_COLOR,
   WATCH_CONJUNCTION_COLOR,
   getConjunctionColor,
-  getConjunctionLineWidth
+  getConjunctionLineWidth,
+  getConjunctionRiskLevel
 } from "../conjunctionVisual";
+import { CONJUNCTION_RISK_THRESHOLDS } from "../conjunctionRisk";
 
 describe("conjunction risk palette", () => {
   it("increases opacity with severity", () => {
@@ -47,5 +49,23 @@ describe("getConjunctionLineWidth", () => {
     expect(getConjunctionLineWidth("warning")).toBe(3);
     expect(getConjunctionLineWidth("critical")).toBe(3);
     expect(getConjunctionLineWidth("nominal")).toBe(3);
+  });
+});
+
+describe("getConjunctionRiskLevel", () => {
+  it("trusts an explicit riskLevel over the probability fields", () => {
+    expect(getConjunctionRiskLevel({ riskLevel: "critical", pc: 0, probability: 0 })).toBe("critical");
+  });
+
+  it("derives the level from pc when no explicit riskLevel is present", () => {
+    expect(getConjunctionRiskLevel({ pc: CONJUNCTION_RISK_THRESHOLDS.critical * 2, probability: 0 })).toBe("critical");
+  });
+
+  it("falls back to probability when pc is missing", () => {
+    expect(getConjunctionRiskLevel({ probability: CONJUNCTION_RISK_THRESHOLDS.warning * 2 })).toBe("warning");
+  });
+
+  it("treats an empty conjunction as nominal", () => {
+    expect(getConjunctionRiskLevel({})).toBe("nominal");
   });
 });
