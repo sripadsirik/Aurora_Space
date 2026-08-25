@@ -1,7 +1,7 @@
 import { Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { SatelliteOrbitAnim } from "../satelliteOrbitAnim";
-import { getSatelliteThetaAtElapsed } from "../satelliteOrbitAnim";
+import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../satelliteOrbitAnim";
 
 const baseState: SatelliteOrbitAnim = {
   radius: 7_000_000,
@@ -32,5 +32,33 @@ describe("getSatelliteThetaAtElapsed", () => {
   it("measures elapsed time relative to the theta epoch, not zero", () => {
     const shifted: SatelliteOrbitAnim = { ...baseState, thetaEpochSeconds: 900 };
     expect(getSatelliteThetaAtElapsed(shifted, 900)).toBe(0);
+  });
+});
+
+describe("getSatellitePositionAtOffset", () => {
+  it("places the satellite on the +x axis at the initial position", () => {
+    const position = getSatellitePositionAtOffset(baseState, 0, 0);
+    expect(position.x).toBeCloseTo(baseState.radius, 3);
+    expect(position.y).toBeCloseTo(0, 3);
+    expect(position.z).toBeCloseTo(0, 3);
+  });
+
+  it("looks a quarter period ahead with a positive offset", () => {
+    const position = getSatellitePositionAtOffset(baseState, 0, baseState.period / 4);
+    expect(position.x).toBeCloseTo(0, 3);
+    expect(position.y).toBeCloseTo(baseState.radius, 3);
+  });
+
+  it("looks behind the current position with a negative offset", () => {
+    const position = getSatellitePositionAtOffset(baseState, 0, -baseState.period / 4);
+    expect(position.x).toBeCloseTo(0, 3);
+    expect(position.y).toBeCloseTo(-baseState.radius, 3);
+  });
+
+  it("combines elapsed time and offset when projecting the position", () => {
+    const combined = getSatellitePositionAtOffset(baseState, baseState.period / 8, baseState.period / 8);
+    const equivalent = getSatellitePositionAtOffset(baseState, baseState.period / 4, 0);
+    expect(combined.x).toBeCloseTo(equivalent.x, 6);
+    expect(combined.y).toBeCloseTo(equivalent.y, 6);
   });
 });
