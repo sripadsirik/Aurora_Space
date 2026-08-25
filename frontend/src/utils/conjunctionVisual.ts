@@ -25,3 +25,11 @@ export const getConjunctionColor = (riskLevel: RiskLevel): Color => {
   if (riskLevel === "watch") return WATCH_CONJUNCTION_COLOR.clone();
   return Color.TRANSPARENT.clone();
 };
+
+/**
+ * Stroke width, in pixels, for a conjunction arc at the given {@link RiskLevel}.
+ * The calmer `watch` tier draws a thinner line so the more urgent `warning` and
+ * `critical` conjunctions stand out against it.
+ */
+export const getConjunctionLineWidth = (riskLevel: RiskLevel): number =>
+  riskLevel === "watch" ? 2 : 3;
