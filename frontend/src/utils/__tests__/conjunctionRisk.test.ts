@@ -10,6 +10,7 @@ import {
   estimateManeuverDeltaVMs,
   isActionableConjunctionRisk,
   missDistanceSeverityTextClass,
+  resolveConjunctionRiskLevel,
   sortConjunctionsByProbabilityDesc
 } from "../conjunctionRisk";
 
@@ -185,5 +186,27 @@ describe("estimateManeuverDeltaVMs", () => {
 
   it("clamps negative probabilities to zero", () => {
     expect(estimateManeuverDeltaVMs(-0.1)).toBe(0);
+  });
+});
+
+describe("resolveConjunctionRiskLevel", () => {
+  it("prefers an explicit riskLevel over the classified probability", () => {
+    const conjunction = makeConjunction({ riskLevel: "critical", pc: 1e-9, probability: 1e-9 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("critical");
+  });
+
+  it("classifies from pc when riskLevel is absent", () => {
+    const conjunction = makeConjunction({ riskLevel: undefined as never, pc: 0.01, probability: 1e-9 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("critical");
+  });
+
+  it("falls back to probability when pc is absent", () => {
+    const conjunction = makeConjunction({ riskLevel: undefined as never, pc: undefined as never, probability: 5e-4 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("warning");
+  });
+
+  it("resolves to nominal for a quiet conjunction with no explicit level", () => {
+    const conjunction = makeConjunction({ riskLevel: undefined as never, pc: 1e-9, probability: 1e-9 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("nominal");
   });
 });
