@@ -26,6 +26,18 @@ export const classifyConjunctionRisk = (probability: number): RiskLevel => {
 };
 
 /**
+ * Resolves the effective {@link RiskLevel} of a conjunction, preferring an
+ * explicit `riskLevel` supplied by the feed and otherwise classifying its
+ * collision probability. The probability is taken from `pc` when present and
+ * falls back to `probability`, so records that carry only one of the two fields
+ * still resolve to a tier. Centralises the resolution the globe overlays used to
+ * derive inline.
+ */
+export const resolveConjunctionRiskLevel = (
+  conjunction: Pick<ConjunctionWarning, "riskLevel" | "pc" | "probability">
+): RiskLevel => conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability);
+
+/**
  * True when a probability is severe enough to warrant operator action — that is,
  * it lands in the `warning` or `critical` tier. Used to raise ops warning
  * indicators without re-deriving the thresholds at each call site.
