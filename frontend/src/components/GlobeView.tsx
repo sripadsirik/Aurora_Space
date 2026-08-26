@@ -38,7 +38,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import { resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
+import { conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -197,9 +197,6 @@ const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
   if (riskLevel === "watch") return WATCH_CONJUNCTION_COLOR.clone();
   return Color.TRANSPARENT.clone();
 };
-
-const getConjunctionLineWidth = (riskLevel: Satellite["riskLevel"]): number =>
-  riskLevel === "watch" ? 2 : 3;
 
 const createConjunctionOrbitArcPositions = (
   state: SatelliteAnimState,
@@ -925,7 +922,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         if (riskLevel === "nominal") return;
 
         const color = getConjunctionColor(riskLevel);
-        const width = getConjunctionLineWidth(riskLevel);
+        const width = conjunctionArcLineWidth(riskLevel);
         const sat1NoradId = sat1.noradId;
         const sat2NoradId = sat2.noradId;
         const object1Arc = conjunctionPolylines.add({
@@ -1727,7 +1724,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           new Cartesian3()
         );
         const pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
-        const lineWidth = Math.max(getConjunctionLineWidth(visual.riskLevel), isSelected ? 4 : 0);
+        const lineWidth = Math.max(conjunctionArcLineWidth(visual.riskLevel), isSelected ? 4 : 0);
 
         visual.object1Arc.show = true;
         visual.object2Arc.show = true;
