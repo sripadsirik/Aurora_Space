@@ -38,7 +38,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import { classifyConjunctionRisk } from "../utils/conjunctionRisk";
+import { resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -190,10 +190,6 @@ const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds:
     state.inclination,
     state.ascendingNode
   );
-
-const getConjunctionRiskLevel = (conjunction: ConjunctionWarning): Satellite["riskLevel"] => {
-  return conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability);
-};
 
 const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
   if (riskLevel === "critical") return CRITICAL_CONJUNCTION_COLOR.clone();
@@ -925,7 +921,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           return;
         }
 
-        const riskLevel = getConjunctionRiskLevel(conjunction);
+        const riskLevel = resolveConjunctionRiskLevel(conjunction);
         if (riskLevel === "nominal") return;
 
         const color = getConjunctionColor(riskLevel);
