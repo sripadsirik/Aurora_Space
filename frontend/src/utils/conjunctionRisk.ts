@@ -38,6 +38,14 @@ export const resolveConjunctionRiskLevel = (
 ): RiskLevel => conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability);
 
 /**
+ * Base line width (in pixels) for a conjunction's projected orbit arc on the
+ * globe. Calm `watch` conjunctions draw as a thin 2px trace; every more urgent
+ * tier is emphasised at 3px. Selection highlighting is layered on top by the
+ * renderer. Centralises the width ramp the globe overlay derived inline.
+ */
+export const conjunctionArcLineWidth = (risk: RiskLevel): number => (risk === "watch" ? 2 : 3);
+
+/**
  * True when a probability is severe enough to warrant operator action — that is,
  * it lands in the `warning` or `critical` tier. Used to raise ops warning
  * indicators without re-deriving the thresholds at each call site.
