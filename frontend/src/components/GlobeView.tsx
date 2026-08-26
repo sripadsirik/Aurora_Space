@@ -54,6 +54,7 @@ import {
 } from "../utils/helio";
 import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
+import { createBezierArcPositions } from "../utils/curves";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 
 interface GlobeViewProps {
@@ -275,23 +276,6 @@ const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { cur
     const baseMax = isStorm ? Math.min(maxAlpha * 2.5, 0.8) : maxAlpha;
     return AURORA_COLOR.withAlpha(baseMin + (baseMax - baseMin) * phase);
   }, false));
-
-const createBezierArcPositions = (start: Cartesian3, control: Cartesian3, end: Cartesian3, intermediatePoints = 8): Cartesian3[] => {
-  const segments = intermediatePoints + 1;
-  const positions: Cartesian3[] = [];
-
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments;
-    const u = 1 - t;
-    positions.push(new Cartesian3(
-      u * u * start.x + 2 * u * t * control.x + t * t * end.x,
-      u * u * start.y + 2 * u * t * control.y + t * t * end.y,
-      u * u * start.z + 2 * u * t * control.z + t * t * end.z
-    ));
-  }
-
-  return positions;
-};
 
 const createFireConeFrontPositions = (
   sunToEarth: Cartesian3,
