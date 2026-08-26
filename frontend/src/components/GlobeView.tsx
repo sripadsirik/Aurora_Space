@@ -53,6 +53,7 @@ import {
   positionOnHelioOrbit
 } from "../utils/helio";
 import { env } from "../utils/env";
+import { clamp } from "../utils/clamp";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 
 interface GlobeViewProps {
@@ -175,7 +176,6 @@ const WARNING_CONJUNCTION_COLOR = Color.fromBytes(255, 50, 0, 204);
 const CRITICAL_CONJUNCTION_COLOR = Color.fromBytes(255, 0, 0, 255);
 const CONJUNCTION_ARC_POINT_COUNT = 20;
 
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
