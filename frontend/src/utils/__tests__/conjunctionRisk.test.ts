@@ -6,6 +6,7 @@ import {
   classifyConjunctionFleetSeverity,
   classifyConjunctionRisk,
   classifyMissDistanceSeverity,
+  conjunctionArcLineWidth,
   conjunctionRiskTextClass,
   estimateManeuverDeltaVMs,
   isActionableConjunctionRisk,
@@ -208,5 +209,20 @@ describe("resolveConjunctionRiskLevel", () => {
   it("resolves to nominal for a quiet conjunction with no explicit level", () => {
     const conjunction = makeConjunction({ riskLevel: undefined as never, pc: 1e-9, probability: 1e-9 });
     expect(resolveConjunctionRiskLevel(conjunction)).toBe("nominal");
+  });
+});
+
+describe("conjunctionArcLineWidth", () => {
+  it("draws watch conjunctions as a thin 2px trace", () => {
+    expect(conjunctionArcLineWidth("watch")).toBe(2);
+  });
+
+  it("emphasises every more urgent tier at 3px", () => {
+    expect(conjunctionArcLineWidth("warning")).toBe(3);
+    expect(conjunctionArcLineWidth("critical")).toBe(3);
+  });
+
+  it("uses the 3px default for nominal conjunctions", () => {
+    expect(conjunctionArcLineWidth("nominal")).toBe(3);
   });
 });
