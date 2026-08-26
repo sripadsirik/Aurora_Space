@@ -38,7 +38,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import { conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
+import { conjunctionArcColorBytes, conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -172,9 +172,6 @@ const HELIO_PLANET_RADII = {
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
-const WATCH_CONJUNCTION_COLOR = Color.fromBytes(255, 100, 0, 153);
-const WARNING_CONJUNCTION_COLOR = Color.fromBytes(255, 50, 0, 204);
-const CRITICAL_CONJUNCTION_COLOR = Color.fromBytes(255, 0, 0, 255);
 const CONJUNCTION_ARC_POINT_COUNT = 20;
 
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
@@ -193,10 +190,8 @@ const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds:
   );
 
 const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
-  if (riskLevel === "critical") return CRITICAL_CONJUNCTION_COLOR.clone();
-  if (riskLevel === "warning") return WARNING_CONJUNCTION_COLOR.clone();
-  if (riskLevel === "watch") return WATCH_CONJUNCTION_COLOR.clone();
-  return Color.TRANSPARENT.clone();
+  const bytes = conjunctionArcColorBytes(riskLevel);
+  return bytes ? Color.fromBytes(bytes[0], bytes[1], bytes[2], bytes[3]) : Color.TRANSPARENT.clone();
 };
 
 const createConjunctionOrbitArcPositions = (
