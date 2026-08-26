@@ -55,7 +55,7 @@ import {
 import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
-import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -182,7 +182,7 @@ const setVisibility = (items: Showable[], show: boolean): void => items.forEach(
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
 
 const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
-  state.initialTheta + (CesiumMath.TWO_PI / state.period) * (elapsedSeconds - state.thetaEpochSeconds);
+  orbitThetaAtElapsed(state.initialTheta, state.period, state.thetaEpochSeconds, elapsedSeconds);
 
 const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
   orbitPoint(
