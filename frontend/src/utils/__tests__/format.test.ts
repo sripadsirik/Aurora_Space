@@ -4,6 +4,7 @@ import {
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
+  formatDynamicPressure,
   formatEclipseFraction,
   formatManeuverDeltaV,
   formatMissDistance,
@@ -195,6 +196,21 @@ describe("formatSpecificEnergy", () => {
   it("renders an em dash for non-finite inputs", () => {
     expect(formatSpecificEnergy(Number.NaN)).toBe("—");
     expect(formatSpecificEnergy(Number.POSITIVE_INFINITY)).toBe("—");
+  });
+});
+
+describe("formatDynamicPressure", () => {
+  it("renders a pressure with two fraction digits and a nPa suffix", () => {
+    expect(formatDynamicPressure(1.338)).toBe("1.34 nPa");
+  });
+
+  it("keeps two fraction digits for a whole-number pressure", () => {
+    expect(formatDynamicPressure(2)).toBe("2.00 nPa");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatDynamicPressure(-1)).toBe("—");
+    expect(formatDynamicPressure(Number.NaN)).toBe("—");
   });
 });
 
