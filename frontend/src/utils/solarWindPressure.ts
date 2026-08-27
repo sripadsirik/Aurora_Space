@@ -29,3 +29,26 @@ export const solarWindDynamicPressure = (densityCm3: number, speedKms: number): 
   const speed = Math.max(0, speedKms);
   return DYNAMIC_PRESSURE_COEFFICIENT * density * speed * speed;
 };
+
+/** Reference quiet-time solar-wind dynamic pressure, in nanopascals. */
+export const NOMINAL_DYNAMIC_PRESSURE_NPA = 2;
+
+/** Subsolar magnetopause standoff distance, in Earth radii, at nominal pressure. */
+export const NOMINAL_MAGNETOPAUSE_STANDOFF_RE = 10.5;
+
+/**
+ * Subsolar magnetopause standoff distance in Earth radii for the given dynamic
+ * pressure (nPa). Pressure balance between the ram pressure and the compressed
+ * dipole field makes the standoff scale as `Pdyn^(-1/6)`, so this anchors that
+ * scaling to the nominal reference (`NOMINAL_MAGNETOPAUSE_STANDOFF_RE` at
+ * `NOMINAL_DYNAMIC_PRESSURE_NPA`): higher pressure pushes the boundary inward.
+ * Non-positive or non-finite pressure leaves the boundary undefined, returning
+ * `Infinity` (an unopposed magnetosphere).
+ */
+export const magnetopauseStandoffRe = (dynamicPressureNPa: number): number => {
+  if (!Number.isFinite(dynamicPressureNPa) || dynamicPressureNPa <= 0) return Infinity;
+  return (
+    NOMINAL_MAGNETOPAUSE_STANDOFF_RE *
+    (NOMINAL_DYNAMIC_PRESSURE_NPA / dynamicPressureNPa) ** (1 / 6)
+  );
+};
