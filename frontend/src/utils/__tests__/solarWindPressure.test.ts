@@ -4,6 +4,7 @@ import {
   NOMINAL_DYNAMIC_PRESSURE_NPA,
   GEO_RADIUS_RE,
   NOMINAL_MAGNETOPAUSE_STANDOFF_RE,
+  dynamicPressureLevel,
   isMagnetopauseInsideGeo,
   magnetopauseStandoffRe,
   solarWindDynamicPressure
@@ -96,5 +97,25 @@ describe("isMagnetopauseInsideGeo", () => {
     expect(isMagnetopauseInsideGeo(magnetopauseStandoffRe(20))).toBe(false);
     // A CME shock near 40 nPa pushes it inside 6.6 Re.
     expect(isMagnetopauseInsideGeo(magnetopauseStandoffRe(40))).toBe(true);
+  });
+});
+
+describe("dynamicPressureLevel", () => {
+  it("labels each band by its representative pressure", () => {
+    expect(dynamicPressureLevel(0.5)).toBe("quiet");
+    expect(dynamicPressureLevel(2)).toBe("nominal");
+    expect(dynamicPressureLevel(6)).toBe("elevated");
+    expect(dynamicPressureLevel(15)).toBe("extreme");
+  });
+
+  it("is inclusive at the lower edge of each band", () => {
+    expect(dynamicPressureLevel(1)).toBe("nominal");
+    expect(dynamicPressureLevel(3)).toBe("elevated");
+    expect(dynamicPressureLevel(10)).toBe("extreme");
+  });
+
+  it("falls back to quiet for negative or non-finite input", () => {
+    expect(dynamicPressureLevel(-4)).toBe("quiet");
+    expect(dynamicPressureLevel(Number.NaN)).toBe("quiet");
   });
 });
