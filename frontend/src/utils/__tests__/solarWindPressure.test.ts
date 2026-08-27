@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_PRESSURE_COEFFICIENT,
   NOMINAL_DYNAMIC_PRESSURE_NPA,
+  GEO_RADIUS_RE,
   NOMINAL_MAGNETOPAUSE_STANDOFF_RE,
+  isMagnetopauseInsideGeo,
   magnetopauseStandoffRe,
   solarWindDynamicPressure
 } from "../solarWindPressure";
@@ -75,5 +77,24 @@ describe("magnetopauseStandoffRe", () => {
     expect(magnetopauseStandoffRe(0)).toBe(Infinity);
     expect(magnetopauseStandoffRe(-1)).toBe(Infinity);
     expect(magnetopauseStandoffRe(Number.NaN)).toBe(Infinity);
+  });
+});
+
+describe("isMagnetopauseInsideGeo", () => {
+  it("is false for a nominal, uncompressed boundary", () => {
+    const standoff = magnetopauseStandoffRe(NOMINAL_DYNAMIC_PRESSURE_NPA);
+    expect(isMagnetopauseInsideGeo(standoff)).toBe(false);
+  });
+
+  it("is true once the boundary is squeezed to geostationary orbit", () => {
+    expect(isMagnetopauseInsideGeo(GEO_RADIUS_RE)).toBe(true);
+    expect(isMagnetopauseInsideGeo(GEO_RADIUS_RE - 1)).toBe(true);
+  });
+
+  it("flags GEO exposure only under extreme ram-pressure loading", () => {
+    // A ~20 nPa gust drives the boundary to roughly 7.1 Re — still outside GEO.
+    expect(isMagnetopauseInsideGeo(magnetopauseStandoffRe(20))).toBe(false);
+    // A CME shock near 40 nPa pushes it inside 6.6 Re.
+    expect(isMagnetopauseInsideGeo(magnetopauseStandoffRe(40))).toBe(true);
   });
 });
