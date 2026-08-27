@@ -1,0 +1,31 @@
+/**
+ * Solar-wind ram (dynamic) pressure and its effect on the dayside magnetopause.
+ *
+ * The solar wind pushes on Earth's magnetosphere with a ram pressure set by the
+ * proton density and bulk speed. That pressure balances against the compressed
+ * geomagnetic field to fix the subsolar magnetopause standoff distance, so a
+ * gust of fast, dense wind squeezes the boundary inward. These helpers turn the
+ * density and speed the feeds already report into a dynamic pressure in nPa and
+ * a standoff distance in Earth radii, keeping the derived figures in one place.
+ */
+
+/**
+ * Coefficient that converts proton density (cm^-3) and bulk speed (km/s) into a
+ * dynamic pressure in nanopascals via `Pdyn = k * n * v^2`. It folds the proton
+ * mass and the cm^-3 -> m^-3, km/s -> m/s, and Pa -> nPa unit conversions into a
+ * single factor (`1.6726e-27 kg * 1e6 * 1e6 * 1e9`).
+ */
+export const DYNAMIC_PRESSURE_COEFFICIENT = 1.6726e-6;
+
+/**
+ * Solar-wind ram (dynamic) pressure in nanopascals for the given proton density
+ * (protons/cm^3) and bulk speed (km/s), from `Pdyn = k * n * v^2`. Non-finite or
+ * negative inputs are treated as zero so a bad feed value yields `0` rather than
+ * a `NaN` pressure.
+ */
+export const solarWindDynamicPressure = (densityCm3: number, speedKms: number): number => {
+  if (!Number.isFinite(densityCm3) || !Number.isFinite(speedKms)) return 0;
+  const density = Math.max(0, densityCm3);
+  const speed = Math.max(0, speedKms);
+  return DYNAMIC_PRESSURE_COEFFICIENT * density * speed * speed;
+};
