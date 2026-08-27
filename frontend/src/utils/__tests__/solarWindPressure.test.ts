@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SpaceWeather } from "../../types/space";
 import {
   DYNAMIC_PRESSURE_COEFFICIENT,
   NOMINAL_DYNAMIC_PRESSURE_NPA,
@@ -7,8 +8,21 @@ import {
   dynamicPressureLevel,
   isMagnetopauseInsideGeo,
   magnetopauseStandoffRe,
-  solarWindDynamicPressure
+  solarWindDynamicPressure,
+  solarWindPressureProfile
 } from "../solarWindPressure";
+
+const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
+  kpIndex: 3,
+  solarWindSpeed: 400,
+  solarWindDensity: 5,
+  bzComponent: -2,
+  xrayFlux: "B1.0",
+  stormLevel: "none",
+  auroraKp: 3,
+  lastUpdated: new Date("2026-01-01T00:00:00Z"),
+  ...overrides
+});
 
 describe("solarWindDynamicPressure", () => {
   it("follows Pdyn = k * n * v^2 for nominal solar wind", () => {
@@ -117,5 +131,33 @@ describe("dynamicPressureLevel", () => {
   it("falls back to quiet for negative or non-finite input", () => {
     expect(dynamicPressureLevel(-4)).toBe("quiet");
     expect(dynamicPressureLevel(Number.NaN)).toBe("quiet");
+  });
+});
+
+describe("solarWindPressureProfile", () => {
+  it("derives every figure from the same computed dynamic pressure", () => {
+    const weather = makeWeather({ solarWindDensity: 6, solarWindSpeed: 500 });
+    const profile = solarWindPressureProfile(weather);
+    const pressure = solarWindDynamicPressure(6, 500);
+    expect(profile.dynamicPressureNPa).toBeCloseTo(pressure, 9);
+    expect(profile.magnetopauseStandoffRe).toBeCloseTo(magnetopauseStandoffRe(pressure), 9);
+    expect(profile.insideGeo).toBe(isMagnetopauseInsideGeo(profile.magnetopauseStandoffRe));
+  });
+
+  it("reports a nominal, uncompressed boundary for quiet solar wind", () => {
+    const profile = solarWindPressureProfile(makeWeather());
+    expect(profile.level).toBe("nominal");
+    expect(profile.insideGeo).toBe(false);
+    expect(profile.magnetopauseStandoffRe).toBeGreaterThan(GEO_RADIUS_RE);
+  });
+
+  it("compresses the boundary inward as a dense, fast stream arrives", () => {
+    const quiet = solarWindPressureProfile(makeWeather());
+    const shock = solarWindPressureProfile(
+      makeWeather({ solarWindDensity: 30, solarWindSpeed: 900 })
+    );
+    expect(shock.dynamicPressureNPa).toBeGreaterThan(quiet.dynamicPressureNPa);
+    expect(shock.magnetopauseStandoffRe).toBeLessThan(quiet.magnetopauseStandoffRe);
+    expect(shock.level).toBe("extreme");
   });
 });
