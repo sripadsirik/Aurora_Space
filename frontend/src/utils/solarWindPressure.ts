@@ -52,3 +52,16 @@ export const magnetopauseStandoffRe = (dynamicPressureNPa: number): number => {
     (NOMINAL_DYNAMIC_PRESSURE_NPA / dynamicPressureNPa) ** (1 / 6)
   );
 };
+
+/** Geostationary orbit radius, in Earth radii (42,164 km / 6,371 km). */
+export const GEO_RADIUS_RE = 6.6;
+
+/**
+ * True when the subsolar magnetopause has been compressed to or inside
+ * geostationary orbit, so a spacecraft at GEO on the dayside can cross the
+ * boundary into the shocked magnetosheath and see the solar wind directly. This
+ * only happens under severe ram-pressure loading and is a real operational
+ * hazard flag for GEO assets.
+ */
+export const isMagnetopauseInsideGeo = (standoffRe: number): boolean =>
+  standoffRe <= GEO_RADIUS_RE;
