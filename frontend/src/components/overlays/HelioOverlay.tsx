@@ -3,7 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure } from "../../utils/format";
+import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
 import { formatHelioArrivalLabel, getHelioRemainingSeconds } from "../../utils/helio";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
@@ -175,6 +175,12 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Ram Pressure</span>
               <span className="text-[#e7f5ff]">{formatDynamicPressure(pressureProfile.dynamicPressureNPa)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Magnetopause</span>
+              <span className={pressureProfile.insideGeo ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+                {formatMagnetopauseStandoff(pressureProfile.magnetopauseStandoffRe)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Bz</span>
