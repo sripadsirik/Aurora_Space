@@ -108,6 +108,28 @@ radius, so `escapeDeltaVKms` reduces to `(sqrt(2) - 1) * v_circular`. `formatOrb
 specific energy (`-29.3 MJ/kg`) for display. Every figure derives from the same deterministic
 orbit radius, so it stays mutually consistent with the periods and speeds reported elsewhere.
 
+## Solar Wind Pressure
+
+The solar-wind ram pressure and the dayside magnetopause compression it drives come from the
+pure helpers in `frontend/src/utils/solarWindPressure.ts`, using the proton density and bulk
+speed the space-weather feeds already report:
+
+| Helper | Returns |
+| --- | --- |
+| `solarWindDynamicPressure` | Ram (dynamic) pressure in nPa (`Pdyn = k · n · v²`) |
+| `magnetopauseStandoffRe` | Subsolar magnetopause standoff in Earth radii (scales as `Pdyn^(-1/6)`) |
+| `isMagnetopauseInsideGeo` | True when the boundary is compressed to or inside geostationary orbit (6.6 Rₑ) |
+| `dynamicPressureLevel` | Qualitative band (`quiet` / `nominal` / `elevated` / `extreme`) |
+| `solarWindPressureProfile` | All of the above bundled into one `SolarWindPressureProfile` for a `SpaceWeather` snapshot |
+
+Pressure balance between the ram pressure and the compressed dipole field fixes the standoff
+distance, so a fast, dense stream squeezes the boundary inward — nominal quiet wind (~2 nPa)
+sits near 10.5 Rₑ, while a strong CME shock can push it inside geostationary orbit and expose
+GEO assets to the magnetosheath. `formatDynamicPressure` and `formatMagnetopauseStandoff` in
+`frontend/src/utils/format.ts` render the pressure (`1.34 nPa`) and the standoff (`10.5 Rₑ`) for
+display, and the heliosphere overlay's L1 DSCOVR panel surfaces both, highlighting the standoff
+when the boundary drops inside GEO.
+
 ## Coverage Footprint
 
 How much of Earth a satellite can see or serve comes from the pure geometry helpers in
