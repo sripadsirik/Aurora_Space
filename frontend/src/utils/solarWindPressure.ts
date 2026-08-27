@@ -65,3 +65,20 @@ export const GEO_RADIUS_RE = 6.6;
  */
 export const isMagnetopauseInsideGeo = (standoffRe: number): boolean =>
   standoffRe <= GEO_RADIUS_RE;
+
+/** Qualitative bands for solar-wind dynamic pressure, from calm to shock-driven. */
+export type DynamicPressureLevel = "quiet" | "nominal" | "elevated" | "extreme";
+
+/**
+ * Buckets a dynamic pressure (nPa) into a qualitative band for the readouts:
+ * below 1 nPa is `quiet`, 1-3 nPa spans the everyday `nominal` range, 3-10 nPa
+ * is `elevated` (a fast or dense stream compressing the boundary), and 10 nPa or
+ * more is `extreme` — the shock-front loading seen when a CME arrives. Negative
+ * or non-finite inputs fall back to `quiet`.
+ */
+export const dynamicPressureLevel = (pressureNPa: number): DynamicPressureLevel => {
+  if (!Number.isFinite(pressureNPa) || pressureNPa < 1) return "quiet";
+  if (pressureNPa < 3) return "nominal";
+  if (pressureNPa < 10) return "elevated";
+  return "extreme";
+};
