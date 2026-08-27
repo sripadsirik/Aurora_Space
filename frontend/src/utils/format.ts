@@ -180,6 +180,17 @@ export const formatDynamicPressure = (pressureNPa: number): string => {
 };
 
 /**
+ * Formats a magnetopause standoff distance given in Earth radii for display.
+ * Renders one fraction digit with an `Rₑ` suffix (for example `10.5 Rₑ`).
+ * Negative or non-finite inputs — including the infinite standoff of an
+ * unopposed magnetosphere — render as an em dash rather than `Infinity Rₑ`.
+ */
+export const formatMagnetopauseStandoff = (standoffRe: number): string => {
+  if (!Number.isFinite(standoffRe) || standoffRe < 0) return "—";
+  return `${standoffRe.toFixed(1)} Rₑ`;
+};
+
+/**
  * A conjunction is treated as critical when the collision probability is at
  * least 0.005 or the miss distance is 250 m or less.
  */
