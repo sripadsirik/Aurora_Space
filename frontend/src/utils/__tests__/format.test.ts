@@ -6,6 +6,7 @@ import {
   formatDurationToTca,
   formatDynamicPressure,
   formatEclipseFraction,
+  formatMagnetopauseStandoff,
   formatManeuverDeltaV,
   formatMissDistance,
   formatOrbitalPeriod,
@@ -211,6 +212,25 @@ describe("formatDynamicPressure", () => {
   it("renders an em dash for negative or non-finite inputs", () => {
     expect(formatDynamicPressure(-1)).toBe("—");
     expect(formatDynamicPressure(Number.NaN)).toBe("—");
+  });
+});
+
+describe("formatMagnetopauseStandoff", () => {
+  it("renders a standoff distance with one fraction digit and an Earth-radii suffix", () => {
+    expect(formatMagnetopauseStandoff(10.5)).toBe("10.5 Rₑ");
+  });
+
+  it("rounds to one fraction digit", () => {
+    expect(formatMagnetopauseStandoff(6.63)).toBe("6.6 Rₑ");
+  });
+
+  it("renders an em dash for an infinite (unopposed) boundary", () => {
+    expect(formatMagnetopauseStandoff(Number.POSITIVE_INFINITY)).toBe("—");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatMagnetopauseStandoff(-1)).toBe("—");
+    expect(formatMagnetopauseStandoff(Number.NaN)).toBe("—");
   });
 });
 
