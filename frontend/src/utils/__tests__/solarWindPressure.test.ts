@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_PRESSURE_COEFFICIENT,
+  NOMINAL_DYNAMIC_PRESSURE_NPA,
+  NOMINAL_MAGNETOPAUSE_STANDOFF_RE,
+  magnetopauseStandoffRe,
   solarWindDynamicPressure
 } from "../solarWindPressure";
 
@@ -41,5 +44,36 @@ describe("solarWindDynamicPressure", () => {
   it("returns zero for non-finite inputs instead of NaN", () => {
     expect(solarWindDynamicPressure(Number.NaN, 400)).toBe(0);
     expect(solarWindDynamicPressure(5, Number.POSITIVE_INFINITY)).toBe(0);
+  });
+});
+
+describe("magnetopauseStandoffRe", () => {
+  it("returns the nominal standoff at the nominal pressure", () => {
+    expect(magnetopauseStandoffRe(NOMINAL_DYNAMIC_PRESSURE_NPA)).toBeCloseTo(
+      NOMINAL_MAGNETOPAUSE_STANDOFF_RE,
+      9
+    );
+  });
+
+  it("pushes the boundary inward as the pressure rises", () => {
+    const quiet = magnetopauseStandoffRe(1);
+    const gust = magnetopauseStandoffRe(20);
+    expect(gust).toBeLessThan(quiet);
+  });
+
+  it("follows the inverse-sixth-power scaling law", () => {
+    const base = magnetopauseStandoffRe(2);
+    // A 64-fold pressure jump halves the standoff (64^(1/6) = 2).
+    expect(magnetopauseStandoffRe(2 * 64)).toBeCloseTo(base / 2, 9);
+  });
+
+  it("keeps a nominal boundary well outside geostationary orbit", () => {
+    expect(magnetopauseStandoffRe(NOMINAL_DYNAMIC_PRESSURE_NPA)).toBeGreaterThan(6.6);
+  });
+
+  it("treats an unopposed magnetosphere as an infinite standoff", () => {
+    expect(magnetopauseStandoffRe(0)).toBe(Infinity);
+    expect(magnetopauseStandoffRe(-1)).toBe(Infinity);
+    expect(magnetopauseStandoffRe(Number.NaN)).toBe(Infinity);
   });
 });
