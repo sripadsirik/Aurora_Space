@@ -9,6 +9,8 @@
  * a standoff distance in Earth radii, keeping the derived figures in one place.
  */
 
+import type { SpaceWeather } from "../types/space";
+
 /**
  * Coefficient that converts proton density (cm^-3) and bulk speed (km/s) into a
  * dynamic pressure in nanopascals via `Pdyn = k * n * v^2`. It folds the proton
@@ -81,4 +83,37 @@ export const dynamicPressureLevel = (pressureNPa: number): DynamicPressureLevel 
   if (pressureNPa < 3) return "nominal";
   if (pressureNPa < 10) return "elevated";
   return "extreme";
+};
+
+/** Derived ram-pressure figures for the current solar-wind state. */
+export interface SolarWindPressureProfile {
+  /** Solar-wind ram (dynamic) pressure, in nanopascals. */
+  dynamicPressureNPa: number;
+  /** Subsolar magnetopause standoff distance driven by that pressure, in Earth radii. */
+  magnetopauseStandoffRe: number;
+  /** Qualitative band the dynamic pressure falls in. */
+  level: DynamicPressureLevel;
+  /** True when the boundary is compressed to or inside geostationary orbit. */
+  insideGeo: boolean;
+}
+
+/**
+ * Bundles the ram-pressure figures derived from a space-weather snapshot: the
+ * dynamic pressure from its solar-wind density and speed, the magnetopause
+ * standoff that pressure implies, the qualitative pressure band, and whether the
+ * boundary has been squeezed inside geostationary orbit. All values come from
+ * the same computed pressure, so they stay mutually consistent.
+ */
+export const solarWindPressureProfile = (weather: SpaceWeather): SolarWindPressureProfile => {
+  const dynamicPressureNPa = solarWindDynamicPressure(
+    weather.solarWindDensity,
+    weather.solarWindSpeed
+  );
+  const standoffRe = magnetopauseStandoffRe(dynamicPressureNPa);
+  return {
+    dynamicPressureNPa,
+    magnetopauseStandoffRe: standoffRe,
+    level: dynamicPressureLevel(dynamicPressureNPa),
+    insideGeo: isMagnetopauseInsideGeo(standoffRe)
+  };
 };
