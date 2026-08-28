@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  auroraLookPhrase,
   describeAuroraViewing,
   hemisphereForLatitude,
   polewardBearingDegrees,
@@ -148,5 +149,26 @@ describe("viewingFromKp", () => {
       bearingDegrees: null,
       elevation: null
     });
+  });
+});
+
+describe("auroraLookPhrase", () => {
+  it("pairs the compass point with the elevation when visible", () => {
+    expect(auroraLookPhrase(describeAuroraViewing(60, "overhead"))).toBe(
+      "Face N · High overhead"
+    );
+    expect(auroraLookPhrase(describeAuroraViewing(-55, "horizon"))).toBe(
+      "Face S · Low on the horizon"
+    );
+  });
+
+  it("returns null when the aurora is not visible", () => {
+    expect(auroraLookPhrase(describeAuroraViewing(45, "none"))).toBeNull();
+  });
+
+  it("drops the compass half when the hemisphere is unknown", () => {
+    expect(auroraLookPhrase(describeAuroraViewing(0, "overhead"))).toBe(
+      "High overhead"
+    );
   });
 });
