@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeAuroraViewing,
   hemisphereForLatitude,
   polewardBearingDegrees,
   polewardCompassPoint,
@@ -75,5 +76,45 @@ describe("VIEWING_ELEVATION_LABELS", () => {
   it("labels every elevation tier", () => {
     expect(VIEWING_ELEVATION_LABELS.high).toBe("High overhead");
     expect(VIEWING_ELEVATION_LABELS.low).toBe("Low on the horizon");
+  });
+});
+
+describe("describeAuroraViewing", () => {
+  it("points a northern observer north and high when overhead", () => {
+    expect(describeAuroraViewing(60, "overhead")).toEqual({
+      visible: true,
+      hemisphere: "northern",
+      compassPoint: "N",
+      bearingDegrees: 0,
+      elevation: "high"
+    });
+  });
+
+  it("points a southern observer south and low for a horizon glow", () => {
+    expect(describeAuroraViewing(-55, "horizon")).toEqual({
+      visible: true,
+      hemisphere: "southern",
+      compassPoint: "S",
+      bearingDegrees: 180,
+      elevation: "low"
+    });
+  });
+
+  it("leaves the directional fields null when nothing is visible", () => {
+    expect(describeAuroraViewing(52, "none")).toEqual({
+      visible: false,
+      hemisphere: "northern",
+      compassPoint: null,
+      bearingDegrees: null,
+      elevation: null
+    });
+  });
+
+  it("cannot point from the equator even when the aurora is visible", () => {
+    const instruction = describeAuroraViewing(0, "overhead");
+    expect(instruction.visible).toBe(true);
+    expect(instruction.hemisphere).toBeNull();
+    expect(instruction.compassPoint).toBeNull();
+    expect(instruction.bearingDegrees).toBeNull();
   });
 });
