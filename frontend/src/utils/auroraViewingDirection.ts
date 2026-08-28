@@ -156,3 +156,30 @@ export const auroraLookPhrase = (
   if (instruction.compassPoint === null) return elevationPart;
   return `Face ${instruction.compassPoint} · ${elevationPart}`;
 };
+
+/**
+ * A full-sentence viewing instruction for panel copy, always returning readable
+ * text. Not-visible instructions read as "out of view"; a high overhead oval
+ * invites scanning the sky; a horizon glow points low toward the poleward
+ * horizon. When the hemisphere is known the sentence names the direction, and
+ * falls back to a generic "poleward" phrasing otherwise.
+ */
+export const auroraViewingSentence = (
+  instruction: AuroraViewingInstruction
+): string => {
+  if (!instruction.visible) {
+    return "The aurora is out of view from your latitude.";
+  }
+  const direction =
+    instruction.hemisphere === null
+      ? null
+      : POLEWARD_DIRECTION_LABELS[polewardCompassPoint(instruction.hemisphere)];
+  if (instruction.elevation === "high") {
+    return direction === null
+      ? "The aurora is high overhead — scan the whole sky."
+      : `Look ${direction} and scan high overhead for the aurora.`;
+  }
+  return direction === null
+    ? "Look low on the poleward horizon for the aurora."
+    : `Look low on the ${instruction.hemisphere} horizon for the aurora.`;
+};
