@@ -24,3 +24,22 @@ export const hemisphereForLatitude = (latitude: number): Hemisphere | null => {
   if (!Number.isFinite(latitude) || latitude === 0) return null;
   return latitude > 0 ? "northern" : "southern";
 };
+
+/** The cardinal compass point toward the nearer geomagnetic pole. */
+export type PolewardCompassPoint = "N" | "S";
+
+/**
+ * The compass point an observer faces to look poleward: `N` from the Northern
+ * Hemisphere (toward the north magnetic pole) and `S` from the Southern. This is
+ * the direction the auroral oval lies in for any observer equatorward of it.
+ */
+export const polewardCompassPoint = (hemisphere: Hemisphere): PolewardCompassPoint =>
+  hemisphere === "northern" ? "N" : "S";
+
+/**
+ * The poleward compass bearing in degrees clockwise from true north: `0` from
+ * the Northern Hemisphere and `180` from the Southern. Suitable for orienting a
+ * compass rose or an arrow widget toward the aurora.
+ */
+export const polewardBearingDegrees = (hemisphere: Hemisphere): number =>
+  hemisphere === "northern" ? 0 : 180;
