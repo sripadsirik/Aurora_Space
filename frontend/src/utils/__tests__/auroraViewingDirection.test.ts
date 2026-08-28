@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { hemisphereForLatitude } from "../auroraViewingDirection";
+import {
+  hemisphereForLatitude,
+  polewardBearingDegrees,
+  polewardCompassPoint
+} from "../auroraViewingDirection";
 
 describe("hemisphereForLatitude", () => {
   it("maps a positive latitude to the northern hemisphere", () => {
@@ -17,5 +21,25 @@ describe("hemisphereForLatitude", () => {
   it("returns null for non-finite latitudes", () => {
     expect(hemisphereForLatitude(Number.NaN)).toBeNull();
     expect(hemisphereForLatitude(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+});
+
+describe("polewardCompassPoint", () => {
+  it("faces north from the northern hemisphere", () => {
+    expect(polewardCompassPoint("northern")).toBe("N");
+  });
+
+  it("faces south from the southern hemisphere", () => {
+    expect(polewardCompassPoint("southern")).toBe("S");
+  });
+});
+
+describe("polewardBearingDegrees", () => {
+  it("is 0 degrees (true north) from the northern hemisphere", () => {
+    expect(polewardBearingDegrees("northern")).toBe(0);
+  });
+
+  it("is 180 degrees (true south) from the southern hemisphere", () => {
+    expect(polewardBearingDegrees("southern")).toBe(180);
   });
 });
