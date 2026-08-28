@@ -6,6 +6,7 @@ import {
   polewardCompassPoint,
   POLEWARD_DIRECTION_LABELS,
   viewingElevationForChance,
+  viewingFromKp,
   VIEWING_ELEVATION_LABELS
 } from "../auroraViewingDirection";
 
@@ -116,5 +117,36 @@ describe("describeAuroraViewing", () => {
     expect(instruction.hemisphere).toBeNull();
     expect(instruction.compassPoint).toBeNull();
     expect(instruction.bearingDegrees).toBeNull();
+  });
+});
+
+describe("viewingFromKp", () => {
+  it("points a high-latitude observer overhead during a strong storm", () => {
+    // Kp 6 puts the oval's overhead edge near 54N, so 60N is under it.
+    expect(viewingFromKp(6, 60)).toEqual({
+      visible: true,
+      hemisphere: "northern",
+      compassPoint: "N",
+      bearingDegrees: 0,
+      elevation: "high"
+    });
+  });
+
+  it("keeps a mid-latitude observer looking low on the poleward horizon", () => {
+    // At 50N the same Kp 6 oval is a few degrees poleward: a horizon glow.
+    const instruction = viewingFromKp(6, 50);
+    expect(instruction.visible).toBe(true);
+    expect(instruction.elevation).toBe("low");
+    expect(instruction.compassPoint).toBe("N");
+  });
+
+  it("reports nothing to see for a low Kp at mid latitudes", () => {
+    expect(viewingFromKp(1, 45)).toEqual({
+      visible: false,
+      hemisphere: "northern",
+      compassPoint: null,
+      bearingDegrees: null,
+      elevation: null
+    });
   });
 });
