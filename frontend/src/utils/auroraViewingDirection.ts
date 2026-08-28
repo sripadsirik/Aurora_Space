@@ -11,7 +11,7 @@
  * single tested source.
  */
 
-import type { AuroraChance } from "./auroraVisibility";
+import { classifyAuroraChance, type AuroraChance } from "./auroraVisibility";
 
 /** Which hemisphere an observer stands in, north or south of the equator. */
 export type Hemisphere = "northern" | "southern";
@@ -128,3 +128,16 @@ export const describeAuroraViewing = (
     elevation
   };
 };
+
+/**
+ * Resolves a viewing instruction straight from a planetary Kp reading and an
+ * observer latitude, deriving the visibility tier via
+ * {@link classifyAuroraChance} before handing off to {@link describeAuroraViewing}.
+ * A convenience for callers that hold a raw Kp value rather than a pre-computed
+ * {@link AuroraChance}.
+ */
+export const viewingFromKp = (
+  kp: number,
+  latitude: number
+): AuroraViewingInstruction =>
+  describeAuroraViewing(latitude, classifyAuroraChance(kp, latitude));
