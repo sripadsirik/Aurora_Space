@@ -11,6 +11,8 @@
  * single tested source.
  */
 
+import type { AuroraChance } from "./auroraVisibility";
+
 /** Which hemisphere an observer stands in, north or south of the equator. */
 export type Hemisphere = "northern" | "southern";
 
@@ -43,3 +45,24 @@ export const polewardCompassPoint = (hemisphere: Hemisphere): PolewardCompassPoi
  */
 export const polewardBearingDegrees = (hemisphere: Hemisphere): number =>
   hemisphere === "northern" ? 0 : 180;
+
+/**
+ * Where in the sky to look for the aurora: `high` when the oval is roughly
+ * overhead and fills much of the sky, `low` when only a glow sits on the
+ * poleward horizon.
+ */
+export type AuroraViewingElevation = "high" | "low";
+
+/**
+ * The elevation band to search for a given visibility tier: an `overhead` tier
+ * puts the display `high` overhead, a `horizon` tier keeps it `low` on the
+ * poleward horizon, and a `none` tier has nothing to look at, so this returns
+ * `null`.
+ */
+export const viewingElevationForChance = (
+  chance: AuroraChance
+): AuroraViewingElevation | null => {
+  if (chance === "overhead") return "high";
+  if (chance === "horizon") return "low";
+  return null;
+};
