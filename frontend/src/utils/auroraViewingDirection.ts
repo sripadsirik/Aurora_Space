@@ -66,3 +66,22 @@ export const viewingElevationForChance = (
   if (chance === "horizon") return "low";
   return null;
 };
+
+/**
+ * Full lower-case compass-point names, for weaving the poleward direction into
+ * panel sentences ("look to the north"). Centralised so every display names the
+ * directions identically.
+ */
+export const POLEWARD_DIRECTION_LABELS: Record<PolewardCompassPoint, string> = {
+  N: "north",
+  S: "south"
+};
+
+/**
+ * Short human labels for each {@link AuroraViewingElevation}, for legends and
+ * badges.
+ */
+export const VIEWING_ELEVATION_LABELS: Record<AuroraViewingElevation, string> = {
+  high: "High overhead",
+  low: "Low on the horizon"
+};
