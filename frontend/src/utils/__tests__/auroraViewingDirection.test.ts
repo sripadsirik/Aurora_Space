@@ -3,7 +3,9 @@ import {
   hemisphereForLatitude,
   polewardBearingDegrees,
   polewardCompassPoint,
-  viewingElevationForChance
+  POLEWARD_DIRECTION_LABELS,
+  viewingElevationForChance,
+  VIEWING_ELEVATION_LABELS
 } from "../auroraViewingDirection";
 
 describe("hemisphereForLatitude", () => {
@@ -56,5 +58,22 @@ describe("viewingElevationForChance", () => {
 
   it("has nothing to look at when the aurora is not visible", () => {
     expect(viewingElevationForChance("none")).toBeNull();
+  });
+});
+
+describe("POLEWARD_DIRECTION_LABELS", () => {
+  it("names the northern poleward direction 'north'", () => {
+    expect(POLEWARD_DIRECTION_LABELS.N).toBe("north");
+  });
+
+  it("names the southern poleward direction 'south'", () => {
+    expect(POLEWARD_DIRECTION_LABELS.S).toBe("south");
+  });
+});
+
+describe("VIEWING_ELEVATION_LABELS", () => {
+  it("labels every elevation tier", () => {
+    expect(VIEWING_ELEVATION_LABELS.high).toBe("High overhead");
+    expect(VIEWING_ELEVATION_LABELS.low).toBe("Low on the horizon");
   });
 });
