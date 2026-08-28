@@ -141,3 +141,18 @@ export const viewingFromKp = (
   latitude: number
 ): AuroraViewingInstruction =>
   describeAuroraViewing(latitude, classifyAuroraChance(kp, latitude));
+
+/**
+ * A terse "where to look" phrase for a badge or chip, such as
+ * `Face N · High overhead`. Returns `null` when the aurora is not visible, and
+ * drops the compass half when the observer's hemisphere is unknown (on the
+ * equator), leaving just the elevation.
+ */
+export const auroraLookPhrase = (
+  instruction: AuroraViewingInstruction
+): string | null => {
+  if (!instruction.visible || instruction.elevation === null) return null;
+  const elevationPart = VIEWING_ELEVATION_LABELS[instruction.elevation];
+  if (instruction.compassPoint === null) return elevationPart;
+  return `Face ${instruction.compassPoint} · ${elevationPart}`;
+};
