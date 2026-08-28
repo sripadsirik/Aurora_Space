@@ -85,3 +85,46 @@ export const VIEWING_ELEVATION_LABELS: Record<AuroraViewingElevation, string> = 
   high: "High overhead",
   low: "Low on the horizon"
 };
+
+/**
+ * A resolved "where to look" instruction for one observer and one visibility
+ * tier, ready to drive a compass widget or a copy string. When there is nothing
+ * to see ({@link visible} is `false`) or the observer's hemisphere is unknown,
+ * the directional fields are `null`.
+ */
+export interface AuroraViewingInstruction {
+  /** Whether the aurora is visible at all for this tier (not the `none` tier). */
+  visible: boolean;
+  /** The observer's hemisphere, or `null` on the equator / for a bad latitude. */
+  hemisphere: Hemisphere | null;
+  /** Compass point to face, or `null` when there is nothing to look toward. */
+  compassPoint: PolewardCompassPoint | null;
+  /** Compass bearing in degrees clockwise from true north, or `null`. */
+  bearingDegrees: number | null;
+  /** Elevation band to search, or `null` when the aurora is not visible. */
+  elevation: AuroraViewingElevation | null;
+}
+
+/**
+ * Resolves an observer's latitude and aurora {@link AuroraChance} into a single
+ * viewing instruction. The directional fields are populated only when the aurora
+ * is visible ({@link viewingElevationForChance} is non-null) and the observer's
+ * hemisphere is known; otherwise they stay `null` so a display can fall back to
+ * "nothing to see" without special-casing every field.
+ */
+export const describeAuroraViewing = (
+  latitude: number,
+  chance: AuroraChance
+): AuroraViewingInstruction => {
+  const hemisphere = hemisphereForLatitude(latitude);
+  const elevation = viewingElevationForChance(chance);
+  const visible = elevation !== null;
+  const pointable = visible && hemisphere !== null;
+  return {
+    visible,
+    hemisphere,
+    compassPoint: pointable ? polewardCompassPoint(hemisphere) : null,
+    bearingDegrees: pointable ? polewardBearingDegrees(hemisphere) : null,
+    elevation
+  };
+};
