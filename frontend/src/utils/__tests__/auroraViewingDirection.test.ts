@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   hemisphereForLatitude,
   polewardBearingDegrees,
-  polewardCompassPoint
+  polewardCompassPoint,
+  viewingElevationForChance
 } from "../auroraViewingDirection";
 
 describe("hemisphereForLatitude", () => {
@@ -41,5 +42,19 @@ describe("polewardBearingDegrees", () => {
 
   it("is 180 degrees (true south) from the southern hemisphere", () => {
     expect(polewardBearingDegrees("southern")).toBe(180);
+  });
+});
+
+describe("viewingElevationForChance", () => {
+  it("puts an overhead oval high in the sky", () => {
+    expect(viewingElevationForChance("overhead")).toBe("high");
+  });
+
+  it("keeps a horizon glow low", () => {
+    expect(viewingElevationForChance("horizon")).toBe("low");
+  });
+
+  it("has nothing to look at when the aurora is not visible", () => {
+    expect(viewingElevationForChance("none")).toBeNull();
   });
 });
