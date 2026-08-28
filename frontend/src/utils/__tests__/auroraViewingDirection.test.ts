@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auroraLookPhrase,
+  auroraViewingSentence,
   describeAuroraViewing,
   hemisphereForLatitude,
   polewardBearingDegrees,
@@ -169,6 +170,35 @@ describe("auroraLookPhrase", () => {
   it("drops the compass half when the hemisphere is unknown", () => {
     expect(auroraLookPhrase(describeAuroraViewing(0, "overhead"))).toBe(
       "High overhead"
+    );
+  });
+});
+
+describe("auroraViewingSentence", () => {
+  it("names the direction for a northern overhead oval", () => {
+    expect(auroraViewingSentence(describeAuroraViewing(65, "overhead"))).toBe(
+      "Look north and scan high overhead for the aurora."
+    );
+  });
+
+  it("points to the southern horizon for a low glow", () => {
+    expect(auroraViewingSentence(describeAuroraViewing(-52, "horizon"))).toBe(
+      "Look low on the southern horizon for the aurora."
+    );
+  });
+
+  it("reads as out of view when nothing is visible", () => {
+    expect(auroraViewingSentence(describeAuroraViewing(40, "none"))).toBe(
+      "The aurora is out of view from your latitude."
+    );
+  });
+
+  it("falls back to generic phrasing without a hemisphere", () => {
+    expect(auroraViewingSentence(describeAuroraViewing(0, "overhead"))).toBe(
+      "The aurora is high overhead — scan the whole sky."
+    );
+    expect(auroraViewingSentence(describeAuroraViewing(0, "horizon"))).toBe(
+      "Look low on the poleward horizon for the aurora."
     );
   });
 });
