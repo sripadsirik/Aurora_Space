@@ -4,6 +4,7 @@ import {
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
+  formatDynamicPressure,
   formatEclipseFraction,
   formatManeuverDeltaV,
   formatMissDistance,
@@ -13,6 +14,7 @@ import {
   formatProbability,
   formatProtonFlux,
   formatSpecificEnergy,
+  formatStandoffDistance,
   formatUtcTime,
   isCriticalConjunction
 } from "../format";
@@ -195,6 +197,32 @@ describe("formatSpecificEnergy", () => {
   it("renders an em dash for non-finite inputs", () => {
     expect(formatSpecificEnergy(Number.NaN)).toBe("—");
     expect(formatSpecificEnergy(Number.POSITIVE_INFINITY)).toBe("—");
+  });
+});
+
+describe("formatDynamicPressure", () => {
+  it("renders a pressure with two fraction digits and an nPa suffix", () => {
+    expect(formatDynamicPressure(1.338)).toBe("1.34 nPa");
+  });
+
+  it("keeps trailing zeros to two fraction digits", () => {
+    expect(formatDynamicPressure(2)).toBe("2.00 nPa");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatDynamicPressure(-1)).toBe("—");
+    expect(formatDynamicPressure(Number.NaN)).toBe("—");
+  });
+});
+
+describe("formatStandoffDistance", () => {
+  it("renders a standoff distance with one fraction digit and an Earth-radius suffix", () => {
+    expect(formatStandoffDistance(9.57)).toBe("9.6 R⊕");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatStandoffDistance(-2)).toBe("—");
+    expect(formatStandoffDistance(Number.POSITIVE_INFINITY)).toBe("—");
   });
 });
 
