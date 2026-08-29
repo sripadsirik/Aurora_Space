@@ -108,6 +108,28 @@ radius, so `escapeDeltaVKms` reduces to `(sqrt(2) - 1) * v_circular`. `formatOrb
 specific energy (`-29.3 MJ/kg`) for display. Every figure derives from the same deterministic
 orbit radius, so it stays mutually consistent with the periods and speeds reported elsewhere.
 
+## Solar-Wind Pressure
+
+How hard the solar wind presses on the magnetosphere comes from the pure helpers in
+`frontend/src/utils/solarWindPressure.ts`, which build on the proton density and bulk speed
+already carried on a `SpaceWeather` snapshot:
+
+| Helper | Returns |
+| --- | --- |
+| `solarWindDynamicPressureNPa` | Dynamic (ram) pressure in nPa (`1.6726e-6 * n * v^2`) |
+| `magnetopauseStandoffRe` | Dayside magnetopause standoff distance in Earth radii (`10.74 * P^(-1/6)`) |
+| `classifySolarWindPressure` | Qualitative level: `quiet` (<3 nPa), `elevated` (3–10 nPa), `compressed` (≥10 nPa) |
+| `isGeoExposedToSolarWind` | Whether the compressed standoff has reached geostationary orbit (≈6.61 R_E) |
+| `solarWindPressureProfile` | All of the above bundled into one `SolarWindPressureProfile` for a snapshot |
+
+Dynamic pressure follows `P = rho * v^2` with `rho = n * m_p`; the standoff distance comes from
+Chapman-Ferraro pressure balance between that ram pressure and the compressed dipole field, so a
+denser or faster stream both raises the pressure and squeezes the magnetopause closer to Earth. A
+nominal ~2 nPa stream sits the standoff near 9.6 R_E, while an extreme enhancement can drive it
+inside geostationary orbit and expose GEO satellites near local noon to the magnetosheath. Every
+figure in the profile derives from the same snapshot density and speed, so they stay mutually
+consistent.
+
 ## Coverage Footprint
 
 How much of Earth a satellite can see or serve comes from the pure geometry helpers in
