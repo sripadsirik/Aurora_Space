@@ -174,3 +174,23 @@ export const formatConjunctionWarningLabel = (count: number): string => {
  */
 export const isCriticalConjunction = (conjunction: ConjunctionWarning): boolean =>
   conjunction.probability >= 0.005 || conjunction.missDistanceM <= 250;
+
+/**
+ * Formats a solar-wind dynamic pressure given in nanopascals for display. Renders
+ * two fraction digits with an `nPa` suffix (for example `1.34 nPa`). Negative or
+ * non-finite inputs render as an em dash so a bad value never shows as `NaN nPa`.
+ */
+export const formatDynamicPressure = (pressureNPa: number): string => {
+  if (!Number.isFinite(pressureNPa) || pressureNPa < 0) return "—";
+  return `${pressureNPa.toFixed(2)} nPa`;
+};
+
+/**
+ * Formats a magnetopause standoff distance given in Earth radii for display.
+ * Renders one fraction digit with an `R⊕` suffix (for example `9.6 R⊕`). Negative
+ * or non-finite inputs render as an em dash so a bad value never shows as `NaN`.
+ */
+export const formatStandoffDistance = (standoffRe: number): string => {
+  if (!Number.isFinite(standoffRe) || standoffRe < 0) return "—";
+  return `${standoffRe.toFixed(1)} R⊕`;
+};
