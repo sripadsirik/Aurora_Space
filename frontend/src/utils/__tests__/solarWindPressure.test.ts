@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE,
   SOLAR_WIND_DYNAMIC_PRESSURE_FACTOR,
+  GEOSTATIONARY_RADIUS_RE,
   SOLAR_WIND_PRESSURE_COMPRESSED_NPA,
   SOLAR_WIND_PRESSURE_ELEVATED_NPA,
   classifySolarWindPressure,
+  isGeoExposedToSolarWind,
   magnetopauseStandoffRe,
   solarWindDynamicPressureNPa
 } from "../solarWindPressure";
@@ -77,5 +79,23 @@ describe("classifySolarWindPressure", () => {
 
   it("stays elevated just below the compressed threshold", () => {
     expect(classifySolarWindPressure(SOLAR_WIND_PRESSURE_COMPRESSED_NPA - 0.01)).toBe("elevated");
+  });
+});
+
+describe("isGeoExposedToSolarWind", () => {
+  it("is false for a nominal standoff well outside GEO", () => {
+    expect(isGeoExposedToSolarWind(magnetopauseStandoffRe(2))).toBe(false);
+  });
+
+  it("is true once an extreme stream compresses the standoff inside GEO", () => {
+    expect(isGeoExposedToSolarWind(magnetopauseStandoffRe(30))).toBe(true);
+  });
+
+  it("treats a standoff exactly at GEO as exposed", () => {
+    expect(isGeoExposedToSolarWind(GEOSTATIONARY_RADIUS_RE)).toBe(true);
+  });
+
+  it("is false just outside GEO", () => {
+    expect(isGeoExposedToSolarWind(GEOSTATIONARY_RADIUS_RE + 0.01)).toBe(false);
   });
 });
