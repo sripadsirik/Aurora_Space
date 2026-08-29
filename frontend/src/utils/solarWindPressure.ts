@@ -8,6 +8,8 @@
  * on a space-weather snapshot into the dynamic pressure in nanopascals.
  */
 
+import type { SpaceWeather } from "../types/space";
+
 /**
  * Conversion factor so that `P[nPa] = FACTOR * n[cm^-3] * v[km/s]^2`.
  *
@@ -87,3 +89,33 @@ export const GEOSTATIONARY_RADIUS_RE = 6.61;
  */
 export const isGeoExposedToSolarWind = (standoffRe: number): boolean =>
   standoffRe <= GEOSTATIONARY_RADIUS_RE;
+
+/** Derived solar-wind pressure figures for a single space-weather snapshot. */
+export interface SolarWindPressureProfile {
+  /** Solar-wind dynamic (ram) pressure, in nanopascals. */
+  dynamicPressureNPa: number;
+  /** Dayside magnetopause standoff distance, in Earth radii. */
+  magnetopauseStandoffRe: number;
+  /** Qualitative pressure level (`quiet` / `elevated` / `compressed`). */
+  level: SolarWindPressureLevel;
+  /** Whether the compressed standoff has reached geostationary orbit. */
+  geoExposed: boolean;
+}
+
+/**
+ * Bundles the derived solar-wind pressure figures for a space-weather snapshot:
+ * the dynamic pressure, the magnetopause standoff distance it implies, the
+ * qualitative level, and whether that standoff has been driven inside
+ * geostationary orbit. Every figure comes from the same snapshot density and
+ * speed, so they stay mutually consistent.
+ */
+export const solarWindPressureProfile = (weather: SpaceWeather): SolarWindPressureProfile => {
+  const dynamicPressureNPa = solarWindDynamicPressureNPa(weather.solarWindDensity, weather.solarWindSpeed);
+  const standoffRe = magnetopauseStandoffRe(dynamicPressureNPa);
+  return {
+    dynamicPressureNPa,
+    magnetopauseStandoffRe: standoffRe,
+    level: classifySolarWindPressure(dynamicPressureNPa),
+    geoExposed: isGeoExposedToSolarWind(standoffRe)
+  };
+};
