@@ -51,3 +51,23 @@ export const MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE = 10.74;
  */
 export const magnetopauseStandoffRe = (pressureNPa: number): number =>
   MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE * Math.pow(Math.max(pressureNPa, 1e-6), -1 / 6);
+
+/** How hard the solar wind is pressing on the magnetosphere. */
+export type SolarWindPressureLevel = "quiet" | "elevated" | "compressed";
+
+/** Dynamic pressure (nPa) at or above which the stream reads as elevated. */
+export const SOLAR_WIND_PRESSURE_ELEVATED_NPA = 3;
+
+/** Dynamic pressure (nPa) at or above which the magnetosphere reads as compressed. */
+export const SOLAR_WIND_PRESSURE_COMPRESSED_NPA = 10;
+
+/**
+ * Classifies a solar-wind dynamic pressure into a qualitative level: `quiet`
+ * below 3 nPa, `elevated` from 3 up to 10 nPa, and `compressed` at or above
+ * 10 nPa, where the dayside magnetosphere is being visibly squeezed.
+ */
+export const classifySolarWindPressure = (pressureNPa: number): SolarWindPressureLevel => {
+  if (pressureNPa >= SOLAR_WIND_PRESSURE_COMPRESSED_NPA) return "compressed";
+  if (pressureNPa >= SOLAR_WIND_PRESSURE_ELEVATED_NPA) return "elevated";
+  return "quiet";
+};
