@@ -71,3 +71,19 @@ export const classifySolarWindPressure = (pressureNPa: number): SolarWindPressur
   if (pressureNPa >= SOLAR_WIND_PRESSURE_ELEVATED_NPA) return "elevated";
   return "quiet";
 };
+
+/**
+ * Geostationary orbit radius in Earth radii: the 42,164 km orbit divided by the
+ * WGS84 equatorial radius of 6,378 km gives roughly 6.61 R_E. When the dayside
+ * magnetopause is compressed inside this distance, geostationary satellites near
+ * local noon can cross into the sheath and shocked solar wind.
+ */
+export const GEOSTATIONARY_RADIUS_RE = 6.61;
+
+/**
+ * True when the dayside magnetopause standoff distance has been compressed to at
+ * or inside geostationary orbit, exposing GEO satellites near local noon to the
+ * magnetosheath. This happens only under strong dynamic-pressure enhancements.
+ */
+export const isGeoExposedToSolarWind = (standoffRe: number): boolean =>
+  standoffRe <= GEOSTATIONARY_RADIUS_RE;
