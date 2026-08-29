@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE,
   SOLAR_WIND_DYNAMIC_PRESSURE_FACTOR,
+  SOLAR_WIND_PRESSURE_COMPRESSED_NPA,
+  SOLAR_WIND_PRESSURE_ELEVATED_NPA,
+  classifySolarWindPressure,
   magnetopauseStandoffRe,
   solarWindDynamicPressureNPa
 } from "../solarWindPressure";
@@ -52,5 +55,27 @@ describe("magnetopauseStandoffRe", () => {
   it("stays finite for a zero or negative pressure", () => {
     expect(Number.isFinite(magnetopauseStandoffRe(0))).toBe(true);
     expect(Number.isFinite(magnetopauseStandoffRe(-5))).toBe(true);
+  });
+});
+
+describe("classifySolarWindPressure", () => {
+  it("reads a calm stream as quiet", () => {
+    expect(classifySolarWindPressure(1.3)).toBe("quiet");
+  });
+
+  it("reads the elevated threshold itself as elevated", () => {
+    expect(classifySolarWindPressure(SOLAR_WIND_PRESSURE_ELEVATED_NPA)).toBe("elevated");
+  });
+
+  it("stays quiet just below the elevated threshold", () => {
+    expect(classifySolarWindPressure(SOLAR_WIND_PRESSURE_ELEVATED_NPA - 0.01)).toBe("quiet");
+  });
+
+  it("reads the compressed threshold itself as compressed", () => {
+    expect(classifySolarWindPressure(SOLAR_WIND_PRESSURE_COMPRESSED_NPA)).toBe("compressed");
+  });
+
+  it("stays elevated just below the compressed threshold", () => {
+    expect(classifySolarWindPressure(SOLAR_WIND_PRESSURE_COMPRESSED_NPA - 0.01)).toBe("elevated");
   });
 });
