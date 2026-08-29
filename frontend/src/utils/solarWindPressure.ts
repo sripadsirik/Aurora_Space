@@ -28,3 +28,26 @@ export const SOLAR_WIND_DYNAMIC_PRESSURE_FACTOR = 1.6726e-6;
  */
 export const solarWindDynamicPressureNPa = (densityCm3: number, speedKms: number): number =>
   SOLAR_WIND_DYNAMIC_PRESSURE_FACTOR * densityCm3 * speedKms * speedKms;
+
+/**
+ * Coefficient (in Earth radii) in the magnetopause standoff relation
+ * `r_mp / R_E = COEFF * P[nPa]^(-1/6)`.
+ *
+ * It comes from Chapman-Ferraro pressure balance between the solar-wind ram
+ * pressure and the compressed geomagnetic dipole field: setting
+ * `P_dyn = 2 * B0^2 / mu0 * (R_E / r)^6` and solving for `r` gives
+ * `COEFF = (2 * B0^2 / (mu0 * 1e-9))^(1/6) ~ 10.74` for the equatorial surface
+ * field `B0 = 3.11e-5 T`. A nominal ~2 nPa stream then sits the magnetopause
+ * near 9.6 R_E, matching the observed dayside standoff.
+ */
+export const MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE = 10.74;
+
+/**
+ * Dayside magnetopause standoff distance in Earth radii for a given solar-wind
+ * dynamic pressure (nPa): `r_mp = 10.74 * P^(-1/6)`. Higher pressure compresses
+ * the magnetosphere, so the standoff distance shrinks. Pressures at or below
+ * zero are unphysical and clamped to a tiny positive value to avoid a divide by
+ * zero, so the result stays finite.
+ */
+export const magnetopauseStandoffRe = (pressureNPa: number): number =>
+  MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE * Math.pow(Math.max(pressureNPa, 1e-6), -1 / 6);
