@@ -1,15 +1,29 @@
 import { describe, expect, it } from "vitest";
+import type { SpaceWeather } from "../../types/space";
 import {
+  GEOSTATIONARY_RADIUS_RE,
   MAGNETOPAUSE_STANDOFF_COEFFICIENT_RE,
   SOLAR_WIND_DYNAMIC_PRESSURE_FACTOR,
-  GEOSTATIONARY_RADIUS_RE,
   SOLAR_WIND_PRESSURE_COMPRESSED_NPA,
   SOLAR_WIND_PRESSURE_ELEVATED_NPA,
   classifySolarWindPressure,
   isGeoExposedToSolarWind,
   magnetopauseStandoffRe,
-  solarWindDynamicPressureNPa
+  solarWindDynamicPressureNPa,
+  solarWindPressureProfile
 } from "../solarWindPressure";
+
+const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
+  kpIndex: 3,
+  solarWindSpeed: 400,
+  solarWindDensity: 5,
+  bzComponent: -2,
+  xrayFlux: "C2.4",
+  stormLevel: "minor",
+  auroraKp: 3,
+  lastUpdated: new Date("2026-08-29T12:00:00Z"),
+  ...overrides
+});
 
 describe("solarWindDynamicPressureNPa", () => {
   it("matches the analytic factor * n * v^2 for a quiet stream", () => {
@@ -97,5 +111,30 @@ describe("isGeoExposedToSolarWind", () => {
 
   it("is false just outside GEO", () => {
     expect(isGeoExposedToSolarWind(GEOSTATIONARY_RADIUS_RE + 0.01)).toBe(false);
+  });
+});
+
+describe("solarWindPressureProfile", () => {
+  it("derives every figure from the same snapshot density and speed", () => {
+    const weather = makeWeather({ solarWindDensity: 5, solarWindSpeed: 400 });
+    const profile = solarWindPressureProfile(weather);
+
+    expect(profile.dynamicPressureNPa).toBeCloseTo(solarWindDynamicPressureNPa(5, 400), 10);
+    expect(profile.magnetopauseStandoffRe).toBeCloseTo(magnetopauseStandoffRe(profile.dynamicPressureNPa), 10);
+    expect(profile.level).toBe(classifySolarWindPressure(profile.dynamicPressureNPa));
+    expect(profile.geoExposed).toBe(isGeoExposedToSolarWind(profile.magnetopauseStandoffRe));
+  });
+
+  it("reports a quiet, unexposed magnetosphere for a calm stream", () => {
+    const profile = solarWindPressureProfile(makeWeather({ solarWindDensity: 5, solarWindSpeed: 400 }));
+    expect(profile.level).toBe("quiet");
+    expect(profile.geoExposed).toBe(false);
+    expect(profile.magnetopauseStandoffRe).toBeGreaterThan(GEOSTATIONARY_RADIUS_RE);
+  });
+
+  it("reports a compressed, GEO-exposed magnetosphere for an extreme stream", () => {
+    const profile = solarWindPressureProfile(makeWeather({ solarWindDensity: 40, solarWindSpeed: 800 }));
+    expect(profile.level).toBe("compressed");
+    expect(profile.geoExposed).toBe(true);
   });
 });
