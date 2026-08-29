@@ -680,7 +680,7 @@ The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently coveri
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
 `catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
 `conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`,
-`conjunctionLeadTime`, `auroraVisibility`), the Zustand store, and the mock datasets under `src/data/mock/`
+`conjunctionLeadTime`, `auroraVisibility`, `solarWindPressure`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
