@@ -25,3 +25,16 @@ export const STORM_INTENSITY_KP_SPAN = 5;
  */
 export const stormIntensity = (kp: number): number =>
   clamp01((kp - STORM_INTENSITY_KP_FLOOR) / STORM_INTENSITY_KP_SPAN);
+
+/**
+ * `box-shadow` for the red screen-edge vignette. Both the blur and the spread
+ * grow with `intensity`, so a stronger storm reads as a deeper, redder frame.
+ * Expects an intensity already normalised by {@link stormIntensity}.
+ */
+export const stormVignetteShadow = (intensity: number): string => {
+  const blur = 80 + intensity * 120;
+  const spread = 20 + intensity * 40;
+  const green = Math.round(30 + (1 - intensity) * 40);
+  const alpha = 0.15 + intensity * 0.2;
+  return `inset 0 0 ${blur}px ${spread}px rgba(255,${green},0,${alpha})`;
+};
