@@ -38,3 +38,31 @@ export const stormVignetteShadow = (intensity: number): string => {
   const alpha = 0.15 + intensity * 0.2;
   return `inset 0 0 ${blur}px ${spread}px rgba(255,${green},0,${alpha})`;
 };
+
+/** Inline CSS properties for the pulsing storm status banner. */
+export interface StormBannerStyle {
+  borderColor: string;
+  backgroundColor: string;
+  color: string;
+  textShadow: string;
+}
+
+/**
+ * Colour and glow for the storm status banner, warming with `intensity`: the
+ * border and text shift toward pure red and the translucent red backing and
+ * text glow deepen. Expects an intensity already normalised by
+ * {@link stormIntensity}.
+ */
+export const stormBannerStyle = (intensity: number): StormBannerStyle => {
+  const borderGreen = Math.round(60 + (1 - intensity) * 80);
+  const backingAlpha = 0.5 + intensity * 0.3;
+  const textGreen = Math.round(120 + (1 - intensity) * 60);
+  const textBlue = Math.round(60 + (1 - intensity) * 40);
+  const glowAlpha = 0.4 + intensity * 0.3;
+  return {
+    borderColor: `rgba(255,${borderGreen},0,0.6)`,
+    backgroundColor: `rgba(80,10,0,${backingAlpha})`,
+    color: `rgb(255,${textGreen},${textBlue})`,
+    textShadow: `0 0 10px rgba(255,60,0,${glowAlpha})`
+  };
+};
