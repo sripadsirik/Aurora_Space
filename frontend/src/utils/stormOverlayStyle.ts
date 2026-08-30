@@ -66,3 +66,25 @@ export const stormBannerStyle = (intensity: number): StormBannerStyle => {
     textShadow: `0 0 10px rgba(255,60,0,${glowAlpha})`
   };
 };
+
+/** The full set of storm-overlay styles derived from a single Kp index. */
+export interface StormOverlayStyle {
+  intensity: number;
+  vignetteShadow: string;
+  banner: StormBannerStyle;
+}
+
+/**
+ * Derives every storm-overlay style from an effective Kp index in one pass: the
+ * shared {@link stormIntensity}, the {@link stormVignetteShadow}, and the
+ * {@link stormBannerStyle}. Consuming the whole set from one call keeps the
+ * vignette and banner locked to the same intensity.
+ */
+export const buildStormOverlayStyle = (kp: number): StormOverlayStyle => {
+  const intensity = stormIntensity(kp);
+  return {
+    intensity,
+    vignetteShadow: stormVignetteShadow(intensity),
+    banner: stormBannerStyle(intensity)
+  };
+};
