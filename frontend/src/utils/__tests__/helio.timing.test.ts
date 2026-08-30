@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   HELIO_CME_DURATION_SECONDS,
+  HELIO_CME_IMMINENT_THRESHOLD_SECONDS,
   HELIO_CME_MAX_RADIUS,
   HELIO_ORBIT_RADII,
   formatHelioArrivalLabel,
   getHelioCmeRadius,
-  getHelioRemainingSeconds
+  getHelioRemainingSeconds,
+  isHelioCmeImminent
 } from "../helio";
 
 describe("getHelioCmeRadius", () => {
@@ -49,5 +51,25 @@ describe("formatHelioArrivalLabel", () => {
 
   it("shows all zeros once the CME has arrived", () => {
     expect(formatHelioArrivalLabel(HELIO_CME_DURATION_SECONDS)).toBe("0h 00m 00s");
+  });
+});
+
+describe("isHelioCmeImminent", () => {
+  it("is false early in the run when lead time is still long", () => {
+    expect(isHelioCmeImminent(0)).toBe(false);
+  });
+
+  it("is true once inside the imminent lead-time window", () => {
+    const elapsed = HELIO_CME_DURATION_SECONDS - HELIO_CME_IMMINENT_THRESHOLD_SECONDS + 60;
+    expect(isHelioCmeImminent(elapsed)).toBe(true);
+  });
+
+  it("is false exactly at the threshold lead time", () => {
+    const elapsed = HELIO_CME_DURATION_SECONDS - HELIO_CME_IMMINENT_THRESHOLD_SECONDS;
+    expect(isHelioCmeImminent(elapsed)).toBe(false);
+  });
+
+  it("stays imminent after the CME has arrived", () => {
+    expect(isHelioCmeImminent(HELIO_CME_DURATION_SECONDS)).toBe(true);
   });
 });
