@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   STORM_INTENSITY_KP_FLOOR,
   STORM_INTENSITY_KP_SPAN,
+  stormBannerStyle,
   stormIntensity,
   stormVignetteShadow
 } from "../stormOverlayStyle";
@@ -39,5 +40,25 @@ describe("stormVignetteShadow", () => {
 
   it("rounds the green channel to a whole value", () => {
     expect(stormVignetteShadow(0.5)).toBe("inset 0 0 140px 40px rgba(255,50,0,0.25)");
+  });
+});
+
+describe("stormBannerStyle", () => {
+  it("uses the cool, dim palette at zero intensity", () => {
+    expect(stormBannerStyle(0)).toEqual({
+      borderColor: "rgba(255,140,0,0.6)",
+      backgroundColor: "rgba(80,10,0,0.5)",
+      color: "rgb(255,180,100)",
+      textShadow: "0 0 10px rgba(255,60,0,0.4)"
+    });
+  });
+
+  it("shifts toward pure red and deepens the backing at full intensity", () => {
+    expect(stormBannerStyle(1)).toEqual({
+      borderColor: "rgba(255,60,0,0.6)",
+      backgroundColor: "rgba(80,10,0,0.8)",
+      color: "rgb(255,120,60)",
+      textShadow: "0 0 10px rgba(255,60,0,0.7)"
+    });
   });
 });
