@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   STORM_INTENSITY_KP_FLOOR,
   STORM_INTENSITY_KP_SPAN,
+  buildStormOverlayStyle,
   stormBannerStyle,
   stormIntensity,
   stormVignetteShadow
@@ -60,5 +61,21 @@ describe("stormBannerStyle", () => {
       color: "rgb(255,120,60)",
       textShadow: "0 0 10px rgba(255,60,0,0.7)"
     });
+  });
+});
+
+describe("buildStormOverlayStyle", () => {
+  it("locks the vignette and banner to a single shared intensity", () => {
+    const kp = 6.5;
+    const intensity = stormIntensity(kp);
+    expect(buildStormOverlayStyle(kp)).toEqual({
+      intensity,
+      vignetteShadow: stormVignetteShadow(intensity),
+      banner: stormBannerStyle(intensity)
+    });
+  });
+
+  it("clamps a sub-floor Kp to the calm styling", () => {
+    expect(buildStormOverlayStyle(1)).toEqual(buildStormOverlayStyle(STORM_INTENSITY_KP_FLOOR));
   });
 });
