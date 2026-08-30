@@ -3,7 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatHelioArrivalLabel, getHelioRemainingSeconds } from "../../utils/helio";
+import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
 
 interface HelioRowProps {
@@ -55,8 +55,7 @@ export const HelioOverlay = (): JSX.Element | null => {
     return null;
   }
 
-  const remainingSeconds = getHelioRemainingSeconds(helioSimulationSeconds);
-  const isCmeImminent = remainingSeconds < 24 * 3600;
+  const isCmeImminent = isHelioCmeImminent(helioSimulationSeconds);
   const bzColor = isBzSouthward(spaceWeather.bzComponent) ? "#ff5a5a" : "#7dff6a";
   const kpColor = getKpColor(spaceWeather.kpIndex);
   const playbackLabel = helioPlaybackRate === 0 ? `PAUSED @ x${helioSelectedPlaybackRate}` : `PLAY x${helioPlaybackRate}`;
