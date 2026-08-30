@@ -4,6 +4,11 @@ import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
+import {
+  burstIntensityToPercent,
+  helioPlaybackLabel,
+  percentToBurstIntensity
+} from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
 
 interface HelioRowProps {
@@ -58,8 +63,8 @@ export const HelioOverlay = (): JSX.Element | null => {
   const isCmeImminent = isHelioCmeImminent(helioSimulationSeconds);
   const bzColor = isBzSouthward(spaceWeather.bzComponent) ? "#ff5a5a" : "#7dff6a";
   const kpColor = getKpColor(spaceWeather.kpIndex);
-  const playbackLabel = helioPlaybackRate === 0 ? `PAUSED @ x${helioSelectedPlaybackRate}` : `PLAY x${helioPlaybackRate}`;
-  const intensityPercent = Math.round(helioBurstIntensity * 100);
+  const playbackLabel = helioPlaybackLabel(helioPlaybackRate, helioSelectedPlaybackRate);
+  const intensityPercent = burstIntensityToPercent(helioBurstIntensity);
 
   // Bz shield status shares the Bz readout colour and adds a magnetosphere label.
   const bzShieldLabel = bzMagnetosphereLabel(spaceWeather.bzComponent);
@@ -69,7 +74,7 @@ export const HelioOverlay = (): JSX.Element | null => {
   };
 
   const handleIntensityChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    setHelioBurstIntensity(Number(event.currentTarget.value) / 100);
+    setHelioBurstIntensity(percentToBurstIntensity(Number(event.currentTarget.value)));
   };
 
   return (
