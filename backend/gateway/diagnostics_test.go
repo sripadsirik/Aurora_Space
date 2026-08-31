@@ -249,3 +249,35 @@ func TestBuildEngineRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildNoaaRow(t *testing.T) {
+	recent := time.Now().Add(-1 * time.Minute)
+
+	t.Run("fresh records are live", func(t *testing.T) {
+		row := buildNoaaRow(trackedProcessSnapshot{Running: true}, feedSnapshot{count: 3, lastUpdated: recent})
+		if row.Key != "noaa" {
+			t.Errorf("Key = %q, want noaa", row.Key)
+		}
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "3 records" {
+			t.Errorf("Records = %q, want %q", row.Records, "3 records")
+		}
+	})
+
+	t.Run("error in log downgrades live to stale", func(t *testing.T) {
+		process := trackedProcessSnapshot{Running: true, LastError: "request failed"}
+		row := buildNoaaRow(process, feedSnapshot{count: 1, lastUpdated: recent})
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("stopped with no data is error", func(t *testing.T) {
+		row := buildNoaaRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+}
