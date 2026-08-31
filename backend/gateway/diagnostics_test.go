@@ -148,3 +148,39 @@ func TestSummarizeLogLine(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildCelestrakRow(t *testing.T) {
+	recent := time.Now().Add(-1 * time.Minute)
+
+	t.Run("running with fresh feed is live", func(t *testing.T) {
+		process := trackedProcessSnapshot{Running: true, LastMessage: "fetched 8000 TLEs"}
+		feed := feedSnapshot{count: 8000, lastUpdated: recent}
+		row := buildCelestrakRow(process, feed)
+
+		if row.Key != "celestrak" {
+			t.Errorf("Key = %q, want celestrak", row.Key)
+		}
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "8000 tracked" {
+			t.Errorf("Records = %q, want %q", row.Records, "8000 tracked")
+		}
+	})
+
+	t.Run("stopped with no data is error", func(t *testing.T) {
+		row := buildCelestrakRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+
+	t.Run("error in log downgrades live to stale", func(t *testing.T) {
+		process := trackedProcessSnapshot{Running: true, LastError: "fetch failed: timeout"}
+		feed := feedSnapshot{count: 10, lastUpdated: recent}
+		row := buildCelestrakRow(process, feed)
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+}
