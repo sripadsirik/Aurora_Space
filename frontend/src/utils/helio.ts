@@ -121,6 +121,17 @@ export const getHelioCmeRadius = (elapsedSeconds: number): number =>
 export const getHelioRemainingSeconds = (elapsedSeconds: number): number =>
   Math.max(0, HELIO_CME_DURATION_SECONDS - elapsedSeconds);
 
+/** Lead time (seconds) at or below which the CME arrival reads as imminent. */
+export const HELIO_CME_IMMINENT_THRESHOLD_SECONDS = 24 * 3600;
+
+/**
+ * Whether the CME arrival is imminent — the remaining lead time has dropped
+ * below {@link HELIO_CME_IMMINENT_THRESHOLD_SECONDS} (24 hours). The overlay
+ * uses this to pulse the arrival readout as the front closes on Earth.
+ */
+export const isHelioCmeImminent = (elapsedSeconds: number): boolean =>
+  getHelioRemainingSeconds(elapsedSeconds) < HELIO_CME_IMMINENT_THRESHOLD_SECONDS;
+
 /** Formats the CME's remaining time-to-arrival as `Hh MMm SSs`. */
 export const formatHelioArrivalLabel = (elapsedSeconds: number): string => {
   const remainingSeconds = getHelioRemainingSeconds(elapsedSeconds);

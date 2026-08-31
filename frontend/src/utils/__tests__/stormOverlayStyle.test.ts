@@ -1,0 +1,81 @@
+import { describe, expect, it } from "vitest";
+import {
+  STORM_INTENSITY_KP_FLOOR,
+  STORM_INTENSITY_KP_SPAN,
+  buildStormOverlayStyle,
+  stormBannerStyle,
+  stormIntensity,
+  stormVignetteShadow
+} from "../stormOverlayStyle";
+
+describe("stormIntensity", () => {
+  it("is zero at the ramp floor", () => {
+    expect(stormIntensity(STORM_INTENSITY_KP_FLOOR)).toBe(0);
+  });
+
+  it("reaches one at the top of the ramp", () => {
+    expect(stormIntensity(STORM_INTENSITY_KP_FLOOR + STORM_INTENSITY_KP_SPAN)).toBe(1);
+  });
+
+  it("interpolates linearly across the ramp", () => {
+    expect(stormIntensity(6.5)).toBeCloseTo(0.5, 10);
+  });
+
+  it("clamps a sub-floor Kp to zero instead of going negative", () => {
+    expect(stormIntensity(2)).toBe(0);
+  });
+
+  it("clamps a Kp above the ramp top to one", () => {
+    expect(stormIntensity(12)).toBe(1);
+  });
+});
+
+describe("stormVignetteShadow", () => {
+  it("uses the calm blur, spread, and warmth at zero intensity", () => {
+    expect(stormVignetteShadow(0)).toBe("inset 0 0 80px 20px rgba(255,70,0,0.15)");
+  });
+
+  it("deepens the blur, spread, and redness at full intensity", () => {
+    expect(stormVignetteShadow(1)).toBe("inset 0 0 200px 60px rgba(255,30,0,0.35)");
+  });
+
+  it("rounds the green channel to a whole value", () => {
+    expect(stormVignetteShadow(0.5)).toBe("inset 0 0 140px 40px rgba(255,50,0,0.25)");
+  });
+});
+
+describe("stormBannerStyle", () => {
+  it("uses the cool, dim palette at zero intensity", () => {
+    expect(stormBannerStyle(0)).toEqual({
+      borderColor: "rgba(255,140,0,0.6)",
+      backgroundColor: "rgba(80,10,0,0.5)",
+      color: "rgb(255,180,100)",
+      textShadow: "0 0 10px rgba(255,60,0,0.4)"
+    });
+  });
+
+  it("shifts toward pure red and deepens the backing at full intensity", () => {
+    expect(stormBannerStyle(1)).toEqual({
+      borderColor: "rgba(255,60,0,0.6)",
+      backgroundColor: "rgba(80,10,0,0.8)",
+      color: "rgb(255,120,60)",
+      textShadow: "0 0 10px rgba(255,60,0,0.7)"
+    });
+  });
+});
+
+describe("buildStormOverlayStyle", () => {
+  it("locks the vignette and banner to a single shared intensity", () => {
+    const kp = 6.5;
+    const intensity = stormIntensity(kp);
+    expect(buildStormOverlayStyle(kp)).toEqual({
+      intensity,
+      vignetteShadow: stormVignetteShadow(intensity),
+      banner: stormBannerStyle(intensity)
+    });
+  });
+
+  it("clamps a sub-floor Kp to the calm styling", () => {
+    expect(buildStormOverlayStyle(1)).toEqual(buildStormOverlayStyle(STORM_INTENSITY_KP_FLOOR));
+  });
+});
