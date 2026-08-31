@@ -327,3 +327,38 @@ func TestLoadTrackedProcessRecords(t *testing.T) {
 		}
 	})
 }
+
+func TestReadLogSummary(t *testing.T) {
+	t.Run("empty path returns empty", func(t *testing.T) {
+		if got := readLogSummary("", false); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+	})
+
+	t.Run("missing file returns empty", func(t *testing.T) {
+		if got := readLogSummary(filepath.Join(t.TempDir(), "nope.log"), false); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+	})
+
+	t.Run("returns last non-empty line", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "app.log")
+		if err := os.WriteFile(path, []byte("first line\nsecond line\n\n"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := readLogSummary(path, false); got != "second line" {
+			t.Errorf("got %q, want %q", got, "second line")
+		}
+	})
+
+	t.Run("prefer error skips rust noise lines", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "err.log")
+		body := "panic: boom\nnote: run with RUST_BACKTRACE=1\nthread 'main' panicked\n"
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := readLogSummary(path, true); got != "panic: boom" {
+			t.Errorf("got %q, want %q", got, "panic: boom")
+		}
+	})
+}
