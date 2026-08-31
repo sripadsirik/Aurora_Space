@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -105,4 +106,45 @@ func TestStatusForFreshness(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSummarizeLogLine(t *testing.T) {
+	t.Run("plain text passes through trimmed", func(t *testing.T) {
+		if got := summarizeLogLine("  hello world  "); got != "hello world" {
+			t.Errorf("got %q, want %q", got, "hello world")
+		}
+	})
+
+	t.Run("invalid json passes through", func(t *testing.T) {
+		line := "{not valid json"
+		if got := summarizeLogLine(line); got != line {
+			t.Errorf("got %q, want %q", got, line)
+		}
+	})
+
+	t.Run("extracts msg field", func(t *testing.T) {
+		if got := summarizeLogLine(`{"msg":"ingest complete"}`); got != "ingest complete" {
+			t.Errorf("got %q, want %q", got, "ingest complete")
+		}
+	})
+
+	t.Run("extracts nested fields.message", func(t *testing.T) {
+		if got := summarizeLogLine(`{"fields":{"message":"nested detail"}}`); got != "nested detail" {
+			t.Errorf("got %q, want %q", got, "nested detail")
+		}
+	})
+
+	t.Run("appends known keyed fields", func(t *testing.T) {
+		got := summarizeLogLine(`{"msg":"batch","count":12,"status":200}`)
+		if !strings.Contains(got, "batch") || !strings.Contains(got, "count=12") || !strings.Contains(got, "status=200") {
+			t.Errorf("got %q, want it to include batch, count=12 and status=200", got)
+		}
+	})
+
+	t.Run("json without known keys falls back to raw", func(t *testing.T) {
+		line := `{"unknown":"value"}`
+		if got := summarizeLogLine(line); got != line {
+			t.Errorf("got %q, want %q", got, line)
+		}
+	})
 }
