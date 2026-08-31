@@ -68,3 +68,15 @@ func TestRecordsLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	if got := formatEventTime(time.Time{}); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	moment := time.Date(2026, 8, 31, 14, 5, 9, 0, time.FixedZone("PST", -8*3600))
+	want := "2026-08-31 22:05:09 UTC"
+	if got := formatEventTime(moment); got != want {
+		t.Errorf("formatEventTime(%v) = %q, want %q", moment, got, want)
+	}
+}
