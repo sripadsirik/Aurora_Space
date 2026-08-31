@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestFirstNonEmpty(t *testing.T) {
 	cases := []struct {
@@ -22,5 +25,24 @@ func TestFirstNonEmpty(t *testing.T) {
 				t.Errorf("firstNonEmpty(%q) = %q, want %q", tc.values, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestMaxTime(t *testing.T) {
+	earlier := time.Date(2026, 8, 30, 10, 0, 0, 0, time.UTC)
+	later := time.Date(2026, 8, 31, 10, 0, 0, 0, time.UTC)
+	zero := time.Time{}
+
+	if got := maxTime(earlier, later); !got.Equal(later) {
+		t.Errorf("maxTime(earlier, later) = %v, want %v", got, later)
+	}
+	if got := maxTime(later, earlier); !got.Equal(later) {
+		t.Errorf("maxTime(later, earlier) = %v, want %v", got, later)
+	}
+	if got := maxTime(zero, earlier); !got.Equal(earlier) {
+		t.Errorf("maxTime(zero, earlier) = %v, want %v", got, earlier)
+	}
+	if got := maxTime(later, later); !got.Equal(later) {
+		t.Errorf("maxTime(equal, equal) = %v, want %v", got, later)
 	}
 }
