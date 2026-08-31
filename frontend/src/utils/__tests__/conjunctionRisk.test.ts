@@ -6,10 +6,13 @@ import {
   classifyConjunctionFleetSeverity,
   classifyConjunctionRisk,
   classifyMissDistanceSeverity,
+  conjunctionArcColorBytes,
+  conjunctionArcLineWidth,
   conjunctionRiskTextClass,
   estimateManeuverDeltaVMs,
   isActionableConjunctionRisk,
   missDistanceSeverityTextClass,
+  resolveConjunctionRiskLevel,
   sortConjunctionsByProbabilityDesc
 } from "../conjunctionRisk";
 
@@ -185,5 +188,68 @@ describe("estimateManeuverDeltaVMs", () => {
 
   it("clamps negative probabilities to zero", () => {
     expect(estimateManeuverDeltaVMs(-0.1)).toBe(0);
+  });
+});
+
+describe("resolveConjunctionRiskLevel", () => {
+  it("prefers an explicit riskLevel over the classified probability", () => {
+    const conjunction = makeConjunction({ riskLevel: "critical", pc: 1e-9, probability: 1e-9 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("critical");
+  });
+
+  it("classifies from pc when riskLevel is absent", () => {
+    const conjunction = makeConjunction({ riskLevel: undefined as never, pc: 0.01, probability: 1e-9 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("critical");
+  });
+
+  it("falls back to probability when pc is absent", () => {
+    const conjunction = makeConjunction({ riskLevel: undefined as never, pc: undefined as never, probability: 5e-4 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("warning");
+  });
+
+  it("resolves to nominal for a quiet conjunction with no explicit level", () => {
+    const conjunction = makeConjunction({ riskLevel: undefined as never, pc: 1e-9, probability: 1e-9 });
+    expect(resolveConjunctionRiskLevel(conjunction)).toBe("nominal");
+  });
+});
+
+describe("conjunctionArcLineWidth", () => {
+  it("draws watch conjunctions as a thin 2px trace", () => {
+    expect(conjunctionArcLineWidth("watch")).toBe(2);
+  });
+
+  it("emphasises every more urgent tier at 3px", () => {
+    expect(conjunctionArcLineWidth("warning")).toBe(3);
+    expect(conjunctionArcLineWidth("critical")).toBe(3);
+  });
+
+  it("uses the 3px default for nominal conjunctions", () => {
+    expect(conjunctionArcLineWidth("nominal")).toBe(3);
+  });
+});
+
+describe("conjunctionArcColorBytes", () => {
+  it("tints critical conjunctions fully opaque red", () => {
+    expect(conjunctionArcColorBytes("critical")).toEqual([255, 0, 0, 255]);
+  });
+
+  it("tints warning conjunctions a hot, mostly opaque red", () => {
+    expect(conjunctionArcColorBytes("warning")).toEqual([255, 50, 0, 204]);
+  });
+
+  it("tints watch conjunctions a softer amber", () => {
+    expect(conjunctionArcColorBytes("watch")).toEqual([255, 100, 0, 153]);
+  });
+
+  it("returns null for nominal conjunctions so they draw transparent", () => {
+    expect(conjunctionArcColorBytes("nominal")).toBeNull();
+  });
+
+  it("grows more opaque as the risk tier climbs", () => {
+    const watch = conjunctionArcColorBytes("watch")!;
+    const warning = conjunctionArcColorBytes("warning")!;
+    const critical = conjunctionArcColorBytes("critical")!;
+    expect(watch[3]).toBeLessThan(warning[3]);
+    expect(warning[3]).toBeLessThan(critical[3]);
   });
 });

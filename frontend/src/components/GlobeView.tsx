@@ -38,7 +38,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import { classifyConjunctionRisk } from "../utils/conjunctionRisk";
+import { conjunctionArcColorBytes, conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -53,7 +53,9 @@ import {
   positionOnHelioOrbit
 } from "../utils/helio";
 import { env } from "../utils/env";
-import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { clamp } from "../utils/clamp";
+import { createBezierArcPositions } from "../utils/curves";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -170,18 +172,14 @@ const HELIO_PLANET_RADII = {
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
-const WATCH_CONJUNCTION_COLOR = Color.fromBytes(255, 100, 0, 153);
-const WARNING_CONJUNCTION_COLOR = Color.fromBytes(255, 50, 0, 204);
-const CRITICAL_CONJUNCTION_COLOR = Color.fromBytes(255, 0, 0, 255);
 const CONJUNCTION_ARC_POINT_COUNT = 20;
 
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
 
 const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
-  state.initialTheta + (CesiumMath.TWO_PI / state.period) * (elapsedSeconds - state.thetaEpochSeconds);
+  orbitThetaAtElapsed(state.initialTheta, state.period, state.thetaEpochSeconds, elapsedSeconds);
 
 const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
   orbitPoint(
@@ -191,19 +189,10 @@ const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds:
     state.ascendingNode
   );
 
-const getConjunctionRiskLevel = (conjunction: ConjunctionWarning): Satellite["riskLevel"] => {
-  return conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability);
-};
-
 const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
-  if (riskLevel === "critical") return CRITICAL_CONJUNCTION_COLOR.clone();
-  if (riskLevel === "warning") return WARNING_CONJUNCTION_COLOR.clone();
-  if (riskLevel === "watch") return WATCH_CONJUNCTION_COLOR.clone();
-  return Color.TRANSPARENT.clone();
+  const bytes = conjunctionArcColorBytes(riskLevel);
+  return bytes ? Color.fromBytes(bytes[0], bytes[1], bytes[2], bytes[3]) : Color.TRANSPARENT.clone();
 };
-
-const getConjunctionLineWidth = (riskLevel: Satellite["riskLevel"]): number =>
-  riskLevel === "watch" ? 2 : 3;
 
 const createConjunctionOrbitArcPositions = (
   state: SatelliteAnimState,
@@ -282,23 +271,6 @@ const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { cur
     const baseMax = isStorm ? Math.min(maxAlpha * 2.5, 0.8) : maxAlpha;
     return AURORA_COLOR.withAlpha(baseMin + (baseMax - baseMin) * phase);
   }, false));
-
-const createBezierArcPositions = (start: Cartesian3, control: Cartesian3, end: Cartesian3, intermediatePoints = 8): Cartesian3[] => {
-  const segments = intermediatePoints + 1;
-  const positions: Cartesian3[] = [];
-
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments;
-    const u = 1 - t;
-    positions.push(new Cartesian3(
-      u * u * start.x + 2 * u * t * control.x + t * t * end.x,
-      u * u * start.y + 2 * u * t * control.y + t * t * end.y,
-      u * u * start.z + 2 * u * t * control.z + t * t * end.z
-    ));
-  }
-
-  return positions;
-};
 
 const createFireConeFrontPositions = (
   sunToEarth: Cartesian3,
@@ -925,11 +897,11 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           return;
         }
 
-        const riskLevel = getConjunctionRiskLevel(conjunction);
+        const riskLevel = resolveConjunctionRiskLevel(conjunction);
         if (riskLevel === "nominal") return;
 
         const color = getConjunctionColor(riskLevel);
-        const width = getConjunctionLineWidth(riskLevel);
+        const width = conjunctionArcLineWidth(riskLevel);
         const sat1NoradId = sat1.noradId;
         const sat2NoradId = sat2.noradId;
         const object1Arc = conjunctionPolylines.add({
@@ -1731,7 +1703,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           new Cartesian3()
         );
         const pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
-        const lineWidth = Math.max(getConjunctionLineWidth(visual.riskLevel), isSelected ? 4 : 0);
+        const lineWidth = Math.max(conjunctionArcLineWidth(visual.riskLevel), isSelected ? 4 : 0);
 
         visual.object1Arc.show = true;
         visual.object2Arc.show = true;

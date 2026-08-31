@@ -26,6 +26,43 @@ export const classifyConjunctionRisk = (probability: number): RiskLevel => {
 };
 
 /**
+ * Resolves the effective {@link RiskLevel} of a conjunction, preferring an
+ * explicit `riskLevel` supplied by the feed and otherwise classifying its
+ * collision probability. The probability is taken from `pc` when present and
+ * falls back to `probability`, so records that carry only one of the two fields
+ * still resolve to a tier. Centralises the resolution the globe overlays used to
+ * derive inline.
+ */
+export const resolveConjunctionRiskLevel = (
+  conjunction: Pick<ConjunctionWarning, "riskLevel" | "pc" | "probability">
+): RiskLevel => conjunction.riskLevel ?? classifyConjunctionRisk(conjunction.pc ?? conjunction.probability);
+
+/** An RGBA colour as four 0–255 byte channels: `[red, green, blue, alpha]`. */
+export type RgbaBytes = readonly [number, number, number, number];
+
+/**
+ * RGBA byte ramp used to tint a conjunction's projected orbit arc on the globe.
+ * The arc runs from an amber `watch` through progressively hotter, more opaque
+ * reds as the risk climbs. `nominal` conjunctions have no arc colour and are
+ * represented by `null` (the renderer draws them transparent). Centralises the
+ * ramp the globe overlay held as loose Cesium colour constants.
+ */
+export const conjunctionArcColorBytes = (risk: RiskLevel): RgbaBytes | null => {
+  if (risk === "critical") return [255, 0, 0, 255];
+  if (risk === "warning") return [255, 50, 0, 204];
+  if (risk === "watch") return [255, 100, 0, 153];
+  return null;
+};
+
+/**
+ * Base line width (in pixels) for a conjunction's projected orbit arc on the
+ * globe. Calm `watch` conjunctions draw as a thin 2px trace; every more urgent
+ * tier is emphasised at 3px. Selection highlighting is layered on top by the
+ * renderer. Centralises the width ramp the globe overlay derived inline.
+ */
+export const conjunctionArcLineWidth = (risk: RiskLevel): number => (risk === "watch" ? 2 : 3);
+
+/**
  * True when a probability is severe enough to warrant operator action — that is,
  * it lands in the `warning` or `critical` tier. Used to raise ops warning
  * indicators without re-deriving the thresholds at each call site.

@@ -3,6 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
+import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -10,6 +11,7 @@ import {
   percentToBurstIntensity
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
+import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
   color: string;
@@ -68,6 +70,9 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Bz shield status shares the Bz readout colour and adds a magnetosphere label.
   const bzShieldLabel = bzMagnetosphereLabel(spaceWeather.bzComponent);
+
+  // Ram pressure and magnetopause standoff derived from the L1 wind readings.
+  const pressureProfile = solarWindPressureProfile(spaceWeather);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
@@ -170,6 +175,16 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Density</span>
               <span className="text-[#e7f5ff]">{spaceWeather.solarWindDensity} p/cm³</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Ram Pressure</span>
+              <span className="text-[#e7f5ff]">{formatDynamicPressure(pressureProfile.dynamicPressureNPa)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Magnetopause</span>
+              <span className={pressureProfile.insideGeo ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+                {formatMagnetopauseStandoff(pressureProfile.magnetopauseStandoffRe)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Bz</span>
