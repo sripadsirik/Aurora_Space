@@ -80,3 +80,29 @@ func TestFormatEventTime(t *testing.T) {
 		t.Errorf("formatEventTime(%v) = %q, want %q", moment, got, want)
 	}
 }
+
+func TestStatusForFreshness(t *testing.T) {
+	liveWindow := 5 * time.Minute
+	staleWindow := 15 * time.Minute
+	now := time.Now()
+
+	cases := []struct {
+		name        string
+		lastUpdated time.Time
+		want        string
+	}{
+		{"never updated is error", time.Time{}, "ERROR"},
+		{"recent is live", now.Add(-1 * time.Minute), "LIVE"},
+		{"at live edge is live", now.Add(-4 * time.Minute), "LIVE"},
+		{"past live window is stale", now.Add(-10 * time.Minute), "STALE"},
+		{"past stale window is error", now.Add(-30 * time.Minute), "ERROR"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := statusForFreshness(tc.lastUpdated, liveWindow, staleWindow); got != tc.want {
+				t.Errorf("statusForFreshness(%v) = %q, want %q", tc.lastUpdated, got, tc.want)
+			}
+		})
+	}
+}
