@@ -1,6 +1,9 @@
 package shared
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestClassifyOrbit(t *testing.T) {
 	cases := []struct {
@@ -78,4 +81,80 @@ func TestDeriveStormLevel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSatelliteJSONTags(t *testing.T) {
+	sat := Satellite{
+		NoradID:          25544,
+		Name:             "ISS",
+		Lat:              12.5,
+		Lon:              -34.2,
+		AltitudeKm:       420,
+		VelocityKms:      7.66,
+		OrbitType:        "LEO",
+		RiskLevel:        "nominal",
+		Owner:            "NASA",
+		ConjunctionCount: 3,
+	}
+
+	data, err := json.Marshal(sat)
+	if err != nil {
+		t.Fatalf("marshal Satellite: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal Satellite: %v", err)
+	}
+
+	wantKeys := []string{
+		"noradId", "name", "lat", "lon", "altitudeKm", "velocityKms",
+		"orbitType", "riskLevel", "owner", "conjunctionCount",
+	}
+	for _, key := range wantKeys {
+		if _, ok := decoded[key]; !ok {
+			t.Errorf("Satellite JSON missing camelCase key %q; got keys %v", key, keysOf(decoded))
+		}
+	}
+}
+
+func TestSpaceWeatherJSONTags(t *testing.T) {
+	weather := SpaceWeather{
+		KpIndex:          6.3,
+		SolarWindSpeed:   540,
+		SolarWindDensity: 4.2,
+		BzComponent:      -8.1,
+		XrayFlux:         "C2.4",
+		StormLevel:       "moderate",
+		AuroraKp:         6,
+		LastUpdated:      "2026-08-31T00:00:00Z",
+	}
+
+	data, err := json.Marshal(weather)
+	if err != nil {
+		t.Fatalf("marshal SpaceWeather: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal SpaceWeather: %v", err)
+	}
+
+	wantKeys := []string{
+		"kpIndex", "solarWindSpeed", "solarWindDensity", "bzComponent",
+		"xrayFlux", "stormLevel", "auroraKp", "lastUpdated",
+	}
+	for _, key := range wantKeys {
+		if _, ok := decoded[key]; !ok {
+			t.Errorf("SpaceWeather JSON missing camelCase key %q; got keys %v", key, keysOf(decoded))
+		}
+	}
+}
+
+func keysOf(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	return keys
 }
