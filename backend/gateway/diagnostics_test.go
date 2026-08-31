@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -278,6 +280,50 @@ func TestBuildNoaaRow(t *testing.T) {
 		row := buildNoaaRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
 		if row.Status != "ERROR" {
 			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+}
+
+func TestLoadTrackedProcessRecords(t *testing.T) {
+	t.Run("missing file returns nil", func(t *testing.T) {
+		if got := loadTrackedProcessRecords(filepath.Join(t.TempDir(), "absent.json")); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+
+	t.Run("array form", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "processes.json")
+		body := `[{"Name":"celestrak","Pid":10},{"Name":"noaa","Pid":20}]`
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		records := loadTrackedProcessRecords(path)
+		if len(records) != 2 {
+			t.Fatalf("len = %d, want 2", len(records))
+		}
+		if records[0].Name != "celestrak" || records[1].Name != "noaa" {
+			t.Errorf("unexpected records: %+v", records)
+		}
+	})
+
+	t.Run("single object form", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "single.json")
+		if err := os.WriteFile(path, []byte(`{"Name":"engine-rust","Pid":42}`), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		records := loadTrackedProcessRecords(path)
+		if len(records) != 1 || records[0].Name != "engine-rust" || records[0].Pid != 42 {
+			t.Errorf("got %+v, want one engine-rust record with pid 42", records)
+		}
+	})
+
+	t.Run("invalid json returns nil", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "bad.json")
+		if err := os.WriteFile(path, []byte("not json"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := loadTrackedProcessRecords(path); got != nil {
+			t.Errorf("got %v, want nil", got)
 		}
 	})
 }
