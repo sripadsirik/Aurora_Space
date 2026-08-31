@@ -184,3 +184,36 @@ func TestBuildCelestrakRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildSpaceTrackRow(t *testing.T) {
+	t.Run("unconfigured with no logs explains credentials", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{}, feedSnapshot{}, false)
+		if row.Key != "spacetrack" {
+			t.Errorf("Key = %q, want spacetrack", row.Key)
+		}
+		if !strings.Contains(row.Detail, "SPACETRACK_USERNAME") {
+			t.Errorf("Detail = %q, want it to mention SPACETRACK_USERNAME", row.Detail)
+		}
+	})
+
+	t.Run("configured but idle waits for fetch window", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{}, feedSnapshot{}, true)
+		if !strings.Contains(row.Detail, "next fetch window") {
+			t.Errorf("Detail = %q, want it to mention the next fetch window", row.Detail)
+		}
+	})
+
+	t.Run("running without data yet is stale", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{}, true)
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("stopped without data is error", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: false}, feedSnapshot{}, true)
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+}
