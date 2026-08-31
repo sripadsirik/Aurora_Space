@@ -40,6 +40,20 @@ export const circularOrbitalVelocityKms = (radiusMeters: number): number =>
   Math.sqrt(MU_EARTH / radiusMeters) / 1000;
 
 /**
+ * True anomaly of a satellite on its circular orbit at `elapsedSeconds`, given
+ * the angle `initialTheta` it held at `thetaEpochSeconds` and its `period` in
+ * seconds. The satellite advances a full `2π` per period, so the angle grows
+ * linearly with the elapsed time past the epoch. Isolating this keeps the
+ * animation loop's per-frame angle a single tested expression.
+ */
+export const orbitThetaAtElapsed = (
+  initialTheta: number,
+  period: number,
+  thetaEpochSeconds: number,
+  elapsedSeconds: number
+): number => initialTheta + (CesiumMath.TWO_PI / period) * (elapsedSeconds - thetaEpochSeconds);
+
+/**
  * Computes the ECEF-style position of a point at true anomaly `theta` on a
  * circular orbit with the given radius, inclination, and ascending node.
  */

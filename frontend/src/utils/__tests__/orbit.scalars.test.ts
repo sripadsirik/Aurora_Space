@@ -1,4 +1,4 @@
-import { Ellipsoid } from "cesium";
+import { Ellipsoid, Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
 import {
   auroraRadiusMeters,
@@ -6,7 +6,8 @@ import {
   earthRadiusMeters,
   getOrbitalPeriod,
   kpToAuroraBoundaryLatitude,
-  kpToAuroraRadiusDegrees
+  kpToAuroraRadiusDegrees,
+  orbitThetaAtElapsed
 } from "../orbit";
 
 describe("getOrbitalPeriod", () => {
@@ -91,5 +92,26 @@ describe("auroraRadiusMeters", () => {
 
   it("applies the multiplier proportionally", () => {
     expect(auroraRadiusMeters(9, 2)).toBeCloseTo(auroraRadiusMeters(9) * 2, 3);
+  });
+});
+
+describe("orbitThetaAtElapsed", () => {
+  it("returns the initial theta at the epoch time", () => {
+    expect(orbitThetaAtElapsed(0.5, 6000, 120, 120)).toBeCloseTo(0.5, 9);
+  });
+
+  it("advances a full turn over one orbital period", () => {
+    const period = 5400;
+    expect(orbitThetaAtElapsed(0, period, 0, period)).toBeCloseTo(CesiumMath.TWO_PI, 9);
+  });
+
+  it("advances a quarter turn over a quarter period past the epoch", () => {
+    const period = 4000;
+    expect(orbitThetaAtElapsed(1, period, 1000, 2000)).toBeCloseTo(1 + CesiumMath.PI_OVER_TWO, 9);
+  });
+
+  it("winds backwards for times before the epoch", () => {
+    const period = 4000;
+    expect(orbitThetaAtElapsed(0, period, 2000, 1000)).toBeCloseTo(-CesiumMath.PI_OVER_TWO, 9);
   });
 });

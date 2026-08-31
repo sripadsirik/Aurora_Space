@@ -38,13 +38,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import {
-  getConjunctionColor,
-  getConjunctionLineWidth,
-  getConjunctionRiskLevel
-} from "../utils/conjunctionVisual";
-import { createBezierArcPositions } from "../utils/bezierArc";
-import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../utils/satelliteOrbitAnim";
+import { conjunctionArcColorBytes, conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -59,7 +53,9 @@ import {
   positionOnHelioOrbit
 } from "../utils/helio";
 import { env } from "../utils/env";
-import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { clamp } from "../utils/clamp";
+import { createBezierArcPositions } from "../utils/curves";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -178,10 +174,25 @@ const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
 const CONJUNCTION_ARC_POINT_COUNT = 20;
 
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
+
+const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
+  orbitThetaAtElapsed(state.initialTheta, state.period, state.thetaEpochSeconds, elapsedSeconds);
+
+const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
+  orbitPoint(
+    getSatelliteThetaAtElapsed(state, elapsedSeconds) + (CesiumMath.TWO_PI / state.period) * offsetSeconds,
+    state.radius,
+    state.inclination,
+    state.ascendingNode
+  );
+
+const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
+  const bytes = conjunctionArcColorBytes(riskLevel);
+  return bytes ? Color.fromBytes(bytes[0], bytes[1], bytes[2], bytes[3]) : Color.TRANSPARENT.clone();
+};
 
 const createConjunctionOrbitArcPositions = (
   state: SatelliteAnimState,
@@ -886,11 +897,11 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           return;
         }
 
-        const riskLevel = getConjunctionRiskLevel(conjunction);
+        const riskLevel = resolveConjunctionRiskLevel(conjunction);
         if (riskLevel === "nominal") return;
 
         const color = getConjunctionColor(riskLevel);
-        const width = getConjunctionLineWidth(riskLevel);
+        const width = conjunctionArcLineWidth(riskLevel);
         const sat1NoradId = sat1.noradId;
         const sat2NoradId = sat2.noradId;
         const object1Arc = conjunctionPolylines.add({
@@ -1692,7 +1703,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           new Cartesian3()
         );
         const pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
-        const lineWidth = Math.max(getConjunctionLineWidth(visual.riskLevel), isSelected ? 4 : 0);
+        const lineWidth = Math.max(conjunctionArcLineWidth(visual.riskLevel), isSelected ? 4 : 0);
 
         visual.object1Arc.show = true;
         visual.object2Arc.show = true;
