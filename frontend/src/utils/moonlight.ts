@@ -156,3 +156,14 @@ export const classifyMoonlight = (illuminatedFraction: number): MoonlightLevel =
   if (illuminatedFraction >= MOONLIGHT_BRIGHT_MIN_ILLUMINATION) return "bright";
   return "moderate";
 };
+
+/**
+ * Short human-readable label for each {@link MoonlightLevel}, phrased for the
+ * observer's bottom line, for legends, badges, and panel copy. Centralised so
+ * every display names the tiers identically.
+ */
+export const MOONLIGHT_LEVEL_LABELS: Record<MoonlightLevel, string> = {
+  dark: "Dark skies",
+  moderate: "Some moonlight",
+  bright: "Washed out by Moon"
+};
