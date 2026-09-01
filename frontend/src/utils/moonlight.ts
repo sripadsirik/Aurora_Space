@@ -167,3 +167,34 @@ export const MOONLIGHT_LEVEL_LABELS: Record<MoonlightLevel, string> = {
   moderate: "Some moonlight",
   bright: "Washed out by Moon"
 };
+
+/** Moonlight outlook for one night, ready to drive a panel or badge. */
+export interface MoonlightSummary {
+  /** The Moon's position in its synodic cycle, `0` (new) to near `1`. */
+  phaseFraction: number;
+  /** Fraction of the Moon's disk that is sunlit, `0` (new) to `1` (full). */
+  illuminatedFraction: number;
+  /** The named lunar phase, or `null` for an invalid date. */
+  phaseName: MoonPhaseName | null;
+  /** How strongly moonlight is expected to interfere with aurora viewing. */
+  level: MoonlightLevel;
+  /** Human-readable label for {@link level}. */
+  levelLabel: string;
+}
+
+/**
+ * Bundles the moonlight figures for one date into a single struct, so a display
+ * can derive every value from one reading. All members reuse the individual
+ * helpers in this module, keeping them mutually consistent.
+ */
+export const summarizeMoonlight = (date: Date): MoonlightSummary => {
+  const illuminatedFraction = moonIlluminatedFraction(date);
+  const level = classifyMoonlight(illuminatedFraction);
+  return {
+    phaseFraction: moonPhaseFraction(date),
+    illuminatedFraction,
+    phaseName: moonPhaseName(date),
+    level,
+    levelLabel: MOONLIGHT_LEVEL_LABELS[level]
+  };
+};
