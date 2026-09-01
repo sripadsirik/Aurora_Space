@@ -9,7 +9,8 @@ import {
   moonAgeDays,
   moonIlluminatedFraction,
   moonPhaseFraction,
-  moonPhaseName
+  moonPhaseName,
+  summarizeMoonlight
 } from "../moonlight";
 
 /** A reference new Moon (2024-01-11T11:57Z) and full Moon (2024-01-25T17:54Z). */
@@ -134,5 +135,30 @@ describe("classifyMoonlight", () => {
     expect(MOONLIGHT_LEVEL_LABELS.dark).toBeTruthy();
     expect(MOONLIGHT_LEVEL_LABELS.moderate).toBeTruthy();
     expect(MOONLIGHT_LEVEL_LABELS.bright).toBeTruthy();
+  });
+});
+
+describe("summarizeMoonlight", () => {
+  it("reports dark skies and a new Moon at a new Moon", () => {
+    const summary = summarizeMoonlight(NEW_MOON);
+    expect(summary.phaseName).toBe("New Moon");
+    expect(summary.level).toBe("dark");
+    expect(summary.illuminatedFraction).toBeLessThan(0.02);
+  });
+
+  it("reports a washed-out full Moon at a full Moon", () => {
+    const summary = summarizeMoonlight(FULL_MOON);
+    expect(summary.phaseName).toBe("Full Moon");
+    expect(summary.level).toBe("bright");
+    expect(summary.illuminatedFraction).toBeGreaterThan(0.98);
+  });
+
+  it("keeps every member mutually consistent", () => {
+    const summary = summarizeMoonlight(new Date("2025-11-20T22:00:00Z"));
+    expect(summary.phaseFraction).toBe(moonPhaseFraction(new Date("2025-11-20T22:00:00Z")));
+    expect(summary.illuminatedFraction).toBe(
+      moonIlluminatedFraction(new Date("2025-11-20T22:00:00Z"))
+    );
+    expect(summary.levelLabel).toBe(MOONLIGHT_LEVEL_LABELS[summary.level]);
   });
 });
