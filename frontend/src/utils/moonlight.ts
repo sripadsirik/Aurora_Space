@@ -142,3 +142,17 @@ export const MOONLIGHT_DARK_MAX_ILLUMINATION = 0.25;
  * and overwhelms faint aurora.
  */
 export const MOONLIGHT_BRIGHT_MIN_ILLUMINATION = 0.65;
+
+/**
+ * Classifies an illuminated fraction into its {@link MoonlightLevel}. A fraction
+ * at or below {@link MOONLIGHT_DARK_MAX_ILLUMINATION} is `dark`, one at or above
+ * {@link MOONLIGHT_BRIGHT_MIN_ILLUMINATION} is `bright`, and anything between is
+ * `moderate`. The input is clamped in spirit — non-finite fractions are treated
+ * as `dark`, the no-interference default — so callers need not guard the value.
+ */
+export const classifyMoonlight = (illuminatedFraction: number): MoonlightLevel => {
+  if (!Number.isFinite(illuminatedFraction)) return "dark";
+  if (illuminatedFraction <= MOONLIGHT_DARK_MAX_ILLUMINATION) return "dark";
+  if (illuminatedFraction >= MOONLIGHT_BRIGHT_MIN_ILLUMINATION) return "bright";
+  return "moderate";
+};
