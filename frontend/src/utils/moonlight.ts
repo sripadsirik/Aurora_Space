@@ -45,3 +45,16 @@ export const moonAgeDays = (date: Date): number => {
   const age = (julian - REFERENCE_NEW_MOON_JULIAN_DATE) % SYNODIC_MONTH_DAYS;
   return age < 0 ? age + SYNODIC_MONTH_DAYS : age;
 };
+
+/**
+ * The Moon's position in its synodic cycle as a fraction in `[0, 1)`: `0` is a
+ * new Moon, `0.25` the first quarter, `0.5` the full Moon, and `0.75` the last
+ * quarter, wrapping back toward `1` as the next new Moon approaches. Returns
+ * `NaN` for an invalid date. This is {@link moonAgeDays} expressed as a fraction
+ * of the {@link SYNODIC_MONTH_DAYS synodic month}.
+ */
+export const moonPhaseFraction = (date: Date): number => {
+  const age = moonAgeDays(date);
+  if (!Number.isFinite(age)) return Number.NaN;
+  return age / SYNODIC_MONTH_DAYS;
+};
