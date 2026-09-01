@@ -75,3 +75,34 @@ export const moonIlluminatedFraction = (date: Date): number => {
   if (!Number.isFinite(phase)) return Number.NaN;
   return (1 - Math.cos(phase * 2 * Math.PI)) / 2;
 };
+
+/**
+ * The eight traditional Moon phases, in cycle order from new Moon back to new
+ * Moon. The four "quarter" names mark the instants a quarter of the cycle apart;
+ * the four "crescent"/"gibbous" names cover the spans between them.
+ */
+export type MoonPhaseName =
+  | "New Moon"
+  | "Waxing Crescent"
+  | "First Quarter"
+  | "Waxing Gibbous"
+  | "Full Moon"
+  | "Waning Gibbous"
+  | "Last Quarter"
+  | "Waning Crescent";
+
+/**
+ * The eight phase names in cycle order, so index `i` is the phase centred on
+ * synodic fraction `i / 8`. Exposed for legends and phase pickers that iterate
+ * the full cycle.
+ */
+export const MOON_PHASE_NAMES: readonly MoonPhaseName[] = [
+  "New Moon",
+  "Waxing Crescent",
+  "First Quarter",
+  "Waxing Gibbous",
+  "Full Moon",
+  "Waning Gibbous",
+  "Last Quarter",
+  "Waning Crescent"
+] as const;
