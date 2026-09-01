@@ -106,3 +106,17 @@ export const MOON_PHASE_NAMES: readonly MoonPhaseName[] = [
   "Last Quarter",
   "Waning Crescent"
 ] as const;
+
+/**
+ * The named Moon phase for a date. Each of the eight names owns an equal slice
+ * of the synodic cycle centred on its exact instant, so a fraction is rounded to
+ * the nearest eighth: the new/quarter/full names cover the moments those phases
+ * occur and the crescent/gibbous names the spans between. Returns `null` for an
+ * invalid date.
+ */
+export const moonPhaseName = (date: Date): MoonPhaseName | null => {
+  const phase = moonPhaseFraction(date);
+  if (!Number.isFinite(phase)) return null;
+  const index = Math.round(phase * 8) % 8;
+  return MOON_PHASE_NAMES[index];
+};
