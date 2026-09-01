@@ -120,3 +120,25 @@ export const moonPhaseName = (date: Date): MoonPhaseName | null => {
   const index = Math.round(phase * 8) % 8;
   return MOON_PHASE_NAMES[index];
 };
+
+/**
+ * How strongly moonlight is expected to interfere with aurora viewing, ordered
+ * from best to worst: `dark` (little or no moonlight, faint aurora shows well),
+ * `moderate` (a partly lit Moon dims the fainter structure), and `bright` (a
+ * near-full Moon washes out all but strong displays).
+ */
+export type MoonlightLevel = "dark" | "moderate" | "bright";
+
+/**
+ * Illuminated-fraction boundary at or below which moonlight is treated as
+ * `dark`. Around a quarter of the disk lit, moonlight is faint enough that it
+ * barely brightens the sky.
+ */
+export const MOONLIGHT_DARK_MAX_ILLUMINATION = 0.25;
+
+/**
+ * Illuminated-fraction boundary above which moonlight is treated as `bright`.
+ * Past roughly two-thirds lit, a gibbous-to-full Moon dominates the night sky
+ * and overwhelms faint aurora.
+ */
+export const MOONLIGHT_BRIGHT_MIN_ILLUMINATION = 0.65;
