@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SYNODIC_MONTH_DAYS,
   moonAgeDays,
+  moonIlluminatedFraction,
   moonPhaseFraction
 } from "../moonlight";
 
@@ -42,5 +43,31 @@ describe("moonPhaseFraction", () => {
 
   it("returns NaN for an invalid date", () => {
     expect(moonPhaseFraction(new Date("not a date"))).toBeNaN();
+  });
+});
+
+describe("moonIlluminatedFraction", () => {
+  it("is near zero at a new Moon", () => {
+    expect(moonIlluminatedFraction(NEW_MOON)).toBeLessThan(0.02);
+  });
+
+  it("is near one at a full Moon", () => {
+    expect(moonIlluminatedFraction(FULL_MOON)).toBeGreaterThan(0.98);
+  });
+
+  it("is roughly half lit at first quarter", () => {
+    // 2024-01-18T03:53Z is the January 2024 first quarter.
+    const firstQuarter = new Date("2024-01-18T03:53:00Z");
+    expect(moonIlluminatedFraction(firstQuarter)).toBeCloseTo(0.5, 1);
+  });
+
+  it("stays within [0, 1] for any date", () => {
+    const fraction = moonIlluminatedFraction(new Date("2027-03-15T09:00:00Z"));
+    expect(fraction).toBeGreaterThanOrEqual(0);
+    expect(fraction).toBeLessThanOrEqual(1);
+  });
+
+  it("returns NaN for an invalid date", () => {
+    expect(moonIlluminatedFraction(new Date("not a date"))).toBeNaN();
   });
 });
