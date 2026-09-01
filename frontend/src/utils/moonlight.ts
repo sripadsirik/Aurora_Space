@@ -58,3 +58,20 @@ export const moonPhaseFraction = (date: Date): number => {
   if (!Number.isFinite(age)) return Number.NaN;
   return age / SYNODIC_MONTH_DAYS;
 };
+
+/**
+ * Fraction of the Moon's disk that is sunlit, in `[0, 1]`: `0` at a new Moon,
+ * rising to `1` at the full Moon and falling back to `0`. Derived from the phase
+ * angle so it varies smoothly across the cycle rather than in discrete steps.
+ * Returns `NaN` for an invalid date.
+ *
+ * This uses the standard `(1 - cos(phase angle)) / 2` approximation, which
+ * assumes the phase angle advances uniformly. The real angle wobbles slightly
+ * with the Moon's orbital speed, shifting the illuminated fraction by at most a
+ * couple of percent — immaterial for judging sky brightness.
+ */
+export const moonIlluminatedFraction = (date: Date): number => {
+  const phase = moonPhaseFraction(date);
+  if (!Number.isFinite(phase)) return Number.NaN;
+  return (1 - Math.cos(phase * 2 * Math.PI)) / 2;
+};
