@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   SYNODIC_MONTH_DAYS,
+  MOONLIGHT_BRIGHT_MIN_ILLUMINATION,
+  MOONLIGHT_DARK_MAX_ILLUMINATION,
+  MOONLIGHT_LEVEL_LABELS,
   MOON_PHASE_NAMES,
+  classifyMoonlight,
   moonAgeDays,
   moonIlluminatedFraction,
   moonPhaseFraction,
@@ -98,5 +102,37 @@ describe("moonPhaseName", () => {
 
   it("returns null for an invalid date", () => {
     expect(moonPhaseName(new Date("not a date"))).toBeNull();
+  });
+});
+
+describe("classifyMoonlight", () => {
+  it("treats a dim Moon as dark skies", () => {
+    expect(classifyMoonlight(0.1)).toBe("dark");
+  });
+
+  it("treats a near-full Moon as bright", () => {
+    expect(classifyMoonlight(0.9)).toBe("bright");
+  });
+
+  it("treats a partly lit Moon as moderate", () => {
+    expect(classifyMoonlight(0.45)).toBe("moderate");
+  });
+
+  it("includes the dark boundary in the dark tier", () => {
+    expect(classifyMoonlight(MOONLIGHT_DARK_MAX_ILLUMINATION)).toBe("dark");
+  });
+
+  it("includes the bright boundary in the bright tier", () => {
+    expect(classifyMoonlight(MOONLIGHT_BRIGHT_MIN_ILLUMINATION)).toBe("bright");
+  });
+
+  it("falls back to dark for a non-finite fraction", () => {
+    expect(classifyMoonlight(Number.NaN)).toBe("dark");
+  });
+
+  it("has a label for every level", () => {
+    expect(MOONLIGHT_LEVEL_LABELS.dark).toBeTruthy();
+    expect(MOONLIGHT_LEVEL_LABELS.moderate).toBeTruthy();
+    expect(MOONLIGHT_LEVEL_LABELS.bright).toBeTruthy();
   });
 });
