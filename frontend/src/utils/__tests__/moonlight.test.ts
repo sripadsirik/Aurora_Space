@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   SYNODIC_MONTH_DAYS,
+  MOON_PHASE_NAMES,
   moonAgeDays,
   moonIlluminatedFraction,
-  moonPhaseFraction
+  moonPhaseFraction,
+  moonPhaseName
 } from "../moonlight";
 
 /** A reference new Moon (2024-01-11T11:57Z) and full Moon (2024-01-25T17:54Z). */
@@ -69,5 +71,32 @@ describe("moonIlluminatedFraction", () => {
 
   it("returns NaN for an invalid date", () => {
     expect(moonIlluminatedFraction(new Date("not a date"))).toBeNaN();
+  });
+});
+
+describe("moonPhaseName", () => {
+  it("names a new Moon", () => {
+    expect(moonPhaseName(NEW_MOON)).toBe("New Moon");
+  });
+
+  it("names a full Moon", () => {
+    expect(moonPhaseName(FULL_MOON)).toBe("Full Moon");
+  });
+
+  it("names the first quarter", () => {
+    expect(moonPhaseName(new Date("2024-01-18T03:53:00Z"))).toBe("First Quarter");
+  });
+
+  it("names the last quarter", () => {
+    expect(moonPhaseName(new Date("2024-01-04T03:30:00Z"))).toBe("Last Quarter");
+  });
+
+  it("only ever returns one of the eight named phases", () => {
+    const name = moonPhaseName(new Date("2025-09-01T00:00:00Z"));
+    expect(MOON_PHASE_NAMES).toContain(name);
+  });
+
+  it("returns null for an invalid date", () => {
+    expect(moonPhaseName(new Date("not a date"))).toBeNull();
   });
 });
