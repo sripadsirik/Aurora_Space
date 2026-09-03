@@ -185,6 +185,7 @@ func parseThreeLineElements(body []byte) []gpRecord {
 		}
 	}
 
+parseLoop:
 	for i := 0; i < len(lines); {
 		var name, line1, line2 string
 
@@ -199,7 +200,7 @@ func parseThreeLineElements(body []byte) []gpRecord {
 			i += 2
 		default:
 			if i+2 >= len(lines) {
-				break
+				break parseLoop
 			}
 			name = lines[i]
 			line1 = lines[i+1]
