@@ -69,3 +69,30 @@ func TestMaxTime(t *testing.T) {
 		t.Errorf("maxTime(zero, later) = %v, want %v", got, later)
 	}
 }
+
+func TestStatusForFreshness(t *testing.T) {
+	live := 30 * time.Second
+	stale := 5 * time.Minute
+	now := time.Now()
+
+	cases := []struct {
+		name        string
+		lastUpdated time.Time
+		want        string
+	}{
+		{"zero time is error", time.Time{}, "ERROR"},
+		{"recent is live", now.Add(-5 * time.Second), "LIVE"},
+		{"at live edge is live", now.Add(-live + time.Second), "LIVE"},
+		{"beyond live is stale", now.Add(-2 * time.Minute), "STALE"},
+		{"at stale edge is stale", now.Add(-stale + time.Second), "STALE"},
+		{"beyond stale is error", now.Add(-10 * time.Minute), "ERROR"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := statusForFreshness(tc.lastUpdated, live, stale); got != tc.want {
+				t.Errorf("statusForFreshness(%v) = %q, want %q", tc.lastUpdated, got, tc.want)
+			}
+		})
+	}
+}
