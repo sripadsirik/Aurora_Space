@@ -96,3 +96,21 @@ func TestStatusForFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	if got := formatEventTime(time.Time{}); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	value := time.Date(2026, 9, 3, 14, 30, 15, 0, time.UTC)
+	if got := formatEventTime(value); got != "2026-09-03 14:30:15 UTC" {
+		t.Errorf("formatEventTime(%v) = %q, want %q", value, got, "2026-09-03 14:30:15 UTC")
+	}
+
+	// Non-UTC input should be normalized to UTC for display.
+	loc := time.FixedZone("UTC+2", 2*3600)
+	local := time.Date(2026, 9, 3, 16, 30, 15, 0, loc)
+	if got := formatEventTime(local); got != "2026-09-03 14:30:15 UTC" {
+		t.Errorf("formatEventTime(non-UTC) = %q, want %q", got, "2026-09-03 14:30:15 UTC")
+	}
+}
