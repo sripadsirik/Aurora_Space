@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 // Real ISS (ZARYA) two-line element set, used to exercise the TLE column parsers.
 const (
@@ -19,5 +22,15 @@ func TestParseNoradCatID(t *testing.T) {
 
 	if _, ok := parseNoradCatID("1 XXXXXU"); ok {
 		t.Error("parseNoradCatID with non-numeric id should return ok=false")
+	}
+}
+
+func TestParseEccentricity(t *testing.T) {
+	if got := parseEccentricity(issLine2); math.Abs(got-0.0006703) > 1e-9 {
+		t.Errorf("parseEccentricity(ISS) = %v, want 0.0006703", got)
+	}
+
+	if got := parseEccentricity("2 25544"); got != 0 {
+		t.Errorf("parseEccentricity on short line = %v, want 0", got)
 	}
 }
