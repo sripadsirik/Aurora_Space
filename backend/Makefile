@@ -1,4 +1,8 @@
-.PHONY: engine-rust
+.PHONY: engine-rust test
+
+# Run the Go unit tests across all backend services and shared packages.
+test:
+	go test ./...
 
 engine-rust:
 	cd engine-rust && \
