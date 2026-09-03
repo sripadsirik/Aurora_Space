@@ -23,3 +23,26 @@ func TestRecordsLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestFirstNonEmpty(t *testing.T) {
+	cases := []struct {
+		name   string
+		values []string
+		want   string
+	}{
+		{"no values", nil, ""},
+		{"all empty", []string{"", "", ""}, ""},
+		{"whitespace only treated as empty", []string{" ", "\t", "\n"}, ""},
+		{"first value wins", []string{"first", "second"}, "first"},
+		{"skips leading empties", []string{"", "  ", "third"}, "third"},
+		{"preserves original spacing of chosen value", []string{"", " padded "}, " padded "},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := firstNonEmpty(tc.values...); got != tc.want {
+				t.Errorf("firstNonEmpty(%q) = %q, want %q", tc.values, got, tc.want)
+			}
+		})
+	}
+}
