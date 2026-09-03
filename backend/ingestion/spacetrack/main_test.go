@@ -48,3 +48,45 @@ func TestParseCDMs(t *testing.T) {
 		t.Errorf("RiskLevel = %q, want watch", w.RiskLevel)
 	}
 }
+
+func TestParseCDMsEdgeCases(t *testing.T) {
+	t.Run("empty array", func(t *testing.T) {
+		warnings, err := parseCDMs([]byte(`[]`))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(warnings) != 0 {
+			t.Errorf("got %d warnings, want 0", len(warnings))
+		}
+	})
+
+	t.Run("malformed json", func(t *testing.T) {
+		if _, err := parseCDMs([]byte(`{not an array`)); err == nil {
+			t.Error("expected error for malformed JSON")
+		}
+	})
+
+	t.Run("empty and invalid numeric fields default to zero", func(t *testing.T) {
+		body := []byte(`[{"CDM_ID":"x","MIN_RNG":"","PC":"not-a-number","SAT_1_ID":"","SAT_2_ID":"abc"}]`)
+		warnings, err := parseCDMs(body)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(warnings) != 1 {
+			t.Fatalf("got %d warnings, want 1", len(warnings))
+		}
+		w := warnings[0]
+		if w.MissDistanceM != 0 || w.MissDistanceKm != 0 {
+			t.Errorf("miss distance = %v/%v, want 0/0 for empty MIN_RNG", w.MissDistanceM, w.MissDistanceKm)
+		}
+		if w.Pc != 0 {
+			t.Errorf("Pc = %v, want 0 for invalid PC", w.Pc)
+		}
+		if w.Object1.NoradID != 0 || w.Object2.NoradID != 0 {
+			t.Errorf("norad ids = %d/%d, want 0/0 for empty and non-numeric SAT ids", w.Object1.NoradID, w.Object2.NoradID)
+		}
+		if w.RiskLevel != "nominal" {
+			t.Errorf("RiskLevel = %q, want nominal for zero Pc", w.RiskLevel)
+		}
+	})
+}
