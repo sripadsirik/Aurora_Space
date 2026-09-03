@@ -114,3 +114,27 @@ func TestFormatEventTime(t *testing.T) {
 		t.Errorf("formatEventTime(non-UTC) = %q, want %q", got, "2026-09-03 14:30:15 UTC")
 	}
 }
+
+func TestSummarizeLogLine(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+		want string
+	}{
+		{"plain text passthrough with trim", "  hello world  ", "hello world"},
+		{"non-json passthrough", "level=info starting up", "level=info starting up"},
+		{"invalid json passthrough", "{not json", "{not json"},
+		{"json msg only", `{"msg":"boot complete"}`, "boot complete"},
+		{"json msg with known field", `{"msg":"published","count":42}`, "published | count=42"},
+		{"nested fields message", `{"fields":{"message":"inner"}}`, "inner"},
+		{"json without recognized keys falls back", `{"level":"info"}`, `{"level":"info"}`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := summarizeLogLine(tc.line); got != tc.want {
+				t.Errorf("summarizeLogLine(%q) = %q, want %q", tc.line, got, tc.want)
+			}
+		})
+	}
+}
