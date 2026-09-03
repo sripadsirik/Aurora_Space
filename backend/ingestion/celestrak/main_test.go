@@ -44,3 +44,48 @@ func TestParseMeanMotion(t *testing.T) {
 		t.Errorf("parseMeanMotion on short line = %v, want 0", got)
 	}
 }
+
+func TestParseThreeLineElements(t *testing.T) {
+	body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\n" +
+		"NOAA 19\n" +
+		"1 33591U 09005A   24001.51000000  .00000100  00000-0  10000-3 0  9990\n" +
+		"2 33591  99.1000 100.0000 0013000 200.0000 160.0000 14.12000000700000\n")
+
+	records := parseThreeLineElements(body)
+	if len(records) != 2 {
+		t.Fatalf("got %d records, want 2", len(records))
+	}
+
+	if records[0].ObjectName != "ISS (ZARYA)" || records[0].NoradCatID != 25544 {
+		t.Errorf("first record = %+v, want ISS 25544", records[0])
+	}
+	if records[0].TLELine1 != issLine1 || records[0].TLELine2 != issLine2 {
+		t.Error("first record did not preserve TLE lines")
+	}
+	if records[1].NoradCatID != 33591 {
+		t.Errorf("second record norad = %d, want 33591", records[1].NoradCatID)
+	}
+}
+
+func TestParseThreeLineElementsBareTwoLine(t *testing.T) {
+	// A record with no name line, starting directly with "1 ".
+	body := []byte(issLine1 + "\n" + issLine2 + "\n")
+
+	records := parseThreeLineElements(body)
+	if len(records) != 1 {
+		t.Fatalf("got %d records, want 1", len(records))
+	}
+	if records[0].ObjectName != "" {
+		t.Errorf("bare record name = %q, want empty", records[0].ObjectName)
+	}
+	if records[0].NoradCatID != 25544 {
+		t.Errorf("bare record norad = %d, want 25544", records[0].NoradCatID)
+	}
+}
+
+func TestParseThreeLineElementsSkipsMalformed(t *testing.T) {
+	body := []byte("GARBAGE LINE\nANOTHER GARBAGE\n")
+	if records := parseThreeLineElements(body); len(records) != 0 {
+		t.Errorf("got %d records from garbage, want 0", len(records))
+	}
+}
