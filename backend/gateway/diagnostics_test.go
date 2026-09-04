@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -128,4 +130,47 @@ func TestSummarizeLogLine(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLoadTrackedProcessRecords(t *testing.T) {
+	t.Run("missing file returns nil", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "processes.json")
+		if got := loadTrackedProcessRecords(path); got != nil {
+			t.Errorf("loadTrackedProcessRecords(missing) = %v, want nil", got)
+		}
+	})
+
+	t.Run("array form", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "processes.json")
+		body := `[{"Name":"celestrak","Pid":101},{"Name":"noaa","Pid":102}]`
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		got := loadTrackedProcessRecords(path)
+		if len(got) != 2 || got[0].Name != "celestrak" || got[1].Pid != 102 {
+			t.Errorf("array parse mismatch: %+v", got)
+		}
+	})
+
+	t.Run("single object form", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "processes.json")
+		body := `{"Name":"engine-rust","Pid":200}`
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		got := loadTrackedProcessRecords(path)
+		if len(got) != 1 || got[0].Name != "engine-rust" || got[0].Pid != 200 {
+			t.Errorf("single parse mismatch: %+v", got)
+		}
+	})
+
+	t.Run("invalid json returns nil", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "processes.json")
+		if err := os.WriteFile(path, []byte("not json"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := loadTrackedProcessRecords(path); got != nil {
+			t.Errorf("loadTrackedProcessRecords(invalid) = %v, want nil", got)
+		}
+	})
 }
