@@ -93,3 +93,14 @@ func TestStatusForFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	if got := formatEventTime(time.Time{}); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	stamp := time.Date(2026, 9, 4, 15, 4, 5, 0, time.UTC)
+	if got := formatEventTime(stamp); got != "2026-09-04 15:04:05 UTC" {
+		t.Errorf("formatEventTime(stamp) = %q, want %q", got, "2026-09-04 15:04:05 UTC")
+	}
+}
