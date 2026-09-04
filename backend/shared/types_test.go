@@ -52,3 +52,29 @@ func TestClassifyRisk(t *testing.T) {
 		})
 	}
 }
+
+func TestDeriveStormLevel(t *testing.T) {
+	tests := []struct {
+		name string
+		kp   float64
+		want string
+	}{
+		{"quiet", 0, "none"},
+		{"unsettled below minor", 4.9, "none"},
+		{"minor threshold", 5, "minor"},
+		{"minor band", 5.6, "minor"},
+		{"moderate threshold", 6, "moderate"},
+		{"strong threshold", 7, "strong"},
+		{"severe threshold", 8, "severe"},
+		{"extreme threshold", 9, "extreme"},
+		{"above scale", 9.5, "extreme"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := DeriveStormLevel(tt.kp); got != tt.want {
+				t.Errorf("DeriveStormLevel(%v) = %q, want %q", tt.kp, got, tt.want)
+			}
+		})
+	}
+}
