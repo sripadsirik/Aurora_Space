@@ -67,3 +67,29 @@ func TestRecordsLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusForFreshness(t *testing.T) {
+	live := 2 * time.Minute
+	stale := 10 * time.Minute
+	now := time.Now()
+
+	tests := []struct {
+		name        string
+		lastUpdated time.Time
+		want        string
+	}{
+		{"zero time is error", time.Time{}, "ERROR"},
+		{"fresh is live", now.Add(-30 * time.Second), "LIVE"},
+		{"at live window is live", now.Add(-live + time.Second), "LIVE"},
+		{"past live but within stale", now.Add(-5 * time.Minute), "STALE"},
+		{"past stale window is error", now.Add(-30 * time.Minute), "ERROR"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := statusForFreshness(tt.lastUpdated, live, stale); got != tt.want {
+				t.Errorf("statusForFreshness(%v) = %q, want %q", tt.lastUpdated, got, tt.want)
+			}
+		})
+	}
+}
