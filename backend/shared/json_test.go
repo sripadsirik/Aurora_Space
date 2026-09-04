@@ -124,3 +124,43 @@ func TestSpaceWeatherJSONTags(t *testing.T) {
 		}
 	}
 }
+
+// TestWSMessageRoundTrip verifies the gateway envelope preserves its type and
+// raw payload through a marshal/unmarshal cycle.
+func TestWSMessageRoundTrip(t *testing.T) {
+	batch := SatelliteBatch{
+		BatchID:    "batch-1",
+		BatchIndex: 0,
+		BatchCount: 1,
+		Satellites: []Satellite{{NoradID: 25544, Name: "ISS", OrbitType: "LEO"}},
+	}
+	payload, err := json.Marshal(batch)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	msg := WSMessage{Type: "satellites", Payload: payload}
+	raw, err := json.Marshal(msg)
+	if err != nil {
+		t.Fatalf("marshal envelope: %v", err)
+	}
+
+	var decoded WSMessage
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+	if decoded.Type != "satellites" {
+		t.Errorf("Type = %q, want %q", decoded.Type, "satellites")
+	}
+
+	var decodedBatch SatelliteBatch
+	if err := json.Unmarshal(decoded.Payload, &decodedBatch); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if decodedBatch.BatchID != "batch-1" || len(decodedBatch.Satellites) != 1 {
+		t.Errorf("payload round-trip mismatch: %+v", decodedBatch)
+	}
+	if decodedBatch.Satellites[0].NoradID != 25544 {
+		t.Errorf("satellite NoradID = %d, want 25544", decodedBatch.Satellites[0].NoradID)
+	}
+}
