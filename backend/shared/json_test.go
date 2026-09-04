@@ -89,3 +89,38 @@ func TestConjunctionWarningJSONTags(t *testing.T) {
 		}
 	}
 }
+
+// TestSpaceWeatherJSONTags guards the space-weather wire contract consumed by
+// the HUD and storm overlays.
+func TestSpaceWeatherJSONTags(t *testing.T) {
+	weather := SpaceWeather{
+		KpIndex:          6.3,
+		SolarWindSpeed:   540,
+		SolarWindDensity: 8.1,
+		BzComponent:      -12.4,
+		XrayFlux:         "C2.4",
+		StormLevel:       "moderate",
+		AuroraKp:         6.3,
+		LastUpdated:      "2026-09-04T12:00:00Z",
+	}
+
+	raw, err := json.Marshal(weather)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	wantKeys := []string{
+		"kpIndex", "solarWindSpeed", "solarWindDensity", "bzComponent",
+		"xrayFlux", "stormLevel", "auroraKp", "lastUpdated",
+	}
+	for _, key := range wantKeys {
+		if _, ok := decoded[key]; !ok {
+			t.Errorf("marshalled SpaceWeather missing key %q; got %s", key, raw)
+		}
+	}
+}
