@@ -104,3 +104,28 @@ func TestFormatEventTime(t *testing.T) {
 		t.Errorf("formatEventTime(stamp) = %q, want %q", got, "2026-09-04 15:04:05 UTC")
 	}
 }
+
+func TestSummarizeLogLine(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want string
+	}{
+		{"plain text passes through", "starting celestrak ingest", "starting celestrak ingest"},
+		{"plain text trimmed", "  padded line  ", "padded line"},
+		{"invalid json passes through", "{not valid json", "{not valid json"},
+		{"json message extracted", `{"msg":"published batch"}`, "published batch"},
+		{"json message with fields", `{"msg":"fetch done","count":42}`, "fetch done | count=42"},
+		{"nested fields message", `{"fields":{"message":"nested"}}`, "nested"},
+		{"error field appended", `{"msg":"boom","err":"timeout"}`, "boom | err=timeout"},
+		{"json without known keys", `{"foo":"bar"}`, `{"foo":"bar"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := summarizeLogLine(tt.line); got != tt.want {
+				t.Errorf("summarizeLogLine(%q) = %q, want %q", tt.line, got, tt.want)
+			}
+		})
+	}
+}
