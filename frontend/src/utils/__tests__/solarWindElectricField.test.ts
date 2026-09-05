@@ -53,3 +53,23 @@ describe("geoeffectiveElectricField", () => {
     expect(geoeffectiveElectricField(600, -9)).toBeCloseTo(solarWindElectricField(600, 9), 10);
   });
 });
+
+describe("electricFieldLevel", () => {
+  it("classifies each band by its representative value", () => {
+    expect(electricFieldLevel(0.2)).toBe("quiet");
+    expect(electricFieldLevel(1.5)).toBe("moderate");
+    expect(electricFieldLevel(5)).toBe("strong");
+    expect(electricFieldLevel(12)).toBe("extreme");
+  });
+
+  it("places band boundaries in the higher band", () => {
+    expect(electricFieldLevel(0.8)).toBe("moderate");
+    expect(electricFieldLevel(3)).toBe("strong");
+    expect(electricFieldLevel(8)).toBe("extreme");
+  });
+
+  it("falls back to quiet for negative or non-finite inputs", () => {
+    expect(electricFieldLevel(-1)).toBe("quiet");
+    expect(electricFieldLevel(NaN)).toBe("quiet");
+  });
+});
