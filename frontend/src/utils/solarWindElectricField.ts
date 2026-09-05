@@ -66,3 +66,34 @@ export const electricFieldLevel = (fieldMvM: number): ElectricFieldLevel => {
   if (fieldMvM < 8) return "strong";
   return "extreme";
 };
+
+/** Derived electric-field figures for the current solar-wind state. */
+export interface SolarWindElectricFieldProfile {
+  /** Motional dawn-to-dusk field magnitude regardless of IMF sign, in mV/m. */
+  fieldMvM: number;
+  /** Rectified, reconnection-driving field (zero for a northward IMF), in mV/m. */
+  geoeffectiveMvM: number;
+  /** True when the IMF is southward, so the field is geoeffective. */
+  southward: boolean;
+  /** Qualitative band the geoeffective field falls in. */
+  level: ElectricFieldLevel;
+}
+
+/**
+ * Bundles the electric-field figures derived from a space-weather snapshot: the
+ * raw motional field from its solar-wind speed and IMF magnitude, the rectified
+ * geoeffective field from the Bz sign, whether the IMF is southward, and the
+ * qualitative band the geoeffective field falls in. Every value comes from the
+ * same speed and Bz, so they stay mutually consistent.
+ */
+export const solarWindElectricFieldProfile = (
+  weather: SpaceWeather
+): SolarWindElectricFieldProfile => {
+  const geoeffectiveMvM = geoeffectiveElectricField(weather.solarWindSpeed, weather.bzComponent);
+  return {
+    fieldMvM: solarWindElectricField(weather.solarWindSpeed, weather.bzComponent),
+    geoeffectiveMvM,
+    southward: weather.bzComponent < 0,
+    level: electricFieldLevel(geoeffectiveMvM)
+  };
+};
