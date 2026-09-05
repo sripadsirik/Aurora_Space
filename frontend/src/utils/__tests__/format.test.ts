@@ -6,6 +6,7 @@ import {
   formatDurationToTca,
   formatDynamicPressure,
   formatEclipseFraction,
+  formatElectricField,
   formatMagnetopauseStandoff,
   formatManeuverDeltaV,
   formatMissDistance,
@@ -231,6 +232,21 @@ describe("formatMagnetopauseStandoff", () => {
   it("renders an em dash for negative or non-finite inputs", () => {
     expect(formatMagnetopauseStandoff(-1)).toBe("—");
     expect(formatMagnetopauseStandoff(Number.NaN)).toBe("—");
+  });
+});
+
+describe("formatElectricField", () => {
+  it("renders a field with two fraction digits and a mV/m suffix", () => {
+    expect(formatElectricField(2.104)).toBe("2.10 mV/m");
+  });
+
+  it("keeps two fraction digits for a whole-number field", () => {
+    expect(formatElectricField(3)).toBe("3.00 mV/m");
+  });
+
+  it("renders an em dash for negative or non-finite inputs", () => {
+    expect(formatElectricField(-1)).toBe("—");
+    expect(formatElectricField(Number.NaN)).toBe("—");
   });
 });
 
