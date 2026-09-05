@@ -36,3 +36,16 @@ export const solarWindElectricField = (speedKms: number, fieldNt: number): numbe
   const field = Math.abs(fieldNt);
   return ELECTRIC_FIELD_COEFFICIENT * speed * field;
 };
+
+/**
+ * Geoeffective dawn-to-dusk electric field in millivolts per metre for the
+ * given solar-wind bulk speed (km/s) and IMF Bz (nT). Only a southward field
+ * (`Bz < 0`) opens dayside reconnection, so this rectifies the field: it uses
+ * `|Bz|` when Bz is southward and returns `0` for a northward or zero Bz. This
+ * is the reconnection-driving part of {@link solarWindElectricField} and the
+ * value that best tracks geomagnetic activity. Non-finite inputs yield `0`.
+ */
+export const geoeffectiveElectricField = (speedKms: number, bz: number): number => {
+  if (!Number.isFinite(bz) || bz >= 0) return 0;
+  return solarWindElectricField(speedKms, bz);
+};
