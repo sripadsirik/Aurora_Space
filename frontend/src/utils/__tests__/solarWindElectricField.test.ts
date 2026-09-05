@@ -111,6 +111,7 @@ describe("solarWindElectricFieldProfile", () => {
     expect(profile.geoeffectiveMvM).toBeCloseTo(3, 10);
     expect(profile.southward).toBe(true);
     expect(profile.level).toBe("strong");
+    expect(profile.levelLabel).toBe("Strong");
   });
 
   it("zeroes the geoeffective field for a northward IMF but keeps the raw field", () => {
@@ -121,5 +122,6 @@ describe("solarWindElectricFieldProfile", () => {
     expect(profile.geoeffectiveMvM).toBe(0);
     expect(profile.southward).toBe(false);
     expect(profile.level).toBe("quiet");
+    expect(profile.levelLabel).toBe("Quiet");
   });
 });
