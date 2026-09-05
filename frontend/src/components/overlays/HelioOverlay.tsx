@@ -199,7 +199,10 @@ export const HelioOverlay = (): JSX.Element | null => {
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Coupling E-field</span>
-              <span className={electricFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+              <span
+                className={electricFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}
+                title={`${electricFieldProfile.levelLabel} coupling`}
+              >
                 {formatElectricField(electricFieldProfile.geoeffectiveMvM)}
               </span>
             </div>
