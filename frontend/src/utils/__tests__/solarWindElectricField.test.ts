@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SpaceWeather } from "../../types/space";
 import {
   ELECTRIC_FIELD_COEFFICIENT,
+  ELECTRIC_FIELD_LEVEL_LABELS,
   electricFieldLevel,
   geoeffectiveElectricField,
   solarWindElectricField,
@@ -71,6 +72,21 @@ describe("electricFieldLevel", () => {
   it("falls back to quiet for negative or non-finite inputs", () => {
     expect(electricFieldLevel(-1)).toBe("quiet");
     expect(electricFieldLevel(NaN)).toBe("quiet");
+  });
+});
+
+describe("ELECTRIC_FIELD_LEVEL_LABELS", () => {
+  it("labels every level returned by electricFieldLevel", () => {
+    for (const value of [0.2, 1.5, 5, 12]) {
+      expect(ELECTRIC_FIELD_LEVEL_LABELS[electricFieldLevel(value)]).toBeTruthy();
+    }
+  });
+
+  it("uses distinct, human-readable labels", () => {
+    expect(ELECTRIC_FIELD_LEVEL_LABELS.quiet).toBe("Quiet");
+    expect(ELECTRIC_FIELD_LEVEL_LABELS.moderate).toBe("Moderate");
+    expect(ELECTRIC_FIELD_LEVEL_LABELS.strong).toBe("Strong");
+    expect(ELECTRIC_FIELD_LEVEL_LABELS.extreme).toBe("Extreme");
   });
 });
 
