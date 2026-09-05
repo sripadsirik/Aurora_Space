@@ -49,3 +49,20 @@ export const geoeffectiveElectricField = (speedKms: number, bz: number): number 
   if (!Number.isFinite(bz) || bz >= 0) return 0;
   return solarWindElectricField(speedKms, bz);
 };
+
+/** Qualitative bands for the geoeffective electric field, from calm to storm. */
+export type ElectricFieldLevel = "quiet" | "moderate" | "strong" | "extreme";
+
+/**
+ * Buckets a geoeffective electric field (mV/m) into a qualitative band for the
+ * readouts: below 0.8 mV/m is `quiet` (little coupling), 0.8-3 mV/m is
+ * `moderate` (substorm-level driving), 3-8 mV/m is `strong` (storm main-phase
+ * driving), and 8 mV/m or more is `extreme` — the sustained driving that builds
+ * a major geomagnetic storm. Negative or non-finite inputs fall back to `quiet`.
+ */
+export const electricFieldLevel = (fieldMvM: number): ElectricFieldLevel => {
+  if (!Number.isFinite(fieldMvM) || fieldMvM < 0.8) return "quiet";
+  if (fieldMvM < 3) return "moderate";
+  if (fieldMvM < 8) return "strong";
+  return "extreme";
+};
