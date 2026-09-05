@@ -33,3 +33,23 @@ describe("solarWindElectricField", () => {
     expect(solarWindElectricField(400, 0)).toBe(0);
   });
 });
+
+describe("geoeffectiveElectricField", () => {
+  it("returns the full field magnitude for a southward IMF", () => {
+    // 400 km/s, Bz = -5 nT -> 2 mV/m
+    expect(geoeffectiveElectricField(400, -5)).toBeCloseTo(2, 10);
+  });
+
+  it("returns zero for a northward or zero IMF", () => {
+    expect(geoeffectiveElectricField(400, 5)).toBe(0);
+    expect(geoeffectiveElectricField(400, 0)).toBe(0);
+  });
+
+  it("returns zero for a non-finite Bz", () => {
+    expect(geoeffectiveElectricField(400, NaN)).toBe(0);
+  });
+
+  it("matches the raw field magnitude when southward", () => {
+    expect(geoeffectiveElectricField(600, -9)).toBeCloseTo(solarWindElectricField(600, 9), 10);
+  });
+});
