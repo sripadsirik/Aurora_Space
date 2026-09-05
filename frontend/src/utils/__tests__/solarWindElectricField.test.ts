@@ -73,3 +73,37 @@ describe("electricFieldLevel", () => {
     expect(electricFieldLevel(NaN)).toBe("quiet");
   });
 });
+
+describe("solarWindElectricFieldProfile", () => {
+  const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
+    kpIndex: 3,
+    solarWindSpeed: 420,
+    solarWindDensity: 5.1,
+    bzComponent: -2,
+    xrayFlux: "C2.4",
+    stormLevel: "minor",
+    auroraKp: 3,
+    lastUpdated: new Date("2026-09-05T12:00:00Z"),
+    ...overrides
+  });
+
+  it("derives every figure from the snapshot's speed and Bz", () => {
+    const profile = solarWindElectricFieldProfile(
+      makeWeather({ solarWindSpeed: 500, bzComponent: -6 })
+    );
+    expect(profile.fieldMvM).toBeCloseTo(3, 10);
+    expect(profile.geoeffectiveMvM).toBeCloseTo(3, 10);
+    expect(profile.southward).toBe(true);
+    expect(profile.level).toBe("strong");
+  });
+
+  it("zeroes the geoeffective field for a northward IMF but keeps the raw field", () => {
+    const profile = solarWindElectricFieldProfile(
+      makeWeather({ solarWindSpeed: 500, bzComponent: 6 })
+    );
+    expect(profile.fieldMvM).toBeCloseTo(3, 10);
+    expect(profile.geoeffectiveMvM).toBe(0);
+    expect(profile.southward).toBe(false);
+    expect(profile.level).toBe("quiet");
+  });
+});
