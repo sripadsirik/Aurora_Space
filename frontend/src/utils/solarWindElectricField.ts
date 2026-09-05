@@ -88,6 +88,8 @@ export interface SolarWindElectricFieldProfile {
   southward: boolean;
   /** Qualitative band the geoeffective field falls in. */
   level: ElectricFieldLevel;
+  /** Human-readable label for {@link level}. */
+  levelLabel: string;
 }
 
 /**
@@ -101,10 +103,12 @@ export const solarWindElectricFieldProfile = (
   weather: SpaceWeather
 ): SolarWindElectricFieldProfile => {
   const geoeffectiveMvM = geoeffectiveElectricField(weather.solarWindSpeed, weather.bzComponent);
+  const level = electricFieldLevel(geoeffectiveMvM);
   return {
     fieldMvM: solarWindElectricField(weather.solarWindSpeed, weather.bzComponent),
     geoeffectiveMvM,
     southward: weather.bzComponent < 0,
-    level: electricFieldLevel(geoeffectiveMvM)
+    level,
+    levelLabel: ELECTRIC_FIELD_LEVEL_LABELS[level]
   };
 };
