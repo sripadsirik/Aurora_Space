@@ -67,6 +67,17 @@ export const electricFieldLevel = (fieldMvM: number): ElectricFieldLevel => {
   return "extreme";
 };
 
+/**
+ * Short human-readable label for each {@link ElectricFieldLevel}, for legends,
+ * badges, and panel copy. Centralised so every display names the bands the same.
+ */
+export const ELECTRIC_FIELD_LEVEL_LABELS: Record<ElectricFieldLevel, string> = {
+  quiet: "Quiet",
+  moderate: "Moderate",
+  strong: "Strong",
+  extreme: "Extreme"
+};
+
 /** Derived electric-field figures for the current solar-wind state. */
 export interface SolarWindElectricFieldProfile {
   /** Motional dawn-to-dusk field magnitude regardless of IMF sign, in mV/m. */
