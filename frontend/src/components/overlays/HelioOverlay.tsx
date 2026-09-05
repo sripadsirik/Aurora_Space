@@ -197,6 +197,12 @@ export const HelioOverlay = (): JSX.Element | null => {
               <span className="text-[#6d8ea9]">Bz</span>
               <span style={{ color: bzColor }}>{formatMagneticFieldNt(spaceWeather.bzComponent)}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Coupling E-field</span>
+              <span className={electricFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+                {formatElectricField(electricFieldProfile.geoeffectiveMvM)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
