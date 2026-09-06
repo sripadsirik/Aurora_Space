@@ -33,3 +33,21 @@ export const geoeffectiveElectricField = (speedKms: number, bz: number): number 
   const southwardField = -bz;
   return speed * southwardField * 1e-3;
 };
+
+/** Qualitative bands for the geoeffective electric field, from closed to storm-driving. */
+export type CouplingLevel = "closed" | "weak" | "moderate" | "strong";
+
+/**
+ * Buckets a geoeffective electric field (mV/m) into a qualitative coupling band
+ * for the readouts: a field of `0` (a northward or zero IMF) reads as `closed`,
+ * below 2 mV/m is `weak` background coupling, 2-5 mV/m is `moderate` (a
+ * geoeffective southward stream), and 5 mV/m or more is `strong` — the sustained
+ * driving that builds major storms. Negative or non-finite inputs fall back to
+ * `closed`.
+ */
+export const couplingLevel = (fieldMvM: number): CouplingLevel => {
+  if (!Number.isFinite(fieldMvM) || fieldMvM <= 0) return "closed";
+  if (fieldMvM < 2) return "weak";
+  if (fieldMvM < 5) return "moderate";
+  return "strong";
+};
