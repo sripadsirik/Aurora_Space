@@ -130,6 +130,28 @@ GEO assets to the magnetosheath. `formatDynamicPressure` and `formatMagnetopause
 display, and the heliosphere overlay's L1 DSCOVR panel surfaces both, highlighting the standoff
 when the boundary drops inside GEO.
 
+## Solar Wind Coupling
+
+How hard the solar wind couples into geomagnetic activity comes from the pure helpers in
+`frontend/src/utils/solarWindCoupling.ts`, using the bulk speed and IMF Bz component the
+space-weather feeds already report:
+
+| Helper | Returns |
+| --- | --- |
+| `geoeffectiveElectricField` | Rectified dawn-dusk electric field in mV/m (`Ey = V · Bs`, `Bs = max(0, -Bz)`) |
+| `couplingLevel` | Qualitative band (`closed` / `weak` / `moderate` / `strong`) |
+| `isStrongGeomagneticCoupling` | True at or above the strong-coupling threshold (5 mV/m) |
+| `solarWindCouplingProfile` | All of the above bundled into one `SolarWindCouplingProfile` for a `SpaceWeather` snapshot |
+
+Only a southward IMF reconnects with the magnetosphere, so only the southward part of the field
+is geoeffective — a northward or zero Bz reads as `closed` and drives no coupling. When the field
+does turn south, the wind sweeps a motional electric field across the dayside that feeds the ring
+current and sets storm intensity, so a fast stream carrying a strongly southward field pushes the
+coupling into the `strong` band. `formatGeoeffectiveField` in `frontend/src/utils/format.ts`
+renders the field for display (`3.20 mV/m`), and the heliosphere overlay's L1 DSCOVR panel
+surfaces it alongside the ram pressure and magnetopause standoff, highlighting it under strong
+coupling.
+
 ## Coverage Footprint
 
 How much of Earth a satellite can see or serve comes from the pure geometry helpers in
