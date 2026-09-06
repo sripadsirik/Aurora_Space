@@ -78,3 +78,26 @@ describe("couplingLevel", () => {
     expect(couplingLevel(Number.NaN)).toBe("closed");
   });
 });
+
+describe("isStrongGeomagneticCoupling", () => {
+  it("is false for a field below the threshold", () => {
+    expect(isStrongGeomagneticCoupling(4)).toBe(false);
+  });
+
+  it("is true at exactly the threshold", () => {
+    expect(isStrongGeomagneticCoupling(STRONG_COUPLING_FIELD_MVM)).toBe(true);
+  });
+
+  it("is true well above the threshold", () => {
+    expect(isStrongGeomagneticCoupling(12)).toBe(true);
+  });
+
+  it("is false just below the threshold", () => {
+    expect(isStrongGeomagneticCoupling(STRONG_COUPLING_FIELD_MVM - 0.01)).toBe(false);
+  });
+
+  it("is false for non-finite inputs, including infinity", () => {
+    expect(isStrongGeomagneticCoupling(Number.NaN)).toBe(false);
+    expect(isStrongGeomagneticCoupling(Number.POSITIVE_INFINITY)).toBe(false);
+  });
+});
