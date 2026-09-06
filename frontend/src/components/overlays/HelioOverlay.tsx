@@ -3,7 +3,11 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
+import {
+  formatDynamicPressure,
+  formatGeoeffectiveField,
+  formatMagnetopauseStandoff
+} from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -11,6 +15,7 @@ import {
   percentToBurstIntensity
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
+import { couplingLevelLabel, solarWindCouplingProfile } from "../../utils/solarWindCoupling";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -74,6 +79,9 @@ export const HelioOverlay = (): JSX.Element | null => {
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
 
+  // Geoeffective dawn-dusk electric field driving reconnection, from V and Bz.
+  const couplingProfile = solarWindCouplingProfile(spaceWeather);
+
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
   };
@@ -95,6 +103,11 @@ export const HelioOverlay = (): JSX.Element | null => {
           <HelioRow color={kpColor} label="KP INDEX" value={formatKpIndex(spaceWeather.kpIndex)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
           <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
+          <HelioRow
+            color={couplingProfile.strong ? "#ff8f6e" : bzColor}
+            label="COUPLING"
+            value={couplingLevelLabel(couplingProfile.level)}
+          />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-cyan-500/10 pt-2 text-[10px] tracking-[0.18em] text-[#6d8ea9]">
           <span>VIEW WIDTH ~ 2.0 AU</span>
@@ -189,6 +202,12 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Bz</span>
               <span style={{ color: bzColor }}>{formatMagneticFieldNt(spaceWeather.bzComponent)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Coupling</span>
+              <span className={couplingProfile.strong ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+                {formatGeoeffectiveField(couplingProfile.electricFieldMvM)}
+              </span>
             </div>
           </div>
         </div>
