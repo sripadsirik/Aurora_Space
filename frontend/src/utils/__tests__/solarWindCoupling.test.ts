@@ -101,3 +101,31 @@ describe("isStrongGeomagneticCoupling", () => {
     expect(isStrongGeomagneticCoupling(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
+
+describe("solarWindCouplingProfile", () => {
+  it("derives every figure from the same computed electric field", () => {
+    const weather = makeWeather({ solarWindSpeed: 700, bzComponent: -12 });
+    const profile = solarWindCouplingProfile(weather);
+    const field = geoeffectiveElectricField(700, -12);
+    expect(profile.electricFieldMvM).toBeCloseTo(field, 9);
+    expect(profile.level).toBe(couplingLevel(field));
+    expect(profile.strong).toBe(isStrongGeomagneticCoupling(field));
+  });
+
+  it("reports a closed, uncoupled magnetosphere for a northward field", () => {
+    const profile = solarWindCouplingProfile(makeWeather({ bzComponent: 6 }));
+    expect(profile.electricFieldMvM).toBe(0);
+    expect(profile.level).toBe("closed");
+    expect(profile.strong).toBe(false);
+  });
+
+  it("flags strong coupling as a fast, strongly southward stream arrives", () => {
+    const quiet = solarWindCouplingProfile(makeWeather());
+    const shock = solarWindCouplingProfile(
+      makeWeather({ solarWindSpeed: 900, bzComponent: -20 })
+    );
+    expect(shock.electricFieldMvM).toBeGreaterThan(quiet.electricFieldMvM);
+    expect(shock.level).toBe("strong");
+    expect(shock.strong).toBe(true);
+  });
+});
