@@ -3,7 +3,11 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
+import {
+  formatDynamicPressure,
+  formatGeoeffectiveField,
+  formatMagnetopauseStandoff
+} from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -11,6 +15,7 @@ import {
   percentToBurstIntensity
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
+import { solarWindCouplingProfile } from "../../utils/solarWindCoupling";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -73,6 +78,9 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
+
+  // Geoeffective dawn-dusk electric field driving reconnection, from V and Bz.
+  const couplingProfile = solarWindCouplingProfile(spaceWeather);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
@@ -189,6 +197,12 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Bz</span>
               <span style={{ color: bzColor }}>{formatMagneticFieldNt(spaceWeather.bzComponent)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Coupling</span>
+              <span className={couplingProfile.strong ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+                {formatGeoeffectiveField(couplingProfile.electricFieldMvM)}
+              </span>
             </div>
           </div>
         </div>
