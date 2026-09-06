@@ -66,3 +66,32 @@ export const STRONG_COUPLING_FIELD_MVM = 5;
  */
 export const isStrongGeomagneticCoupling = (fieldMvM: number): boolean =>
   Number.isFinite(fieldMvM) && fieldMvM >= STRONG_COUPLING_FIELD_MVM;
+
+/** Derived solar-wind coupling figures for the current space-weather state. */
+export interface SolarWindCouplingProfile {
+  /** Geoeffective dawn-dusk electric field, in millivolts per metre. */
+  electricFieldMvM: number;
+  /** Qualitative band the coupling field falls in. */
+  level: CouplingLevel;
+  /** True when the field is at or above the strong-coupling threshold. */
+  strong: boolean;
+}
+
+/**
+ * Bundles the coupling figures derived from a space-weather snapshot: the
+ * geoeffective electric field from its solar-wind speed and Bz, the qualitative
+ * coupling band, and whether the field has reached the strong-coupling
+ * threshold. All values come from the same computed field, so they stay
+ * mutually consistent.
+ */
+export const solarWindCouplingProfile = (weather: SpaceWeather): SolarWindCouplingProfile => {
+  const electricFieldMvM = geoeffectiveElectricField(
+    weather.solarWindSpeed,
+    weather.bzComponent
+  );
+  return {
+    electricFieldMvM,
+    level: couplingLevel(electricFieldMvM),
+    strong: isStrongGeomagneticCoupling(electricFieldMvM)
+  };
+};
