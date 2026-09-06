@@ -51,3 +51,18 @@ export const couplingLevel = (fieldMvM: number): CouplingLevel => {
   if (fieldMvM < 5) return "moderate";
   return "strong";
 };
+
+/**
+ * Geoeffective electric field (mV/m) at or above which coupling reads as strong
+ * enough to drive a major geomagnetic storm. Marks the lower edge of the
+ * `strong` {@link couplingLevel} band.
+ */
+export const STRONG_COUPLING_FIELD_MVM = 5;
+
+/**
+ * True when the geoeffective electric field is at or above the strong-coupling
+ * threshold, the sustained dawn-dusk driving associated with major storms.
+ * Non-finite inputs read as not strongly coupled.
+ */
+export const isStrongGeomagneticCoupling = (fieldMvM: number): boolean =>
+  Number.isFinite(fieldMvM) && fieldMvM >= STRONG_COUPLING_FIELD_MVM;
