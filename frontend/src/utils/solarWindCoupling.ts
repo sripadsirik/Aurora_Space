@@ -67,6 +67,24 @@ export const STRONG_COUPLING_FIELD_MVM = 5;
 export const isStrongGeomagneticCoupling = (fieldMvM: number): boolean =>
   Number.isFinite(fieldMvM) && fieldMvM >= STRONG_COUPLING_FIELD_MVM;
 
+/**
+ * Maps a coupling band to the short uppercase label the readouts show: `CLOSED`,
+ * `WEAK`, `MODERATE`, or `STRONG`. Keeps the display wording for each band in one
+ * place so panels and overlays label the coupling the same way.
+ */
+export const couplingLevelLabel = (level: CouplingLevel): string => {
+  switch (level) {
+    case "closed":
+      return "CLOSED";
+    case "weak":
+      return "WEAK";
+    case "moderate":
+      return "MODERATE";
+    case "strong":
+      return "STRONG";
+  }
+};
+
 /** Derived solar-wind coupling figures for the current space-weather state. */
 export interface SolarWindCouplingProfile {
   /** Geoeffective dawn-dusk electric field, in millivolts per metre. */
