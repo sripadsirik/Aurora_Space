@@ -50,3 +50,31 @@ describe("geoeffectiveElectricField", () => {
     expect(geoeffectiveElectricField(-500, -10)).toBe(0);
   });
 });
+
+describe("couplingLevel", () => {
+  it("reads a zero field as a closed magnetosphere", () => {
+    expect(couplingLevel(0)).toBe("closed");
+  });
+
+  it("classifies a low field as weak background coupling", () => {
+    expect(couplingLevel(1)).toBe("weak");
+  });
+
+  it("classifies a mid-range field as moderate", () => {
+    expect(couplingLevel(3)).toBe("moderate");
+  });
+
+  it("classifies a high field as strong storm-driving coupling", () => {
+    expect(couplingLevel(8)).toBe("strong");
+  });
+
+  it("places each band boundary in the higher band", () => {
+    expect(couplingLevel(2)).toBe("moderate");
+    expect(couplingLevel(5)).toBe("strong");
+  });
+
+  it("falls back to closed for negative or non-finite inputs", () => {
+    expect(couplingLevel(-3)).toBe("closed");
+    expect(couplingLevel(Number.NaN)).toBe("closed");
+  });
+});
