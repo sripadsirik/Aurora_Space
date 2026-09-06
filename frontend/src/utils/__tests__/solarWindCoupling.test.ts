@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SpaceWeather } from "../../types/space";
 import {
   couplingLevel,
+  couplingLevelLabel,
   geoeffectiveElectricField,
   isStrongGeomagneticCoupling,
   solarWindCouplingProfile,
@@ -76,6 +77,20 @@ describe("couplingLevel", () => {
   it("falls back to closed for negative or non-finite inputs", () => {
     expect(couplingLevel(-3)).toBe("closed");
     expect(couplingLevel(Number.NaN)).toBe("closed");
+  });
+});
+
+describe("couplingLevelLabel", () => {
+  it("maps each band to its uppercase display label", () => {
+    expect(couplingLevelLabel("closed")).toBe("CLOSED");
+    expect(couplingLevelLabel("weak")).toBe("WEAK");
+    expect(couplingLevelLabel("moderate")).toBe("MODERATE");
+    expect(couplingLevelLabel("strong")).toBe("STRONG");
+  });
+
+  it("labels the band a computed field falls in", () => {
+    expect(couplingLevelLabel(couplingLevel(geoeffectiveElectricField(900, -20)))).toBe("STRONG");
+    expect(couplingLevelLabel(couplingLevel(geoeffectiveElectricField(400, 5)))).toBe("CLOSED");
   });
 });
 
