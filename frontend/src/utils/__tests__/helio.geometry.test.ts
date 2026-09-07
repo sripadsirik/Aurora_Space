@@ -1,6 +1,7 @@
 import { Cartesian3, Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
 import {
+  createHelioBandHierarchy,
   createOrbitArcPositions,
   createOrbitRingPositions,
   createSectorHierarchy,
@@ -143,5 +144,40 @@ describe("createSectorHierarchy", () => {
   it("has no inner holes", () => {
     const hierarchy = createSectorHierarchy(1000, 0, 0.3);
     expect(hierarchy.holes).toEqual([]);
+  });
+});
+
+describe("createHelioBandHierarchy", () => {
+  it("builds a flat quadrilateral of four vertices", () => {
+    const { positions } = createHelioBandHierarchy(0, 1000, 5000, 200);
+    expect(positions).toHaveLength(4);
+    for (const point of positions) {
+      expect(point.z).toBe(0);
+    }
+  });
+
+  it("is wider at the start than the tapered outer edge", () => {
+    const { positions } = createHelioBandHierarchy(0, 1000, 5000, 200);
+    // Along angle 0 the band width runs along the y axis.
+    const startWidth = Math.abs(positions[0].y - positions[3].y);
+    const endWidth = Math.abs(positions[1].y - positions[2].y);
+    expect(startWidth).toBeCloseTo(400, 6);
+    expect(endWidth).toBeCloseTo(2 * 200 * 0.78, 6);
+    expect(endWidth).toBeLessThan(startWidth);
+  });
+
+  it("runs radially from the start radius to the end radius", () => {
+    const { positions } = createHelioBandHierarchy(0, 1000, 5000, 200);
+    // The x component tracks the radial distance for a band along angle 0.
+    expect(positions[0].x).toBeCloseTo(1000, 6);
+    expect(positions[1].x).toBeCloseTo(5000, 6);
+  });
+
+  it("orients the band along the central angle", () => {
+    const centralAngle = Math.PI / 2;
+    const { positions } = createHelioBandHierarchy(centralAngle, 1000, 5000, 200);
+    // Along a quarter turn the midline points up the y axis.
+    expect(positions[0].y).toBeCloseTo(1000, 6);
+    expect(positions[1].y).toBeCloseTo(5000, 6);
   });
 });
