@@ -1,7 +1,7 @@
 import { Cartesian3, Math as CesiumMath, Ellipsoid } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { circularOrbitalVelocityKms, getOrbitalPeriod, orbitThetaAtElapsed } from "../orbit";
+import { circularOrbitalVelocityKms, getOrbitalPeriod, orbitPoint, orbitThetaAtElapsed } from "../orbit";
 
 const EARTH_RADIUS_METERS = Ellipsoid.WGS84.maximumRadius;
 
@@ -93,5 +93,33 @@ describe("orbitThetaAtElapsed", () => {
   it("winds backwards for time before the epoch", () => {
     const theta = orbitThetaAtElapsed(0, 5400, 5400, 0);
     expect(theta).toBeCloseTo(-CesiumMath.TWO_PI, 10);
+  });
+});
+
+describe("orbitPoint", () => {
+  it("places theta 0 of an equatorial orbit on the +x axis at the radius", () => {
+    const point = orbitPoint(0, 7_000_000, 0, 0);
+    expect(point.x).toBeCloseTo(7_000_000, 3);
+    expect(point.y).toBeCloseTo(0, 3);
+    expect(point.z).toBeCloseTo(0, 3);
+  });
+
+  it("keeps an equatorial (zero inclination) orbit in the z = 0 plane", () => {
+    const point = orbitPoint(Math.PI / 3, 7_000_000, 0, 0);
+    expect(point.z).toBeCloseTo(0, 6);
+  });
+
+  it("lifts the orbit out of plane by the inclination at theta = 90 degrees", () => {
+    const radius = 7_000_000;
+    const inclination = CesiumMath.toRadians(45);
+    const point = orbitPoint(Math.PI / 2, radius, inclination, 0);
+    expect(point.z).toBeCloseTo(radius * Math.sin(inclination), 3);
+  });
+
+  it("keeps every point at the orbit radius from the origin", () => {
+    const radius = 7_000_000;
+    const point = orbitPoint(1.1, radius, CesiumMath.toRadians(53), CesiumMath.toRadians(120));
+    const magnitude = Math.hypot(point.x, point.y, point.z);
+    expect(magnitude).toBeCloseTo(radius, 3);
   });
 });
