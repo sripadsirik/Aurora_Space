@@ -1,6 +1,11 @@
 import { Cartesian3, Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
-import { createOrbitRingPositions, getHelioOrbitAngle, positionOnHelioOrbit } from "../helio";
+import {
+  createOrbitArcPositions,
+  createOrbitRingPositions,
+  getHelioOrbitAngle,
+  positionOnHelioOrbit
+} from "../helio";
 
 describe("getHelioOrbitAngle", () => {
   const J2000 = new Date(Date.UTC(2000, 0, 1, 12, 0, 0));
@@ -83,6 +88,35 @@ describe("createOrbitRingPositions", () => {
     for (const point of createOrbitRingPositions(2000, 16)) {
       expect(Math.hypot(point.x, point.y)).toBeCloseTo(2000, 6);
       expect(point.z).toBe(0);
+    }
+  });
+});
+
+describe("createOrbitArcPositions", () => {
+  it("returns segments + 1 points", () => {
+    expect(createOrbitArcPositions(1000, 0, 0.3, 24)).toHaveLength(25);
+  });
+
+  it("starts at centralAngle - halfAngle and ends at centralAngle + halfAngle", () => {
+    const radius = 1000;
+    const centralAngle = 1;
+    const halfAngle = 0.4;
+    const positions = createOrbitArcPositions(radius, centralAngle, halfAngle, 10);
+
+    const start = positionOnHelioOrbit(radius, centralAngle - halfAngle);
+    const end = positionOnHelioOrbit(radius, centralAngle + halfAngle);
+    const first = positions[0];
+    const last = positions[positions.length - 1];
+
+    expect(first.x).toBeCloseTo(start.x, 6);
+    expect(first.y).toBeCloseTo(start.y, 6);
+    expect(last.x).toBeCloseTo(end.x, 6);
+    expect(last.y).toBeCloseTo(end.y, 6);
+  });
+
+  it("keeps every sampled point on the arc radius", () => {
+    for (const point of createOrbitArcPositions(2500, 2, 0.5, 12)) {
+      expect(Math.hypot(point.x, point.y)).toBeCloseTo(2500, 6);
     }
   });
 });
