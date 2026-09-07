@@ -1,7 +1,13 @@
 import { Cartesian3, Math as CesiumMath, Ellipsoid } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { circularOrbitalVelocityKms, getOrbitalPeriod, orbitPoint, orbitThetaAtElapsed } from "../orbit";
+import {
+  circularOrbitalVelocityKms,
+  getOrbitParams,
+  getOrbitalPeriod,
+  orbitPoint,
+  orbitThetaAtElapsed
+} from "../orbit";
 
 const EARTH_RADIUS_METERS = Ellipsoid.WGS84.maximumRadius;
 
@@ -121,5 +127,37 @@ describe("orbitPoint", () => {
     const point = orbitPoint(1.1, radius, CesiumMath.toRadians(53), CesiumMath.toRadians(120));
     const magnitude = Math.hypot(point.x, point.y, point.z);
     expect(magnitude).toBeCloseTo(radius, 3);
+  });
+});
+
+describe("getOrbitParams", () => {
+  it("derives the radius from Earth's radius plus the satellite altitude", () => {
+    const { radius } = getOrbitParams(makeSatellite({ altitudeKm: 550 }));
+    expect(radius).toBeCloseTo(EARTH_RADIUS_METERS + 550_000, 3);
+  });
+
+  it("is deterministic for a given satellite", () => {
+    const satellite = makeSatellite({ noradId: 12345, altitudeKm: 780 });
+    expect(getOrbitParams(satellite)).toEqual(getOrbitParams(satellite));
+  });
+
+  it("keeps LEO inclinations within the 40-97 degree band", () => {
+    for (let noradId = 0; noradId < 58; noradId += 1) {
+      const { inclination } = getOrbitParams(makeSatellite({ noradId, orbitType: "LEO" }));
+      const degrees = CesiumMath.toDegrees(inclination);
+      expect(degrees).toBeGreaterThanOrEqual(40);
+      expect(degrees).toBeLessThanOrEqual(97);
+    }
+  });
+
+  it("gives GEO satellites a near-equatorial inclination", () => {
+    const { inclination } = getOrbitParams(makeSatellite({ orbitType: "GEO", noradId: 5 }));
+    expect(CesiumMath.toDegrees(inclination)).toBeLessThanOrEqual(8);
+  });
+
+  it("keeps the ascending node within a full revolution", () => {
+    const { ascendingNode } = getOrbitParams(makeSatellite({ noradId: 999 }));
+    expect(ascendingNode).toBeGreaterThanOrEqual(0);
+    expect(ascendingNode).toBeLessThan(CesiumMath.TWO_PI);
   });
 });
