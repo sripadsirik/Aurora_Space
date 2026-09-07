@@ -7,6 +7,7 @@ import {
   getOrbitParams,
   getOrbitalPeriod,
   getSatellitePositionOnOrbit,
+  kpToAuroraRadiusDegrees,
   orbitPoint,
   orbitThetaAtElapsed
 } from "../orbit";
@@ -198,5 +199,29 @@ describe("getSatellitePositionOnOrbit", () => {
 
   it("returns a Cartesian3 instance", () => {
     expect(getSatellitePositionOnOrbit(makeSatellite())).toBeInstanceOf(Cartesian3);
+  });
+});
+
+describe("kpToAuroraRadiusDegrees", () => {
+  it("maps the Kp 4 floor to a 20 degree radius", () => {
+    expect(kpToAuroraRadiusDegrees(4)).toBeCloseTo(20, 6);
+  });
+
+  it("maps the Kp 9 ceiling to a 40 degree radius", () => {
+    expect(kpToAuroraRadiusDegrees(9)).toBeCloseTo(40, 6);
+  });
+
+  it("clamps Kp values below 4 to the 20 degree floor", () => {
+    expect(kpToAuroraRadiusDegrees(0)).toBeCloseTo(20, 6);
+    expect(kpToAuroraRadiusDegrees(-3)).toBeCloseTo(20, 6);
+  });
+
+  it("clamps Kp values above 9 to the 40 degree ceiling", () => {
+    expect(kpToAuroraRadiusDegrees(12)).toBeCloseTo(40, 6);
+  });
+
+  it("interpolates linearly between the endpoints", () => {
+    // Kp 6.5 is the midpoint of the 4-9 range, so the radius is the 20-40 mid.
+    expect(kpToAuroraRadiusDegrees(6.5)).toBeCloseTo(30, 6);
   });
 });
