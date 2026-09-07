@@ -1,6 +1,6 @@
 import { Cartesian3, Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
-import { getHelioOrbitAngle } from "../helio";
+import { getHelioOrbitAngle, positionOnHelioOrbit } from "../helio";
 
 describe("getHelioOrbitAngle", () => {
   const J2000 = new Date(Date.UTC(2000, 0, 1, 12, 0, 0));
@@ -28,5 +28,36 @@ describe("getHelioOrbitAngle", () => {
 
   it("defaults the phase to a quarter turn behind", () => {
     expect(getHelioOrbitAngle(J2000, 365.25)).toBeCloseTo(-CesiumMath.PI_OVER_TWO, 10);
+  });
+});
+
+describe("positionOnHelioOrbit", () => {
+  it("places angle 0 on the +x axis at the given radius", () => {
+    const point = positionOnHelioOrbit(1000, 0);
+    expect(point.x).toBeCloseTo(1000, 6);
+    expect(point.y).toBeCloseTo(0, 6);
+    expect(point.z).toBe(0);
+  });
+
+  it("places a quarter turn on the +y axis", () => {
+    const point = positionOnHelioOrbit(1000, Math.PI / 2);
+    expect(point.x).toBeCloseTo(0, 6);
+    expect(point.y).toBeCloseTo(1000, 6);
+  });
+
+  it("keeps the orbit flat in the z = 0 plane", () => {
+    expect(positionOnHelioOrbit(500, 1.3).z).toBe(0);
+  });
+
+  it("stays at the orbit radius from the Sun", () => {
+    const point = positionOnHelioOrbit(2500, 2.1);
+    expect(Math.hypot(point.x, point.y)).toBeCloseTo(2500, 6);
+  });
+
+  it("reuses the provided result Cartesian to avoid allocation", () => {
+    const result = new Cartesian3();
+    const returned = positionOnHelioOrbit(700, 0, result);
+    expect(returned).toBe(result);
+    expect(result.x).toBeCloseTo(700, 6);
   });
 });
