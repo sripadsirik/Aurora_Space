@@ -2,8 +2,10 @@ import { Cartesian3, Math as CesiumMath, Ellipsoid } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import {
+  auroraRadiusMeters,
   circularOrbitalVelocityKms,
   createOrbitPositions,
+  earthRadiusMeters,
   getOrbitParams,
   getOrbitalPeriod,
   getSatellitePositionOnOrbit,
@@ -249,5 +251,27 @@ describe("kpToAuroraBoundaryLatitude", () => {
 
   it("never exceeds the pole for negative inputs", () => {
     expect(kpToAuroraBoundaryLatitude(-5)).toBe(90);
+  });
+});
+
+describe("auroraRadiusMeters", () => {
+  it("converts the Kp 4 oval radius into metres along the surface", () => {
+    const expected = EARTH_RADIUS_METERS * CesiumMath.toRadians(20);
+    expect(auroraRadiusMeters(4)).toBeCloseTo(expected, 3);
+  });
+
+  it("scales linearly with the multiplier", () => {
+    const base = auroraRadiusMeters(6);
+    expect(auroraRadiusMeters(6, 2)).toBeCloseTo(base * 2, 3);
+  });
+
+  it("grows with a stronger storm", () => {
+    expect(auroraRadiusMeters(9)).toBeGreaterThan(auroraRadiusMeters(4));
+  });
+});
+
+describe("earthRadiusMeters", () => {
+  it("exposes the WGS84 maximum radius", () => {
+    expect(earthRadiusMeters).toBe(EARTH_RADIUS_METERS);
   });
 });
