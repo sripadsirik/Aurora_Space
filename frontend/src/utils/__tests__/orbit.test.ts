@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
 import {
   circularOrbitalVelocityKms,
+  createOrbitPositions,
   getOrbitParams,
   getOrbitalPeriod,
+  getSatellitePositionOnOrbit,
   orbitPoint,
   orbitThetaAtElapsed
 } from "../orbit";
@@ -159,5 +161,42 @@ describe("getOrbitParams", () => {
     const { ascendingNode } = getOrbitParams(makeSatellite({ noradId: 999 }));
     expect(ascendingNode).toBeGreaterThanOrEqual(0);
     expect(ascendingNode).toBeLessThan(CesiumMath.TWO_PI);
+  });
+});
+
+describe("createOrbitPositions", () => {
+  it("returns segments + 1 points so the ring closes", () => {
+    const positions = createOrbitPositions(makeSatellite(), 90);
+    expect(positions).toHaveLength(91);
+  });
+
+  it("closes the loop by ending where it started", () => {
+    const positions = createOrbitPositions(makeSatellite(), 120);
+    const first = positions[0];
+    const last = positions[positions.length - 1];
+    expect(last.x).toBeCloseTo(first.x, 3);
+    expect(last.y).toBeCloseTo(first.y, 3);
+    expect(last.z).toBeCloseTo(first.z, 3);
+  });
+
+  it("keeps every sampled point at the orbit radius", () => {
+    const satellite = makeSatellite({ altitudeKm: 1200 });
+    const { radius } = getOrbitParams(satellite);
+    for (const point of createOrbitPositions(satellite, 36)) {
+      expect(Math.hypot(point.x, point.y, point.z)).toBeCloseTo(radius, 2);
+    }
+  });
+});
+
+describe("getSatellitePositionOnOrbit", () => {
+  it("returns a point on the satellite's orbit radius", () => {
+    const satellite = makeSatellite({ lon: 42, altitudeKm: 600 });
+    const { radius } = getOrbitParams(satellite);
+    const position = getSatellitePositionOnOrbit(satellite);
+    expect(Math.hypot(position.x, position.y, position.z)).toBeCloseTo(radius, 2);
+  });
+
+  it("returns a Cartesian3 instance", () => {
+    expect(getSatellitePositionOnOrbit(makeSatellite())).toBeInstanceOf(Cartesian3);
   });
 });
