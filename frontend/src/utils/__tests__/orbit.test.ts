@@ -1,7 +1,7 @@
 import { Cartesian3, Math as CesiumMath, Ellipsoid } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { circularOrbitalVelocityKms, getOrbitalPeriod } from "../orbit";
+import { circularOrbitalVelocityKms, getOrbitalPeriod, orbitThetaAtElapsed } from "../orbit";
 
 const EARTH_RADIUS_METERS = Ellipsoid.WGS84.maximumRadius;
 
@@ -70,5 +70,28 @@ describe("circularOrbitalVelocityKms", () => {
     const quadrupled = circularOrbitalVelocityKms(40_000_000);
     // Quadrupling the radius halves the orbital speed.
     expect(quadrupled / base).toBeCloseTo(0.5, 5);
+  });
+});
+
+describe("orbitThetaAtElapsed", () => {
+  it("returns the initial angle when no time has elapsed past the epoch", () => {
+    expect(orbitThetaAtElapsed(1.2, 5400, 100, 100)).toBe(1.2);
+  });
+
+  it("advances a full turn after exactly one period", () => {
+    const initial = 0.5;
+    const period = 5400;
+    const theta = orbitThetaAtElapsed(initial, period, 0, period);
+    expect(theta).toBeCloseTo(initial + CesiumMath.TWO_PI, 10);
+  });
+
+  it("advances half a turn after half a period", () => {
+    const theta = orbitThetaAtElapsed(0, 5400, 0, 2700);
+    expect(theta).toBeCloseTo(Math.PI, 10);
+  });
+
+  it("winds backwards for time before the epoch", () => {
+    const theta = orbitThetaAtElapsed(0, 5400, 5400, 0);
+    expect(theta).toBeCloseTo(-CesiumMath.TWO_PI, 10);
   });
 });
