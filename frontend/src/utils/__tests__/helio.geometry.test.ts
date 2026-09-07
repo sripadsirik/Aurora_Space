@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createOrbitArcPositions,
   createOrbitRingPositions,
+  createSectorHierarchy,
   getHelioOrbitAngle,
   positionOnHelioOrbit
 } from "../helio";
@@ -118,5 +119,29 @@ describe("createOrbitArcPositions", () => {
     for (const point of createOrbitArcPositions(2500, 2, 0.5, 12)) {
       expect(Math.hypot(point.x, point.y)).toBeCloseTo(2500, 6);
     }
+  });
+});
+
+describe("createSectorHierarchy", () => {
+  it("anchors the pie slice at the Sun's centre", () => {
+    const { positions } = createSectorHierarchy(1000, 0, 0.3, 16);
+    expect(positions[0]).toEqual(new Cartesian3(0, 0, 0));
+  });
+
+  it("has the apex plus segments + 1 arc points", () => {
+    const { positions } = createSectorHierarchy(1000, 0, 0.3, 16);
+    expect(positions).toHaveLength(1 + 17);
+  });
+
+  it("keeps the arc points on the sector radius", () => {
+    const { positions } = createSectorHierarchy(1800, 1, 0.4, 8);
+    for (const point of positions.slice(1)) {
+      expect(Math.hypot(point.x, point.y)).toBeCloseTo(1800, 6);
+    }
+  });
+
+  it("has no inner holes", () => {
+    const hierarchy = createSectorHierarchy(1000, 0, 0.3);
+    expect(hierarchy.holes).toEqual([]);
   });
 });
