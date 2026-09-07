@@ -7,6 +7,7 @@ import {
   getOrbitParams,
   getOrbitalPeriod,
   getSatellitePositionOnOrbit,
+  kpToAuroraBoundaryLatitude,
   kpToAuroraRadiusDegrees,
   orbitPoint,
   orbitThetaAtElapsed
@@ -223,5 +224,30 @@ describe("kpToAuroraRadiusDegrees", () => {
   it("interpolates linearly between the endpoints", () => {
     // Kp 6.5 is the midpoint of the 4-9 range, so the radius is the 20-40 mid.
     expect(kpToAuroraRadiusDegrees(6.5)).toBeCloseTo(30, 6);
+  });
+});
+
+describe("kpToAuroraBoundaryLatitude", () => {
+  it("keeps the boundary at the pole for a quiet Kp 0", () => {
+    expect(kpToAuroraBoundaryLatitude(0)).toBeCloseTo(90, 6);
+  });
+
+  it("drops the boundary ~5.5 degrees per whole Kp step", () => {
+    expect(kpToAuroraBoundaryLatitude(4)).toBeCloseTo(68, 6);
+  });
+
+  it("pushes the aurora to mid-latitudes for a strong storm", () => {
+    const latitude = kpToAuroraBoundaryLatitude(8);
+    expect(latitude).toBeGreaterThanOrEqual(35);
+    expect(latitude).toBeLessThan(50);
+  });
+
+  it("never falls below the 35 degree floor", () => {
+    expect(kpToAuroraBoundaryLatitude(9)).toBeGreaterThanOrEqual(35);
+    expect(kpToAuroraBoundaryLatitude(20)).toBe(35);
+  });
+
+  it("never exceeds the pole for negative inputs", () => {
+    expect(kpToAuroraBoundaryLatitude(-5)).toBe(90);
   });
 });
