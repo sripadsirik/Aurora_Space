@@ -1,7 +1,7 @@
 import { Cartesian3, Math as CesiumMath, Ellipsoid } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { Satellite } from "../../types/space";
-import { getOrbitalPeriod } from "../orbit";
+import { circularOrbitalVelocityKms, getOrbitalPeriod } from "../orbit";
 
 const EARTH_RADIUS_METERS = Ellipsoid.WGS84.maximumRadius;
 
@@ -43,5 +43,32 @@ describe("getOrbitalPeriod", () => {
     const quadrupled = getOrbitalPeriod(40_000_000);
     // Quadrupling the radius multiplies the period by 4^1.5 = 8.
     expect(quadrupled / base).toBeCloseTo(8, 5);
+  });
+});
+
+describe("circularOrbitalVelocityKms", () => {
+  it("returns the ~7.7 km/s speed of a low Earth orbit", () => {
+    const velocity = circularOrbitalVelocityKms(EARTH_RADIUS_METERS + 420_000);
+    expect(velocity).toBeGreaterThan(7.5);
+    expect(velocity).toBeLessThan(7.9);
+  });
+
+  it("returns the ~3.07 km/s speed of a geostationary orbit", () => {
+    const velocity = circularOrbitalVelocityKms(42_164_000);
+    expect(velocity).toBeGreaterThan(3.0);
+    expect(velocity).toBeLessThan(3.15);
+  });
+
+  it("decreases as the orbit radius grows", () => {
+    const low = circularOrbitalVelocityKms(EARTH_RADIUS_METERS + 500_000);
+    const high = circularOrbitalVelocityKms(EARTH_RADIUS_METERS + 20_000_000);
+    expect(high).toBeLessThan(low);
+  });
+
+  it("scales as the inverse square root of radius", () => {
+    const base = circularOrbitalVelocityKms(10_000_000);
+    const quadrupled = circularOrbitalVelocityKms(40_000_000);
+    // Quadrupling the radius halves the orbital speed.
+    expect(quadrupled / base).toBeCloseTo(0.5, 5);
   });
 });
