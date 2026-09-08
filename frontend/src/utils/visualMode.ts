@@ -19,3 +19,12 @@ export const isStormLevelKp = (kpIndex: number): boolean => kpIndex > STORM_KP_T
  */
 export const isStormModeActive = (mode: VisualMode, kpIndex: number): boolean =>
   mode === "STORM" || isStormLevelKp(kpIndex);
+
+/**
+ * Whether the HUD should automatically switch the operator into STORM mode: the
+ * effective Kp index is storm-level ({@link isStormLevelKp}) and the operator is
+ * not already in STORM mode. Guarding on the current mode keeps the auto-trigger
+ * from re-firing (and re-showing its banner) once STORM mode is active.
+ */
+export const shouldAutoActivateStorm = (mode: VisualMode, kpIndex: number): boolean =>
+  mode !== "STORM" && isStormLevelKp(kpIndex);
