@@ -18,4 +18,4 @@ export const isStormLevelKp = (kpIndex: number): boolean => kpIndex > STORM_KP_T
  * of the current mode.
  */
 export const isStormModeActive = (mode: VisualMode, kpIndex: number): boolean =>
-  mode === "STORM" || kpIndex > STORM_KP_THRESHOLD;
+  mode === "STORM" || isStormLevelKp(kpIndex);
