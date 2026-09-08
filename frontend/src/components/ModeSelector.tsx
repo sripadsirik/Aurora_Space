@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuroraStore } from "../store/auroraStore";
 import type { VisualMode } from "../types/space";
+import { modeForShortcutKey } from "../utils/modeShortcuts";
 
 const MODES: { key: VisualMode; label: string; subtitle: string; shortcut: string }[] = [
   { key: "OPS", label: "OPS", subtitle: "Operator Dashboard", shortcut: "1" },
@@ -35,9 +36,9 @@ export const ModeSelector = (): JSX.Element => {
         closeAllPanels();
         return;
       }
-      const index = parseInt(e.key, 10);
-      if (index >= 1 && index <= 4) {
-        handleSetMode(MODES[index - 1].key);
+      const shortcutMode = modeForShortcutKey(e.key);
+      if (shortcutMode) {
+        handleSetMode(shortcutMode);
       }
     };
     window.addEventListener("keydown", onKeyDown);
