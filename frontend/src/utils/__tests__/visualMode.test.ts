@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { STORM_KP_THRESHOLD, isStormModeActive } from "../visualMode";
+import { STORM_KP_THRESHOLD, isStormLevelKp, isStormModeActive } from "../visualMode";
+
+describe("isStormLevelKp", () => {
+  it("is true once Kp climbs strictly past the threshold", () => {
+    expect(isStormLevelKp(STORM_KP_THRESHOLD + 0.01)).toBe(true);
+    expect(isStormLevelKp(9)).toBe(true);
+  });
+
+  it("is false at or below the threshold", () => {
+    expect(isStormLevelKp(STORM_KP_THRESHOLD)).toBe(false);
+    expect(isStormLevelKp(0)).toBe(false);
+  });
+
+  it("treats the threshold as exclusive", () => {
+    expect(isStormLevelKp(STORM_KP_THRESHOLD)).toBe(false);
+    expect(isStormLevelKp(STORM_KP_THRESHOLD + 0.001)).toBe(true);
+  });
+});
 
 describe("isStormModeActive", () => {
   it("is active whenever STORM mode is explicitly selected", () => {
