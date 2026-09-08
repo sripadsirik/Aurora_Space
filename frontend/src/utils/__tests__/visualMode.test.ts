@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { STORM_KP_THRESHOLD, isStormLevelKp, isStormModeActive } from "../visualMode";
+import {
+  STORM_KP_THRESHOLD,
+  isStormLevelKp,
+  isStormModeActive,
+  shouldAutoActivateStorm
+} from "../visualMode";
 
 describe("isStormLevelKp", () => {
   it("is true once Kp climbs strictly past the threshold", () => {
@@ -38,5 +43,21 @@ describe("isStormModeActive", () => {
   it("treats the threshold as exclusive", () => {
     expect(isStormModeActive("OPS", STORM_KP_THRESHOLD)).toBe(false);
     expect(isStormModeActive("OPS", STORM_KP_THRESHOLD + 0.01)).toBe(true);
+  });
+});
+
+describe("shouldAutoActivateStorm", () => {
+  it("triggers from a non-storm mode once Kp is storm-level", () => {
+    expect(shouldAutoActivateStorm("OPS", STORM_KP_THRESHOLD + 0.1)).toBe(true);
+    expect(shouldAutoActivateStorm("INTEL", 8)).toBe(true);
+  });
+
+  it("does not trigger when already in STORM mode", () => {
+    expect(shouldAutoActivateStorm("STORM", 9)).toBe(false);
+  });
+
+  it("does not trigger below or at the threshold", () => {
+    expect(shouldAutoActivateStorm("OPS", STORM_KP_THRESHOLD)).toBe(false);
+    expect(shouldAutoActivateStorm("HELIO", 1)).toBe(false);
   });
 });
