@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { moonIlluminationFraction } from "../auroraMoonlight";
+import {
+  MOONLIGHT_INTERFERENCE_THRESHOLDS,
+  classifyMoonlightInterference,
+  moonIlluminationFraction
+} from "../auroraMoonlight";
 
 describe("moonIlluminationFraction", () => {
   it("passes through values already within [0, 1]", () => {
@@ -22,5 +26,42 @@ describe("moonIlluminationFraction", () => {
     expect(moonIlluminationFraction(Number.NaN)).toBe(0);
     expect(moonIlluminationFraction(Number.POSITIVE_INFINITY)).toBe(0);
     expect(moonIlluminationFraction(Number.NEGATIVE_INFINITY)).toBe(0);
+  });
+});
+
+describe("classifyMoonlightInterference", () => {
+  it("keeps a new Moon and thin crescent in the dark tier", () => {
+    expect(classifyMoonlightInterference(0)).toBe("dark");
+    expect(classifyMoonlightInterference(0.05)).toBe("dark");
+  });
+
+  it("classifies a broad crescent through first quarter as dim", () => {
+    expect(classifyMoonlightInterference(0.1)).toBe("dim");
+    expect(classifyMoonlightInterference(0.3)).toBe("dim");
+    expect(classifyMoonlightInterference(0.49)).toBe("dim");
+  });
+
+  it("classifies a gibbous Moon as bright", () => {
+    expect(classifyMoonlightInterference(0.5)).toBe("bright");
+    expect(classifyMoonlightInterference(0.8)).toBe("bright");
+  });
+
+  it("classifies a near-full Moon as washed-out", () => {
+    expect(classifyMoonlightInterference(0.85)).toBe("washed-out");
+    expect(classifyMoonlightInterference(1)).toBe("washed-out");
+  });
+
+  it("is monotonic across each threshold boundary", () => {
+    expect(classifyMoonlightInterference(MOONLIGHT_INTERFERENCE_THRESHOLDS.dim)).toBe("dim");
+    expect(classifyMoonlightInterference(MOONLIGHT_INTERFERENCE_THRESHOLDS.bright)).toBe("bright");
+    expect(classifyMoonlightInterference(MOONLIGHT_INTERFERENCE_THRESHOLDS.washedOut)).toBe(
+      "washed-out"
+    );
+  });
+
+  it("normalises out-of-range readings before classifying", () => {
+    expect(classifyMoonlightInterference(-1)).toBe("dark");
+    expect(classifyMoonlightInterference(2)).toBe("washed-out");
+    expect(classifyMoonlightInterference(Number.NaN)).toBe("dark");
   });
 });
