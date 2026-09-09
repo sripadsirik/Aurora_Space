@@ -87,6 +87,18 @@ export const moonlightSeverity = (illumination: number): number => {
 };
 
 /**
+ * Whether the prevailing moonlight is strong enough to hide a faint aurora — a
+ * horizon glow or the first stirrings of a display. True for a `bright` or
+ * `washed-out` Moon and false for `dark` or `dim` skies. Exposed as a predicate
+ * so callers can gate their own faint-aurora warnings without re-deriving the
+ * tier, and reused by {@link adjustAuroraChanceForMoonlight}.
+ */
+export const drownsOutFaintAurora = (illumination: number): boolean => {
+  const interference = classifyMoonlightInterference(illumination);
+  return interference === "bright" || interference === "washed-out";
+};
+
+/**
  * Adjusts an aurora {@link AuroraChance} downward for the prevailing moonlight.
  * Aurora that reaches `overhead` is a bright, structured display that survives
  * even a full Moon, so it is never demoted. A faint `horizon` glow, by contrast,
