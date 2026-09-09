@@ -5,7 +5,8 @@ import {
   adjustAuroraChanceForMoonlight,
   classifyMoonlightInterference,
   moonIlluminationFraction,
-  moonlightSeverity
+  moonlightSeverity,
+  summarizeMoonlight
 } from "../auroraMoonlight";
 
 describe("moonIlluminationFraction", () => {
@@ -127,5 +128,28 @@ describe("adjustAuroraChanceForMoonlight", () => {
   it("leaves a none chance unchanged", () => {
     expect(adjustAuroraChanceForMoonlight("none", 0)).toBe("none");
     expect(adjustAuroraChanceForMoonlight("none", 1)).toBe("none");
+  });
+});
+
+describe("summarizeMoonlight", () => {
+  it("bundles fields consistent with the individual helpers", () => {
+    const summary = summarizeMoonlight(0.6);
+    expect(summary.fraction).toBe(moonIlluminationFraction(0.6));
+    expect(summary.interference).toBe(classifyMoonlightInterference(0.6));
+    expect(summary.interferenceLabel).toBe(MOONLIGHT_INTERFERENCE_LABELS[summary.interference]);
+    expect(summary.severity).toBe(moonlightSeverity(0.6));
+  });
+
+  it("summarises a new Moon as dark with zero severity", () => {
+    const summary = summarizeMoonlight(0);
+    expect(summary.interference).toBe("dark");
+    expect(summary.severity).toBe(0);
+  });
+
+  it("normalises out-of-range readings", () => {
+    const summary = summarizeMoonlight(2);
+    expect(summary.fraction).toBe(1);
+    expect(summary.interference).toBe("washed-out");
+    expect(summary.severity).toBe(1);
   });
 });
