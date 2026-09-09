@@ -61,3 +61,15 @@ export const classifyMoonlightInterference = (illumination: number): MoonlightIn
   if (fraction >= MOONLIGHT_INTERFERENCE_THRESHOLDS.dim) return "dim";
   return "dark";
 };
+
+/**
+ * Short human-readable label for each {@link MoonlightInterference} tier, for
+ * legends, badges, and panel copy. Centralised so every display names the tiers
+ * identically.
+ */
+export const MOONLIGHT_INTERFERENCE_LABELS: Record<MoonlightInterference, string> = {
+  dark: "Dark skies",
+  dim: "Slight moonlight",
+  bright: "Bright Moon",
+  "washed-out": "Washed out by Moon"
+};
