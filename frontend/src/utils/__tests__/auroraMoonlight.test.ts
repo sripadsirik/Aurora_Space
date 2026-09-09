@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MOONLIGHT_INTERFERENCE_LABELS,
   MOONLIGHT_INTERFERENCE_THRESHOLDS,
+  adjustAuroraChanceForMoonlight,
   classifyMoonlightInterference,
   moonIlluminationFraction,
   moonlightSeverity
@@ -104,5 +105,27 @@ describe("moonlightSeverity", () => {
     expect(moonlightSeverity(-5)).toBe(0);
     expect(moonlightSeverity(5)).toBe(1);
     expect(moonlightSeverity(Number.NaN)).toBe(0);
+  });
+});
+
+describe("adjustAuroraChanceForMoonlight", () => {
+  it("never demotes an overhead aurora, whatever the Moon", () => {
+    expect(adjustAuroraChanceForMoonlight("overhead", 0)).toBe("overhead");
+    expect(adjustAuroraChanceForMoonlight("overhead", 1)).toBe("overhead");
+  });
+
+  it("keeps a horizon glow under dark and dim skies", () => {
+    expect(adjustAuroraChanceForMoonlight("horizon", 0)).toBe("horizon");
+    expect(adjustAuroraChanceForMoonlight("horizon", 0.3)).toBe("horizon");
+  });
+
+  it("drowns out a horizon glow under a bright or full Moon", () => {
+    expect(adjustAuroraChanceForMoonlight("horizon", 0.6)).toBe("none");
+    expect(adjustAuroraChanceForMoonlight("horizon", 1)).toBe("none");
+  });
+
+  it("leaves a none chance unchanged", () => {
+    expect(adjustAuroraChanceForMoonlight("none", 0)).toBe("none");
+    expect(adjustAuroraChanceForMoonlight("none", 1)).toBe("none");
   });
 });
