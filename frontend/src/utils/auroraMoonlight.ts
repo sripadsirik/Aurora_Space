@@ -112,9 +112,7 @@ export const adjustAuroraChanceForMoonlight = (
   illumination: number
 ): AuroraChance => {
   if (chance !== "horizon") return chance;
-  const interference = classifyMoonlightInterference(illumination);
-  const drownsOutHorizonGlow = interference === "bright" || interference === "washed-out";
-  return drownsOutHorizonGlow ? "none" : "horizon";
+  return drownsOutFaintAurora(illumination) ? "none" : "horizon";
 };
 
 /** Moonlight outlook for one illuminated fraction, ready to drive a panel. */
