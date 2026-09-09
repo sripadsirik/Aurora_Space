@@ -451,6 +451,26 @@ still be glimpsed low on the poleward horizon. Observer latitude is compared by 
 the helpers work for either hemisphere, and non-finite inputs fall back to a safe result
 (`none`/`null`) rather than throwing.
 
+### Moonlight Interference
+
+Being *above the horizon* is not the same as being *visible*: a bright Moon floods the sky
+with scattered light that washes out faint aurora. The pure helpers in
+`frontend/src/utils/auroraMoonlight.ts` turn the Moon's illuminated fraction (`0` at new Moon,
+`1` at full) into a viewing outlook and fold it back into the aurora chance:
+
+| Helper | Returns |
+| --- | --- |
+| `moonIlluminationFraction` | The reading normalised to `[0, 1]` (non-finite → new Moon) |
+| `classifyMoonlightInterference` | The `dark`/`dim`/`bright`/`washed-out` interference tier |
+| `moonlightSeverity` | A perceptual sky-glow weight (illuminated fraction squared) |
+| `adjustAuroraChanceForMoonlight` | Demotes a faint `horizon` glow to `none` under a bright Moon |
+| `summarizeMoonlight` | All of the above bundled into one `MoonlightSummary` |
+
+`MOONLIGHT_INTERFERENCE_THRESHOLDS` holds the illuminated-fraction cut points between tiers and
+`MOONLIGHT_INTERFERENCE_LABELS` supplies panel copy. The adjustment keeps the physical
+asymmetry that vivid `overhead` aurora survive any Moon while a subtle horizon glow does not, so
+the HUD can warn "great storm, but the Moon will drown it out" from a single tested source.
+
 ## Repo Layout
 
 ```text
