@@ -85,3 +85,22 @@ export const moonlightSeverity = (illumination: number): number => {
   const fraction = moonIlluminationFraction(illumination);
   return fraction * fraction;
 };
+
+/**
+ * Adjusts an aurora {@link AuroraChance} downward for the prevailing moonlight.
+ * Aurora that reaches `overhead` is a bright, structured display that survives
+ * even a full Moon, so it is never demoted. A faint `horizon` glow, by contrast,
+ * is the first thing to vanish under sky-glow: a `bright` or `washed-out` Moon
+ * drops it to `none`, while `dark` and `dim` skies leave it intact. A `none`
+ * chance has nothing to lose and is returned unchanged. This keeps the physical
+ * asymmetry — the Moon hides subtle aurora but not vivid ones — in one place.
+ */
+export const adjustAuroraChanceForMoonlight = (
+  chance: AuroraChance,
+  illumination: number
+): AuroraChance => {
+  if (chance !== "horizon") return chance;
+  const interference = classifyMoonlightInterference(illumination);
+  const drownsOutHorizonGlow = interference === "bright" || interference === "washed-out";
+  return drownsOutHorizonGlow ? "none" : "horizon";
+};
