@@ -104,3 +104,30 @@ export const adjustAuroraChanceForMoonlight = (
   const drownsOutHorizonGlow = interference === "bright" || interference === "washed-out";
   return drownsOutHorizonGlow ? "none" : "horizon";
 };
+
+/** Moonlight outlook for one illuminated fraction, ready to drive a panel. */
+export interface MoonlightSummary {
+  /** Normalised illuminated fraction, `0`–`1`. */
+  fraction: number;
+  /** The moonlight interference tier for this fraction. */
+  interference: MoonlightInterference;
+  /** Human-readable label for {@link interference}. */
+  interferenceLabel: string;
+  /** Perceptual sky-glow weight, `0`–`1`. */
+  severity: number;
+}
+
+/**
+ * Bundles the moonlight figures for one illuminated fraction into a single
+ * struct, so a display can derive every value from one reading. All members
+ * reuse the individual helpers in this module, keeping them mutually consistent.
+ */
+export const summarizeMoonlight = (illumination: number): MoonlightSummary => {
+  const interference = classifyMoonlightInterference(illumination);
+  return {
+    fraction: moonIlluminationFraction(illumination),
+    interference,
+    interferenceLabel: MOONLIGHT_INTERFERENCE_LABELS[interference],
+    severity: moonlightSeverity(illumination)
+  };
+};
