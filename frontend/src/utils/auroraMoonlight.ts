@@ -73,3 +73,15 @@ export const MOONLIGHT_INTERFERENCE_LABELS: Record<MoonlightInterference, string
   bright: "Bright Moon",
   "washed-out": "Washed out by Moon"
 };
+
+/**
+ * Scattered moonlight scales with the lit area of the Moon's disc rather than
+ * its diameter, so a half-lit Moon adds far less sky-glow than half of a full
+ * Moon's. Squaring the illuminated fraction gives a simple perceptual weight
+ * that keeps crescents dark and bunches the intrusive glow toward the full-Moon
+ * end, matching how the tiers in {@link classifyMoonlightInterference} feel.
+ */
+export const moonlightSeverity = (illumination: number): number => {
+  const fraction = moonIlluminationFraction(illumination);
+  return fraction * fraction;
+};
