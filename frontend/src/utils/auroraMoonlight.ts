@@ -25,3 +25,25 @@ export const moonIlluminationFraction = (illumination: number): number => {
   if (!Number.isFinite(illumination)) return 0;
   return clamp01(illumination);
 };
+
+/**
+ * How much the Moon degrades aurora viewing, ordered from best to worst: `dark`
+ * (little to no sky-glow, faint aurora survive), `dim` (a crescent adds a slight
+ * wash), `bright` (a broad gibbous Moon noticeably drowns faint structure), and
+ * `washed-out` (a near-full Moon leaves only the brightest aurora visible).
+ */
+export type MoonlightInterference = "dark" | "dim" | "bright" | "washed-out";
+
+/**
+ * Illuminated-fraction thresholds separating the {@link MoonlightInterference}
+ * tiers. A reading at or above `dim` leaves the `dark` tier, at or above
+ * `bright` the `dim` tier, and at or above `washedOut` the `bright` tier. The
+ * cut points follow the familiar phase names — a thin crescent through first
+ * quarter stays fairly dark, a waxing gibbous grows intrusive, and the days
+ * around full Moon are hopeless for faint aurora.
+ */
+export const MOONLIGHT_INTERFERENCE_THRESHOLDS = {
+  dim: 0.1,
+  bright: 0.5,
+  washedOut: 0.85
+} as const;
