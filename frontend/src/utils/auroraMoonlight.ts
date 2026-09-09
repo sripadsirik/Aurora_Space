@@ -47,3 +47,17 @@ export const MOONLIGHT_INTERFERENCE_THRESHOLDS = {
   bright: 0.5,
   washedOut: 0.85
 } as const;
+
+/**
+ * Classifies the moonlight interference for a raw illuminated fraction using
+ * {@link MOONLIGHT_INTERFERENCE_THRESHOLDS}. The reading is first normalised via
+ * {@link moonIlluminationFraction}, so out-of-range or non-finite inputs fall in
+ * the `dark` tier rather than throwing. A brighter Moon yields a worse tier.
+ */
+export const classifyMoonlightInterference = (illumination: number): MoonlightInterference => {
+  const fraction = moonIlluminationFraction(illumination);
+  if (fraction >= MOONLIGHT_INTERFERENCE_THRESHOLDS.washedOut) return "washed-out";
+  if (fraction >= MOONLIGHT_INTERFERENCE_THRESHOLDS.bright) return "bright";
+  if (fraction >= MOONLIGHT_INTERFERENCE_THRESHOLDS.dim) return "dim";
+  return "dark";
+};
