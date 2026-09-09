@@ -3,6 +3,7 @@ import {
   MOONLIGHT_INTERFERENCE_LABELS,
   MOONLIGHT_INTERFERENCE_THRESHOLDS,
   adjustAuroraChanceForMoonlight,
+  drownsOutFaintAurora,
   classifyMoonlightInterference,
   moonIlluminationFraction,
   moonlightSeverity,
@@ -151,5 +152,24 @@ describe("summarizeMoonlight", () => {
     expect(summary.fraction).toBe(1);
     expect(summary.interference).toBe("washed-out");
     expect(summary.severity).toBe(1);
+  });
+});
+
+describe("drownsOutFaintAurora", () => {
+  it("is false under dark and dim skies", () => {
+    expect(drownsOutFaintAurora(0)).toBe(false);
+    expect(drownsOutFaintAurora(0.3)).toBe(false);
+  });
+
+  it("is true under a bright or washed-out Moon", () => {
+    expect(drownsOutFaintAurora(0.6)).toBe(true);
+    expect(drownsOutFaintAurora(1)).toBe(true);
+  });
+
+  it("agrees with the horizon-glow demotion in adjustAuroraChanceForMoonlight", () => {
+    for (let fraction = 0; fraction <= 1; fraction += 0.05) {
+      const demoted = adjustAuroraChanceForMoonlight("horizon", fraction) === "none";
+      expect(demoted).toBe(drownsOutFaintAurora(fraction));
+    }
   });
 });
