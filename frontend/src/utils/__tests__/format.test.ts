@@ -298,6 +298,11 @@ describe("formatEclipseFraction", () => {
     expect(formatEclipseFraction(0)).toBe("0%");
     expect(formatEclipseFraction(1)).toBe("100%");
   });
+
+  it("renders an em dash for non-finite input", () => {
+    expect(formatEclipseFraction(Number.NaN)).toBe("—");
+    expect(formatEclipseFraction(Number.POSITIVE_INFINITY)).toBe("—");
+  });
 });
 
 describe("formatDurationToTca", () => {
