@@ -164,9 +164,11 @@ export const formatPassDuration = (seconds: number): string => {
 /**
  * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
  * whole-percent string like `37%`. Values are clamped to the 0-1 range before
- * rounding, so out-of-range inputs read as `0%` or `100%`.
+ * rounding, so out-of-range inputs read as `0%` or `100%`. A non-finite input
+ * renders as an em dash so a bad value never shows as `NaN%`.
  */
 export const formatEclipseFraction = (fraction: number): string => {
+  if (!Number.isFinite(fraction)) return "—";
   const clamped = Math.min(1, Math.max(0, fraction));
   return `${Math.round(clamped * 100)}%`;
 };
