@@ -1,4 +1,5 @@
 import { clamp01 } from "./clamp";
+import { zeroPad } from "./format";
 
 /**
  * Maps a date onto its `0-1` position within the `[start, end]` window. Dates
@@ -55,7 +56,7 @@ export const isAtLiveEdge = (position: Date, now: Date, toleranceMs = 60_000): b
 /** Formats a date as a zero-padded UTC `YYYY-MM-DD` calendar day. */
 export const formatTimelineDate = (date: Date): string => {
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = zeroPad(date.getUTCMonth() + 1);
+  const day = zeroPad(date.getUTCDate());
   return `${year}-${month}-${day}`;
 };

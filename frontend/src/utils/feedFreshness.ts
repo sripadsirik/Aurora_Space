@@ -11,14 +11,16 @@ export interface FeedFreshness {
  * Classifies how fresh a feed is from its last-updated timestamp relative to
  * `now`. Feeds under five minutes old are `live`, five to fifteen minutes are
  * `stale`, and anything older (or missing/invalid) is `error`. The label reads
- * in seconds while under a minute old, otherwise in whole minutes.
+ * in seconds while under a minute old, otherwise in whole minutes. A timestamp
+ * slightly ahead of `now` (clock skew between the feed source and the client)
+ * is floored to a zero age so the label never reads as a negative `-3s ago`.
  */
 export const describeFeedFreshness = (lastUpdated: Date | null, now: Date): FeedFreshness => {
   try {
     if (!lastUpdated) return { label: "NO DATA", status: "error" };
     const updated = lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated as unknown as string);
     if (isNaN(updated.getTime())) return { label: "unknown", status: "error" };
-    const ageMs = now.getTime() - updated.getTime();
+    const ageMs = Math.max(0, now.getTime() - updated.getTime());
     const ageMinutes = ageMs / 60_000;
     if (ageMinutes > 15) return { label: `${Math.round(ageMinutes)}m ago`, status: "error" };
     if (ageMinutes > 5) return { label: `${Math.round(ageMinutes)}m ago`, status: "stale" };

@@ -16,7 +16,8 @@ import {
   formatProtonFlux,
   formatSpecificEnergy,
   formatUtcTime,
-  isCriticalConjunction
+  isCriticalConjunction,
+  zeroPad
 } from "../format";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
@@ -31,6 +32,18 @@ const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): Conjuncti
   relativeVelocityKms: 7,
   riskLevel: "nominal",
   ...overrides
+});
+
+describe("zeroPad", () => {
+  it("pads single-digit numbers to two digits", () => {
+    expect(zeroPad(7)).toBe("07");
+    expect(zeroPad(0)).toBe("00");
+  });
+
+  it("leaves two-or-more-digit numbers unchanged", () => {
+    expect(zeroPad(12)).toBe("12");
+    expect(zeroPad(100)).toBe("100");
+  });
 });
 
 describe("formatUtcTime", () => {
@@ -50,6 +63,12 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
+  });
+
+  it("renders an em dash for non-finite or negative inputs", () => {
+    expect(formatProbability(Number.NaN)).toBe("—");
+    expect(formatProbability(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(formatProbability(-0.001)).toBe("—");
   });
 });
 
@@ -106,6 +125,11 @@ describe("formatManeuverDeltaV", () => {
 
   it("renders a zero probability as zero delta-V", () => {
     expect(formatManeuverDeltaV(0)).toBe("~0.0 m/s");
+  });
+
+  it("renders an em dash for non-finite or negative inputs", () => {
+    expect(formatManeuverDeltaV(Number.NaN)).toBe("—");
+    expect(formatManeuverDeltaV(-0.001)).toBe("—");
   });
 });
 
@@ -274,6 +298,11 @@ describe("formatEclipseFraction", () => {
     expect(formatEclipseFraction(0)).toBe("0%");
     expect(formatEclipseFraction(1)).toBe("100%");
   });
+
+  it("renders an em dash for non-finite input", () => {
+    expect(formatEclipseFraction(Number.NaN)).toBe("—");
+    expect(formatEclipseFraction(Number.POSITIVE_INFINITY)).toBe("—");
+  });
 });
 
 describe("formatDurationToTca", () => {
@@ -301,6 +330,10 @@ describe("formatDurationToTca", () => {
   it("reports a long-passed TCA in days and hours", () => {
     expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
   });
+
+  it("renders an em dash for an unparseable date string", () => {
+    expect(formatDurationToTca("not-a-date")).toBe("—");
+  });
 });
 
 describe("formatCountdownToTca", () => {
@@ -327,5 +360,9 @@ describe("formatCountdownToTca", () => {
 
   it("switches to days and hours once a passed TCA is over a day old", () => {
     expect(formatCountdownToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
+  });
+
+  it("renders an em dash for an unparseable date string", () => {
+    expect(formatCountdownToTca("not-a-date")).toBe("—");
   });
 });
