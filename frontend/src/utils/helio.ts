@@ -1,4 +1,5 @@
 import { Cartesian3, Math as CesiumMath, PolygonHierarchy } from "cesium";
+import { zeroPad } from "./format";
 
 export const HELIO_AU_SCENE_UNITS = 30_000_000;
 export const HELIO_ORBIT_RADII = {
@@ -138,5 +139,5 @@ export const formatHelioArrivalLabel = (elapsedSeconds: number): string => {
   const hours = Math.floor(remainingSeconds / 3600);
   const minutes = Math.floor((remainingSeconds % 3600) / 60);
   const seconds = Math.floor(remainingSeconds % 60);
-  return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+  return `${hours}h ${zeroPad(minutes)}m ${zeroPad(seconds)}s`;
 };
