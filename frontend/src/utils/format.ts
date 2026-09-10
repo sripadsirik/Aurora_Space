@@ -57,8 +57,16 @@ export const formatCountdownToTca = (tca: Date | string): string => {
   return `${zeroPad(hours)}:${zeroPad(minutes)}:${zeroPad(seconds)}`;
 };
 
-/** Formats a collision probability in exponential notation with one fraction digit. */
-export const formatProbability = (probability: number): string => probability.toExponential(1);
+/**
+ * Formats a collision probability in exponential notation with one fraction
+ * digit (for example `1.2e-3`). Negative or non-finite inputs render as an em
+ * dash so a bad feed value never shows as `NaN` or a nonsensical negative
+ * probability.
+ */
+export const formatProbability = (probability: number): string => {
+  if (!Number.isFinite(probability) || probability < 0) return "—";
+  return probability.toExponential(1);
+};
 
 /**
  * Formats a conjunction miss distance for display. Distances below 10 km are
