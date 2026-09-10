@@ -1,10 +1,11 @@
 import type { ConjunctionWarning } from "../types/space";
 
-const pad = (value: number): string => value.toString().padStart(2, "0");
+/** Zero-pads a number to at least two digits (for example `7` becomes `07`). */
+export const zeroPad = (value: number): string => value.toString().padStart(2, "0");
 
 /** Formats a date as a zero-padded `HH:MM:SS UTC` wall-clock string. */
 export const formatUtcTime = (date: Date): string =>
-  `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;
+  `${zeroPad(date.getUTCHours())}:${zeroPad(date.getUTCMinutes())}:${zeroPad(date.getUTCSeconds())} UTC`;
 
 /**
  * Renders the time until (or since) a time of closest approach. Future TCAs
@@ -46,14 +47,14 @@ export const formatCountdownToTca = (tca: Date | string): string => {
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    if (days > 0) return `PASSED ${days}d ${pad(hours)}h ago`;
-    return `PASSED ${pad(hours)}:${pad(minutes)}:${pad(seconds)} ago`;
+    if (days > 0) return `PASSED ${days}d ${zeroPad(hours)}h ago`;
+    return `PASSED ${zeroPad(hours)}:${zeroPad(minutes)}:${zeroPad(seconds)} ago`;
   }
   const totalSeconds = Math.floor(rawDiffMs / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  return `${zeroPad(hours)}:${zeroPad(minutes)}:${zeroPad(seconds)}`;
 };
 
 /** Formats a collision probability in exponential notation with one fraction digit. */
@@ -141,7 +142,7 @@ export const formatPassDuration = (seconds: number): string => {
   if (totalSeconds < 60) return `${totalSeconds}s`;
   if (totalSeconds < 3600) {
     const minutes = Math.floor(totalSeconds / 60);
-    return `${minutes}m ${pad(totalSeconds % 60)}s`;
+    return `${minutes}m ${zeroPad(totalSeconds % 60)}s`;
   }
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
