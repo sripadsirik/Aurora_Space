@@ -86,9 +86,13 @@ export const formatMissDistance = (meters: number): string => {
  * is a first-order display estimate that scales linearly with collision
  * probability (`probability × 10000` m/s) and is prefixed with `~` and rounded to
  * one decimal to signal that it is indicative rather than a computed burn.
+ * Negative or non-finite inputs render as an em dash so a bad feed value never
+ * shows as `NaN m/s`.
  */
-export const formatManeuverDeltaV = (probability: number): string =>
-  `~${(probability * 10000).toFixed(1)} m/s`;
+export const formatManeuverDeltaV = (probability: number): string => {
+  if (!Number.isFinite(probability) || probability < 0) return "—";
+  return `~${(probability * 10000).toFixed(1)} m/s`;
+};
 
 /**
  * Formats an orbital period given in minutes as a compact wall-clock string.
