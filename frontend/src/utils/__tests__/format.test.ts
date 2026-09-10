@@ -16,7 +16,8 @@ import {
   formatProtonFlux,
   formatSpecificEnergy,
   formatUtcTime,
-  isCriticalConjunction
+  isCriticalConjunction,
+  zeroPad
 } from "../format";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
@@ -31,6 +32,18 @@ const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): Conjuncti
   relativeVelocityKms: 7,
   riskLevel: "nominal",
   ...overrides
+});
+
+describe("zeroPad", () => {
+  it("pads single-digit numbers to two digits", () => {
+    expect(zeroPad(7)).toBe("07");
+    expect(zeroPad(0)).toBe("00");
+  });
+
+  it("leaves two-or-more-digit numbers unchanged", () => {
+    expect(zeroPad(12)).toBe("12");
+    expect(zeroPad(100)).toBe("100");
+  });
 });
 
 describe("formatUtcTime", () => {
