@@ -33,6 +33,11 @@ describe("describeFeedFreshness", () => {
     expect(describeFeedFreshness(agoMs(60_000), now)).toEqual({ label: "1m ago", status: "live" });
   });
 
+  it("floors a slightly-future timestamp to a zero-second live label", () => {
+    const future = new Date(now.getTime() + 3000);
+    expect(describeFeedFreshness(future, now)).toEqual({ label: "0s ago", status: "live" });
+  });
+
   it("falls back to an error when a timestamp throws while being read", () => {
     const exploding = {
       getTime: () => {
