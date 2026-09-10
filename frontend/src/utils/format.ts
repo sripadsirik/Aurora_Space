@@ -10,11 +10,13 @@ export const formatUtcTime = (date: Date): string =>
 /**
  * Renders the time until (or since) a time of closest approach. Future TCAs
  * count down as `Hh Mm`; past TCAs read as `PASSED …ago`, switching to days and
- * hours once more than a day has elapsed. Accepts a `Date` or ISO string.
+ * hours once more than a day has elapsed. Accepts a `Date` or ISO string; an
+ * unparseable date renders as an em dash rather than `NaNh NaNm`.
  */
 export const formatDurationToTca = (tca: Date | string): string => {
   const tcaDate = tca instanceof Date ? tca : new Date(tca);
   const rawDiffMs = tcaDate.getTime() - Date.now();
+  if (Number.isNaN(rawDiffMs)) return "—";
   if (rawDiffMs < 0) {
     const elapsed = Math.abs(rawDiffMs);
     const totalMinutes = Math.floor(elapsed / 60000);
