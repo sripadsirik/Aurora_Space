@@ -64,6 +64,12 @@ describe("formatProbability", () => {
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
   });
+
+  it("renders an em dash for non-finite or negative inputs", () => {
+    expect(formatProbability(Number.NaN)).toBe("—");
+    expect(formatProbability(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(formatProbability(-0.001)).toBe("—");
+  });
 });
 
 describe("formatMissDistance", () => {
