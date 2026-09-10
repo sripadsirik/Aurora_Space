@@ -126,6 +126,11 @@ describe("formatManeuverDeltaV", () => {
   it("renders a zero probability as zero delta-V", () => {
     expect(formatManeuverDeltaV(0)).toBe("~0.0 m/s");
   });
+
+  it("renders an em dash for non-finite or negative inputs", () => {
+    expect(formatManeuverDeltaV(Number.NaN)).toBe("—");
+    expect(formatManeuverDeltaV(-0.001)).toBe("—");
+  });
 });
 
 describe("isCriticalConjunction", () => {
