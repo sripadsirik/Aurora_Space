@@ -330,6 +330,10 @@ describe("formatDurationToTca", () => {
   it("reports a long-passed TCA in days and hours", () => {
     expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
   });
+
+  it("renders an em dash for an unparseable date string", () => {
+    expect(formatDurationToTca("not-a-date")).toBe("—");
+  });
 });
 
 describe("formatCountdownToTca", () => {
@@ -356,5 +360,9 @@ describe("formatCountdownToTca", () => {
 
   it("switches to days and hours once a passed TCA is over a day old", () => {
     expect(formatCountdownToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
+  });
+
+  it("renders an em dash for an unparseable date string", () => {
+    expect(formatCountdownToTca("not-a-date")).toBe("—");
   });
 });
