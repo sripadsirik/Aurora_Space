@@ -94,3 +94,21 @@ func TestRecordsLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	if got := formatEventTime(time.Time{}); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	ts := time.Date(2026, 9, 11, 14, 5, 3, 0, time.UTC)
+	want := "2026-09-11 14:05:03 UTC"
+	if got := formatEventTime(ts); got != want {
+		t.Errorf("formatEventTime(%v) = %q, want %q", ts, got, want)
+	}
+
+	// A non-UTC input should be normalised to UTC in the rendered label.
+	loc := time.FixedZone("UTC+2", 2*60*60)
+	if got := formatEventTime(ts.In(loc)); got != want {
+		t.Errorf("formatEventTime(non-UTC) = %q, want %q", got, want)
+	}
+}
