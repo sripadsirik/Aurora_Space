@@ -62,3 +62,38 @@ func TestIsTLEValid(t *testing.T) {
 		}
 	})
 }
+
+func TestTLECacheSetSnapshotCount(t *testing.T) {
+	cache := &tleCache{records: make(map[string]gpRecord)}
+
+	if cache.count() != 0 {
+		t.Fatalf("new cache count = %d, want 0", cache.count())
+	}
+	if snap := cache.snapshot(); len(snap) != 0 {
+		t.Fatalf("new cache snapshot length = %d, want 0", len(snap))
+	}
+
+	cache.set("25544", validISSRecord())
+	cache.set("48274", gpRecord{NoradCatID: 48274})
+	if cache.count() != 2 {
+		t.Errorf("count after two inserts = %d, want 2", cache.count())
+	}
+
+	// Re-setting an existing key updates in place rather than growing the cache.
+	updated := validISSRecord()
+	updated.MeanMotion = 15.9
+	cache.set("25544", updated)
+	if cache.count() != 2 {
+		t.Errorf("count after overwrite = %d, want 2", cache.count())
+	}
+
+	snap := cache.snapshot()
+	if len(snap) != 2 {
+		t.Fatalf("snapshot length = %d, want 2", len(snap))
+	}
+	for _, rec := range snap {
+		if rec.NoradCatID == 25544 && rec.MeanMotion != 15.9 {
+			t.Errorf("overwritten record not reflected in snapshot: mm=%v", rec.MeanMotion)
+		}
+	}
+}
