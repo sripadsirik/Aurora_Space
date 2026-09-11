@@ -28,3 +28,18 @@ func TestParseNoradCatID(t *testing.T) {
 		}
 	})
 }
+
+func TestParseEccentricity(t *testing.T) {
+	t.Run("reads the assumed-leading-decimal eccentricity", func(t *testing.T) {
+		got := parseEccentricity(issLine2)
+		if got != 0.0006703 {
+			t.Errorf("parseEccentricity(issLine2) = %v, want 0.0006703", got)
+		}
+	})
+
+	t.Run("returns zero for a line too short to hold the field", func(t *testing.T) {
+		if got := parseEccentricity("2 25544"); got != 0 {
+			t.Errorf("parseEccentricity(short) = %v, want 0", got)
+		}
+	})
+}
