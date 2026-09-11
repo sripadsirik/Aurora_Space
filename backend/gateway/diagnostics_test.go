@@ -72,3 +72,25 @@ func TestStatusForFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestRecordsLabel(t *testing.T) {
+	cases := []struct {
+		name  string
+		count int
+		noun  string
+		want  string
+	}{
+		{"zero count has no data", 0, "tracked", "No data"},
+		{"negative count has no data", -3, "tracked", "No data"},
+		{"single record", 1, "alerts", "1 alerts"},
+		{"many records", 1200, "positions", "1200 positions"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := recordsLabel(tc.count, tc.noun); got != tc.want {
+				t.Errorf("recordsLabel(%d, %q) = %q, want %q", tc.count, tc.noun, got, tc.want)
+			}
+		})
+	}
+}
