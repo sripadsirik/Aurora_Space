@@ -43,3 +43,18 @@ func TestParseEccentricity(t *testing.T) {
 		}
 	})
 }
+
+func TestParseMeanMotion(t *testing.T) {
+	t.Run("reads revolutions per day", func(t *testing.T) {
+		got := parseMeanMotion(issLine2)
+		if got != 15.72125391 {
+			t.Errorf("parseMeanMotion(issLine2) = %v, want 15.72125391", got)
+		}
+	})
+
+	t.Run("returns zero for a line too short to hold the field", func(t *testing.T) {
+		if got := parseMeanMotion("2 25544  51.6416"); got != 0 {
+			t.Errorf("parseMeanMotion(short) = %v, want 0", got)
+		}
+	})
+}
