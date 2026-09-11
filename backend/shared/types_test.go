@@ -27,3 +27,30 @@ func TestClassifyOrbit(t *testing.T) {
 		})
 	}
 }
+
+func TestClassifyRisk(t *testing.T) {
+	cases := []struct {
+		name        string
+		probability float64
+		want        string
+	}{
+		{"zero probability is nominal", 0, "nominal"},
+		{"negative probability is nominal", -1, "nominal"},
+		{"just at the watch floor stays nominal", 0.000001, "nominal"},
+		{"just above the watch floor", 0.0000011, "watch"},
+		{"mid watch band", 0.00005, "watch"},
+		{"at the warning floor stays watch", 0.0001, "watch"},
+		{"just above the warning floor", 0.00011, "warning"},
+		{"at the critical floor stays warning", 0.001, "warning"},
+		{"just above the critical floor", 0.0011, "critical"},
+		{"very high probability is critical", 0.5, "critical"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ClassifyRisk(tc.probability); got != tc.want {
+				t.Errorf("ClassifyRisk(%v) = %q, want %q", tc.probability, got, tc.want)
+			}
+		})
+	}
+}
