@@ -76,3 +76,24 @@ func TestSatelliteBatchAssemblerPassThrough(t *testing.T) {
 		}
 	})
 }
+
+func TestSatelliteBatchAssemblerReassembly(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+
+	// Deliver the second part first to confirm ordering is by batch index, not
+	// arrival order, and that the batch only completes once every part arrives.
+	part1 := []byte(`{"batchId":"multi","batchIndex":1,"batchCount":2,"satellites":[{"noradId":20}]}`)
+	part0 := []byte(`{"batchId":"multi","batchIndex":0,"batchCount":2,"satellites":[{"noradId":10}]}`)
+
+	if payload, complete, err := a.ingest(part1); err != nil || complete || payload != nil {
+		t.Fatalf("first part: (payload=%v, complete=%v, err=%v), want (nil, false, nil)", payload, complete, err)
+	}
+
+	payload, complete, err := a.ingest(part0)
+	if err != nil || !complete {
+		t.Fatalf("final part: (complete=%v, err=%v), want (true, nil)", complete, err)
+	}
+	if ids := decodeSatelliteIDs(t, payload); len(ids) != 2 || ids[0] != 10 || ids[1] != 20 {
+		t.Errorf("reassembled ids = %v, want [10 20]", ids)
+	}
+}
