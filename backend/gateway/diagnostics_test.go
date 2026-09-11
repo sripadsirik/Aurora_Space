@@ -112,3 +112,50 @@ func TestFormatEventTime(t *testing.T) {
 		t.Errorf("formatEventTime(non-UTC) = %q, want %q", got, want)
 	}
 }
+
+func TestSummarizeLogLine(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+		want string
+	}{
+		{
+			name: "plain text is trimmed and returned as-is",
+			line: "  starting ingestion  ",
+			want: "starting ingestion",
+		},
+		{
+			name: "malformed JSON falls back to the trimmed line",
+			line: "{not valid json",
+			want: "{not valid json",
+		},
+		{
+			name: "extracts the msg field",
+			line: `{"msg":"published batch"}`,
+			want: "published batch",
+		},
+		{
+			name: "appends recognised top-level fields to the message",
+			line: `{"msg":"fetch complete","count":42,"status":200}`,
+			want: "fetch complete | status=200 | count=42",
+		},
+		{
+			name: "reads a nested fields.message and nested field values",
+			line: `{"fields":{"message":"worker tick","norad":25544}}`,
+			want: "worker tick | norad=25544",
+		},
+		{
+			name: "JSON object with no known keys falls back to the raw line",
+			line: `{"unrelated":"value"}`,
+			want: `{"unrelated":"value"}`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := summarizeLogLine(tc.line); got != tc.want {
+				t.Errorf("summarizeLogLine(%q) = %q, want %q", tc.line, got, tc.want)
+			}
+		})
+	}
+}
