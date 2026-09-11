@@ -58,3 +58,52 @@ func TestParseMeanMotion(t *testing.T) {
 		}
 	})
 }
+
+func TestParseThreeLineElements(t *testing.T) {
+	t.Run("parses a named three-line block", func(t *testing.T) {
+		body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\n")
+		records := parseThreeLineElements(body)
+		if len(records) != 1 {
+			t.Fatalf("expected 1 record, got %d", len(records))
+		}
+		rec := records[0]
+		if rec.ObjectName != "ISS (ZARYA)" || rec.NoradCatID != 25544 {
+			t.Errorf("unexpected name/id: %q / %d", rec.ObjectName, rec.NoradCatID)
+		}
+		if rec.MeanMotion != 15.72125391 || rec.Eccentricity != 0.0006703 {
+			t.Errorf("unexpected orbit fields: mm=%v ecc=%v", rec.MeanMotion, rec.Eccentricity)
+		}
+		if rec.TLELine1 != issLine1 || rec.TLELine2 != issLine2 {
+			t.Error("raw TLE lines were not preserved")
+		}
+	})
+
+	t.Run("parses a bare two-line block with no name", func(t *testing.T) {
+		body := []byte(issLine1 + "\n" + issLine2 + "\n")
+		records := parseThreeLineElements(body)
+		if len(records) != 1 {
+			t.Fatalf("expected 1 record, got %d", len(records))
+		}
+		if records[0].ObjectName != "" || records[0].NoradCatID != 25544 {
+			t.Errorf("unexpected name/id: %q / %d", records[0].ObjectName, records[0].NoradCatID)
+		}
+	})
+
+	t.Run("ignores trailing lines that cannot form a full record", func(t *testing.T) {
+		// A well-formed block followed by a stray trailing line must not send the
+		// position-based scanner into an infinite loop; the trailing line is simply
+		// dropped once fewer than a full block remains.
+		body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\ndangling trailing line\n")
+		records := parseThreeLineElements(body)
+		if len(records) != 1 {
+			t.Fatalf("expected 1 record, got %d", len(records))
+		}
+	})
+
+	t.Run("returns an empty slice for empty input", func(t *testing.T) {
+		records := parseThreeLineElements([]byte(""))
+		if records == nil || len(records) != 0 {
+			t.Errorf("expected a non-nil empty slice, got %#v", records)
+		}
+	})
+}
