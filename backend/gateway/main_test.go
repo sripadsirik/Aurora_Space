@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/sripadsirik/aurora/shared"
 )
 
 func TestPayloadCount(t *testing.T) {
@@ -30,4 +32,47 @@ func TestPayloadCount(t *testing.T) {
 			}
 		})
 	}
+}
+
+func decodeSatelliteIDs(t *testing.T, payload json.RawMessage) []int {
+	t.Helper()
+	var sats []shared.Satellite
+	if err := json.Unmarshal(payload, &sats); err != nil {
+		t.Fatalf("unmarshal reassembled payload: %v", err)
+	}
+	ids := make([]int, len(sats))
+	for i, s := range sats {
+		ids[i] = s.NoradID
+	}
+	return ids
+}
+
+func TestSatelliteBatchAssemblerPassThrough(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+
+	t.Run("a bare satellite array passes straight through", func(t *testing.T) {
+		payload, complete, err := a.ingest([]byte(`[{"noradId":1},{"noradId":2}]`))
+		if err != nil || !complete {
+			t.Fatalf("ingest = (complete=%v, err=%v), want (true, nil)", complete, err)
+		}
+		if ids := decodeSatelliteIDs(t, payload); len(ids) != 2 {
+			t.Errorf("got %d satellites, want 2", len(ids))
+		}
+	})
+
+	t.Run("a single-batch envelope completes immediately", func(t *testing.T) {
+		payload, complete, err := a.ingest([]byte(`{"batchId":"b","batchIndex":0,"batchCount":1,"satellites":[{"noradId":7}]}`))
+		if err != nil || !complete {
+			t.Fatalf("ingest = (complete=%v, err=%v), want (true, nil)", complete, err)
+		}
+		if ids := decodeSatelliteIDs(t, payload); len(ids) != 1 || ids[0] != 7 {
+			t.Errorf("got ids %v, want [7]", ids)
+		}
+	})
+
+	t.Run("invalid JSON returns an error", func(t *testing.T) {
+		if _, _, err := a.ingest([]byte(`{not valid`)); err == nil {
+			t.Error("expected an error for malformed input")
+		}
+	})
 }
