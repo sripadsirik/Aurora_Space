@@ -47,3 +47,28 @@ func TestMaxTime(t *testing.T) {
 		t.Errorf("maxTime(zero, later) = %v, want %v", got, later)
 	}
 }
+
+func TestStatusForFreshness(t *testing.T) {
+	liveWindow := 5 * time.Minute
+	staleWindow := 15 * time.Minute
+
+	cases := []struct {
+		name        string
+		lastUpdated time.Time
+		want        string
+	}{
+		{"zero time is ERROR", time.Time{}, "ERROR"},
+		{"fresh update is LIVE", time.Now().Add(-1 * time.Minute), "LIVE"},
+		{"exactly at the live window is LIVE", time.Now().Add(-liveWindow + time.Second), "LIVE"},
+		{"past live but within stale is STALE", time.Now().Add(-10 * time.Minute), "STALE"},
+		{"past the stale window is ERROR", time.Now().Add(-20 * time.Minute), "ERROR"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := statusForFreshness(tc.lastUpdated, liveWindow, staleWindow); got != tc.want {
+				t.Errorf("statusForFreshness(%v) = %q, want %q", tc.lastUpdated, got, tc.want)
+			}
+		})
+	}
+}
