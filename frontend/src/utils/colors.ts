@@ -75,5 +75,5 @@ export const getSolarWindColor = (solarWindSpeed: number): Color => {
     return Color.fromCssColorString("#ff8d42");
   }
 
-  return Color.fromCssColorString("#ff2a2a");
+  return Color.fromCssColorString(alertColors.severe);
 };
