@@ -231,12 +231,12 @@ export const protonFluxToSScale = (fluxPfu: number): SScaleLevel => {
 
 /** CSS hex colour for each S-level, escalating from quiet green to extreme red. */
 const sScaleColorMap: Record<SScaleLevel, string> = {
-  S0: "#7dff6a",
-  S1: "#ffcc00",
-  S2: "#ff9900",
-  S3: "#ff6600",
-  S4: "#ff3300",
-  S5: "#ff0000"
+  S0: noaaScaleColors.quiet,
+  S1: noaaScaleColors.minor,
+  S2: noaaScaleColors.moderate,
+  S3: noaaScaleColors.strong,
+  S4: noaaScaleColors.severe,
+  S5: noaaScaleColors.extreme
 };
 
 /**
