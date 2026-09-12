@@ -1,3 +1,5 @@
+import { alertColors, noaaScaleColors } from "./severityPalette";
+
 /** A single infrastructure system's status under current geomagnetic activity. */
 export interface SystemImpactRow {
   system: string;
@@ -32,14 +34,14 @@ export const getStormSystemImpacts = (kp: number): SystemImpactRow[] => {
     return [
       { system: "HF Radio", status: "MINOR DEGRADATION — R1", color: "#ffcc00" },
       { system: "GPS Accuracy", status: "SLIGHT DEGRADATION ±3m", color: "#ffcc00" },
-      { system: "Power Grids", status: "NOMINAL", color: "#7dff6a" },
+      { system: "Power Grids", status: "NOMINAL", color: alertColors.calm },
       { system: "Aviation", status: "MONITORING", color: "#ffcc00" }
     ];
   }
   return [
-    { system: "HF Radio", status: "NOMINAL", color: "#7dff6a" },
-    { system: "GPS Accuracy", status: "NOMINAL", color: "#7dff6a" },
-    { system: "Power Grids", status: "NOMINAL", color: "#7dff6a" },
-    { system: "Aviation", status: "NOMINAL", color: "#7dff6a" }
+    { system: "HF Radio", status: "NOMINAL", color: alertColors.calm },
+    { system: "GPS Accuracy", status: "NOMINAL", color: alertColors.calm },
+    { system: "Power Grids", status: "NOMINAL", color: alertColors.calm },
+    { system: "Aviation", status: "NOMINAL", color: alertColors.calm }
   ];
 };
