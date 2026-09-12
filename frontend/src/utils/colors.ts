@@ -45,12 +45,12 @@ export const getKpColor = (kp: number): string => {
  */
 export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity): string => {
   if (severity === "critical") {
-    return "#ff2a2a";
+    return alertColors.severe;
   }
   if (severity === "warning") {
-    return "#ff8b38";
+    return alertColors.elevated;
   }
-  return "#ffcc00";
+  return alertColors.caution;
 };
 
 /**
