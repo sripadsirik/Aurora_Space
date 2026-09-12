@@ -1,4 +1,4 @@
-import { noaaScaleColors } from "./severityPalette";
+import { alertColors, noaaScaleColors } from "./severityPalette";
 
 /**
  * NOAA Space Weather Prediction Center geomagnetic storm scale (G-scale).
@@ -84,9 +84,9 @@ export const kpToGScaleInfo = (kp: number): GScaleInfo => gScaleInfo(kpToGScale(
  * the sparkline reads at a glance rather than tracking the full G-scale palette.
  */
 export const kpSparklineColor = (kp: number): string => {
-  if (kp > 7) return "#ff2a2a";
-  if (kp >= 5) return "#ffcc00";
-  return "#7dff6a";
+  if (kp > 7) return alertColors.severe;
+  if (kp >= 5) return alertColors.caution;
+  return alertColors.calm;
 };
 
 /**
