@@ -1,3 +1,5 @@
+import { noaaScaleColors } from "./severityPalette";
+
 /**
  * NOAA Space Weather Prediction Center geomagnetic storm scale (G-scale).
  *
@@ -23,12 +25,12 @@ export const kpToGScale = (kp: number): GScaleLevel => {
 
 /** CSS hex colour for each G-level, escalating from quiet green to extreme red. */
 const gScaleColorMap: Record<GScaleLevel, string> = {
-  G0: "#7dff6a",
-  G1: "#ffcc00",
-  G2: "#ff9900",
-  G3: "#ff6600",
-  G4: "#ff3300",
-  G5: "#ff0000"
+  G0: noaaScaleColors.quiet,
+  G1: noaaScaleColors.minor,
+  G2: noaaScaleColors.moderate,
+  G3: noaaScaleColors.strong,
+  G4: noaaScaleColors.severe,
+  G5: noaaScaleColors.extreme
 };
 
 /**
