@@ -16,7 +16,7 @@ export interface SystemImpactRow {
 export const getStormSystemImpacts = (kp: number): SystemImpactRow[] => {
   if (kp > 8) {
     return [
-      { system: "HF Radio", status: "BLACKOUT — R4", color: "#ff2a2a" },
+      { system: "HF Radio", status: "BLACKOUT — R4", color: alertColors.severe },
       { system: "GPS Accuracy", status: "DEGRADED ±15m", color: "#ff6600" },
       { system: "Power Grids", status: "ELEVATED RISK — High latitudes", color: alertColors.caution },
       { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff6600" }
