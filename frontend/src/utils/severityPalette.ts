@@ -26,3 +26,20 @@ export const noaaScaleColors = {
   /** Extreme storm (level 5). */
   extreme: "#ff0000"
 } as const;
+
+/**
+ * The four-tier Kp alert palette used by the at-a-glance severity readouts
+ * (the Kp colour swatch, fleet-conjunction badge, and Kp history sparkline).
+ * Coarser than {@link noaaScaleColors} so it reads instantly rather than
+ * tracking the full six-step scale.
+ */
+export const alertColors = {
+  /** Quiet geomagnetic conditions. */
+  calm: "#7dff6a",
+  /** Watch-level activity. */
+  caution: "#ffcc00",
+  /** Elevated storm activity. */
+  elevated: "#ff8b38",
+  /** Severe storm activity. */
+  severe: "#ff2a2a"
+} as const;
