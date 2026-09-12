@@ -17,14 +17,14 @@ export const getStormSystemImpacts = (kp: number): SystemImpactRow[] => {
   if (kp > 8) {
     return [
       { system: "HF Radio", status: "BLACKOUT — R4", color: alertColors.severe },
-      { system: "GPS Accuracy", status: "DEGRADED ±15m", color: "#ff6600" },
+      { system: "GPS Accuracy", status: "DEGRADED ±15m", color: noaaScaleColors.strong },
       { system: "Power Grids", status: "ELEVATED RISK — High latitudes", color: alertColors.caution },
-      { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff6600" }
+      { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: noaaScaleColors.strong }
     ];
   }
   if (kp >= 7) {
     return [
-      { system: "HF Radio", status: "BLACKOUT — R3", color: "#ff6600" },
+      { system: "HF Radio", status: "BLACKOUT — R3", color: noaaScaleColors.strong },
       { system: "GPS Accuracy", status: "DEGRADED ±8m", color: alertColors.elevated },
       { system: "Power Grids", status: "ELEVATED RISK — Northern regions", color: alertColors.caution },
       { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: alertColors.elevated }
