@@ -3,6 +3,7 @@ import type { RiskLevel } from "../types/space";
 import type { ConjunctionFleetSeverity } from "./conjunctionRisk";
 import { conjunctionRiskTextClass } from "./conjunctionRisk";
 import { isBzSouthward } from "./bzComponent";
+import { alertColors } from "./severityPalette";
 
 /** Cesium colours used to shade satellites and conjunctions by risk level. */
 export const riskColorMap: Record<RiskLevel, Color> = {
@@ -26,15 +27,15 @@ export const conjunctionRowTextClass = (risk: RiskLevel): string =>
  */
 export const getKpColor = (kp: number): string => {
   if (kp < 3) {
-    return "#7dff6a";
+    return alertColors.calm;
   }
   if (kp < 5) {
-    return "#ffcc00";
+    return alertColors.caution;
   }
   if (kp < 7) {
-    return "#ff8b38";
+    return alertColors.elevated;
   }
-  return "#ff2a2a";
+  return alertColors.severe;
 };
 
 /**
@@ -44,12 +45,12 @@ export const getKpColor = (kp: number): string => {
  */
 export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity): string => {
   if (severity === "critical") {
-    return "#ff2a2a";
+    return alertColors.severe;
   }
   if (severity === "warning") {
-    return "#ff8b38";
+    return alertColors.elevated;
   }
-  return "#ffcc00";
+  return alertColors.caution;
 };
 
 /**
@@ -74,5 +75,5 @@ export const getSolarWindColor = (solarWindSpeed: number): Color => {
     return Color.fromCssColorString("#ff8d42");
   }
 
-  return Color.fromCssColorString("#ff2a2a");
+  return Color.fromCssColorString(alertColors.severe);
 };

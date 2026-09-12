@@ -1,3 +1,5 @@
+import { alertColors, noaaScaleColors } from "./severityPalette";
+
 /**
  * NOAA Space Weather Prediction Center geomagnetic storm scale (G-scale).
  *
@@ -23,12 +25,12 @@ export const kpToGScale = (kp: number): GScaleLevel => {
 
 /** CSS hex colour for each G-level, escalating from quiet green to extreme red. */
 const gScaleColorMap: Record<GScaleLevel, string> = {
-  G0: "#7dff6a",
-  G1: "#ffcc00",
-  G2: "#ff9900",
-  G3: "#ff6600",
-  G4: "#ff3300",
-  G5: "#ff0000"
+  G0: noaaScaleColors.quiet,
+  G1: noaaScaleColors.minor,
+  G2: noaaScaleColors.moderate,
+  G3: noaaScaleColors.strong,
+  G4: noaaScaleColors.severe,
+  G5: noaaScaleColors.extreme
 };
 
 /**
@@ -82,9 +84,9 @@ export const kpToGScaleInfo = (kp: number): GScaleInfo => gScaleInfo(kpToGScale(
  * the sparkline reads at a glance rather than tracking the full G-scale palette.
  */
 export const kpSparklineColor = (kp: number): string => {
-  if (kp > 7) return "#ff2a2a";
-  if (kp >= 5) return "#ffcc00";
-  return "#7dff6a";
+  if (kp > 7) return alertColors.severe;
+  if (kp >= 5) return alertColors.caution;
+  return alertColors.calm;
 };
 
 /**
@@ -145,12 +147,12 @@ export const xrayClassToRScale = (flux: string): RScaleLevel => {
 
 /** CSS hex colour for each R-level, escalating from quiet green to extreme red. */
 const rScaleColorMap: Record<RScaleLevel, string> = {
-  R0: "#7dff6a",
-  R1: "#ffcc00",
-  R2: "#ff9900",
-  R3: "#ff6600",
-  R4: "#ff3300",
-  R5: "#ff0000"
+  R0: noaaScaleColors.quiet,
+  R1: noaaScaleColors.minor,
+  R2: noaaScaleColors.moderate,
+  R3: noaaScaleColors.strong,
+  R4: noaaScaleColors.severe,
+  R5: noaaScaleColors.extreme
 };
 
 /**
@@ -229,12 +231,12 @@ export const protonFluxToSScale = (fluxPfu: number): SScaleLevel => {
 
 /** CSS hex colour for each S-level, escalating from quiet green to extreme red. */
 const sScaleColorMap: Record<SScaleLevel, string> = {
-  S0: "#7dff6a",
-  S1: "#ffcc00",
-  S2: "#ff9900",
-  S3: "#ff6600",
-  S4: "#ff3300",
-  S5: "#ff0000"
+  S0: noaaScaleColors.quiet,
+  S1: noaaScaleColors.minor,
+  S2: noaaScaleColors.moderate,
+  S3: noaaScaleColors.strong,
+  S4: noaaScaleColors.severe,
+  S5: noaaScaleColors.extreme
 };
 
 /**
