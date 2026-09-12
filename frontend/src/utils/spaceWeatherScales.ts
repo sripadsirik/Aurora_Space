@@ -147,12 +147,12 @@ export const xrayClassToRScale = (flux: string): RScaleLevel => {
 
 /** CSS hex colour for each R-level, escalating from quiet green to extreme red. */
 const rScaleColorMap: Record<RScaleLevel, string> = {
-  R0: "#7dff6a",
-  R1: "#ffcc00",
-  R2: "#ff9900",
-  R3: "#ff6600",
-  R4: "#ff3300",
-  R5: "#ff0000"
+  R0: noaaScaleColors.quiet,
+  R1: noaaScaleColors.minor,
+  R2: noaaScaleColors.moderate,
+  R3: noaaScaleColors.strong,
+  R4: noaaScaleColors.severe,
+  R5: noaaScaleColors.extreme
 };
 
 /**
