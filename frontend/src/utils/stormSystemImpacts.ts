@@ -18,7 +18,7 @@ export const getStormSystemImpacts = (kp: number): SystemImpactRow[] => {
     return [
       { system: "HF Radio", status: "BLACKOUT — R4", color: "#ff2a2a" },
       { system: "GPS Accuracy", status: "DEGRADED ±15m", color: "#ff6600" },
-      { system: "Power Grids", status: "ELEVATED RISK — High latitudes", color: "#ffcc00" },
+      { system: "Power Grids", status: "ELEVATED RISK — High latitudes", color: alertColors.caution },
       { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff6600" }
     ];
   }
@@ -26,16 +26,16 @@ export const getStormSystemImpacts = (kp: number): SystemImpactRow[] => {
     return [
       { system: "HF Radio", status: "BLACKOUT — R3", color: "#ff6600" },
       { system: "GPS Accuracy", status: "DEGRADED ±8m", color: "#ff8b38" },
-      { system: "Power Grids", status: "ELEVATED RISK — Northern regions", color: "#ffcc00" },
+      { system: "Power Grids", status: "ELEVATED RISK — Northern regions", color: alertColors.caution },
       { system: "Aviation", status: "POLAR ROUTES AFFECTED", color: "#ff8b38" }
     ];
   }
   if (kp >= 5) {
     return [
-      { system: "HF Radio", status: "MINOR DEGRADATION — R1", color: "#ffcc00" },
-      { system: "GPS Accuracy", status: "SLIGHT DEGRADATION ±3m", color: "#ffcc00" },
+      { system: "HF Radio", status: "MINOR DEGRADATION — R1", color: alertColors.caution },
+      { system: "GPS Accuracy", status: "SLIGHT DEGRADATION ±3m", color: alertColors.caution },
       { system: "Power Grids", status: "NOMINAL", color: alertColors.calm },
-      { system: "Aviation", status: "MONITORING", color: "#ffcc00" }
+      { system: "Aviation", status: "MONITORING", color: alertColors.caution }
     ];
   }
   return [
