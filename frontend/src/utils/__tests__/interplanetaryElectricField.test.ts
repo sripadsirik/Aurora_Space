@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ELECTRIC_FIELD_COEFFICIENT,
+  geoeffectiveElectricField,
   interplanetaryElectricField
 } from "../interplanetaryElectricField";
 
@@ -40,5 +41,28 @@ describe("interplanetaryElectricField", () => {
   it("returns zero for non-finite inputs instead of NaN", () => {
     expect(interplanetaryElectricField(Number.NaN, -5)).toBe(0);
     expect(interplanetaryElectricField(400, Number.POSITIVE_INFINITY)).toBe(0);
+  });
+});
+
+describe("geoeffectiveElectricField", () => {
+  it("matches the signed field while the IMF is southward", () => {
+    expect(geoeffectiveElectricField(500, -6)).toBeCloseTo(
+      interplanetaryElectricField(500, -6),
+      9
+    );
+  });
+
+  it("rectifies a northward field to zero forcing", () => {
+    expect(geoeffectiveElectricField(500, 6)).toBe(0);
+  });
+
+  it("is zero for a purely northward or null field", () => {
+    expect(geoeffectiveElectricField(600, 4)).toBe(0);
+    expect(geoeffectiveElectricField(600, 0)).toBe(0);
+  });
+
+  it("never returns a negative value", () => {
+    expect(geoeffectiveElectricField(800, 10)).toBeGreaterThanOrEqual(0);
+    expect(geoeffectiveElectricField(800, -10)).toBeGreaterThanOrEqual(0);
   });
 });
