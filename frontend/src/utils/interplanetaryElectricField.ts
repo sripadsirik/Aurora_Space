@@ -63,3 +63,33 @@ export const electricFieldLevel = (fieldMvM: number): ElectricFieldLevel => {
   if (fieldMvM < 10) return "strong";
   return "extreme";
 };
+
+/** Derived interplanetary electric field figures for the current solar-wind state. */
+export interface ElectricFieldProfile {
+  /** Signed dawn-dusk field (positive for a southward, geoeffective IMF), in mV/m. */
+  fieldMvM: number;
+  /** Half-wave rectified geoeffective field that actually drives the magnetosphere, in mV/m. */
+  geoeffectiveMvM: number;
+  /** Qualitative band the geoeffective field falls in. */
+  level: ElectricFieldLevel;
+  /** True when the IMF is southward, so the coupling field is geoeffective. */
+  southward: boolean;
+}
+
+/**
+ * Bundles the interplanetary electric field figures derived from a space-weather
+ * snapshot: the signed dawn-dusk field from its solar-wind speed and IMF Bz, the
+ * rectified geoeffective field, the qualitative band that field falls in, and
+ * whether the IMF is currently southward. The band is keyed off the geoeffective
+ * field, so a northward interval always reads as `quiet` regardless of speed.
+ */
+export const electricFieldProfile = (weather: SpaceWeather): ElectricFieldProfile => {
+  const fieldMvM = interplanetaryElectricField(weather.solarWindSpeed, weather.bzComponent);
+  const geoeffectiveMvM = Math.max(0, fieldMvM);
+  return {
+    fieldMvM,
+    geoeffectiveMvM,
+    level: electricFieldLevel(geoeffectiveMvM),
+    southward: fieldMvM > 0
+  };
+};
