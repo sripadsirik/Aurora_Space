@@ -3,7 +3,8 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
+import { formatDynamicPressure, formatElectricField, formatMagnetopauseStandoff } from "../../utils/format";
+import { electricFieldProfile } from "../../utils/interplanetaryElectricField";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -73,6 +74,9 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
+
+  // Dawn-dusk coupling electric field from the L1 speed and Bz readings.
+  const efieldProfile = electricFieldProfile(spaceWeather);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
