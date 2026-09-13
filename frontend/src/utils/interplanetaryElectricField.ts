@@ -45,3 +45,21 @@ export const interplanetaryElectricField = (speedKms: number, bzNt: number): num
  */
 export const geoeffectiveElectricField = (speedKms: number, bzNt: number): number =>
   Math.max(0, interplanetaryElectricField(speedKms, bzNt));
+
+/** Qualitative bands for the geoeffective dawn-dusk field, from calm to storm-driving. */
+export type ElectricFieldLevel = "quiet" | "moderate" | "strong" | "extreme";
+
+/**
+ * Buckets a geoeffective dawn-dusk field (mV/m) into a qualitative band for the
+ * readouts: below 0.5 mV/m is `quiet` (little coupling, including any northward
+ * interval that rectifies to zero), 0.5-3 mV/m is `moderate` convection forcing,
+ * 3-10 mV/m is `strong` (main-phase storm driving), and 10 mV/m or more is
+ * `extreme` — the coupling seen in the great storms. Negative or non-finite
+ * inputs fall back to `quiet`.
+ */
+export const electricFieldLevel = (fieldMvM: number): ElectricFieldLevel => {
+  if (!Number.isFinite(fieldMvM) || fieldMvM < 0.5) return "quiet";
+  if (fieldMvM < 3) return "moderate";
+  if (fieldMvM < 10) return "strong";
+  return "extreme";
+};
