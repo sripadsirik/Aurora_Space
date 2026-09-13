@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SpaceWeather } from "../../types/space";
 import {
   ELECTRIC_FIELD_COEFFICIENT,
+  couplingLabel,
   electricFieldLevel,
   electricFieldProfile,
   geoeffectiveElectricField,
@@ -103,6 +104,19 @@ describe("electricFieldLevel", () => {
   it("falls back to quiet for negative or non-finite input", () => {
     expect(electricFieldLevel(-4)).toBe("quiet");
     expect(electricFieldLevel(Number.NaN)).toBe("quiet");
+  });
+});
+
+describe("couplingLabel", () => {
+  it("maps each band to its status label", () => {
+    expect(couplingLabel("quiet")).toBe("WEAK COUPLING");
+    expect(couplingLabel("moderate")).toBe("MODERATE COUPLING");
+    expect(couplingLabel("strong")).toBe("STRONG COUPLING");
+    expect(couplingLabel("extreme")).toBe("EXTREME COUPLING");
+  });
+
+  it("agrees with the band a geoeffective field lands in", () => {
+    expect(couplingLabel(electricFieldLevel(6))).toBe("STRONG COUPLING");
   });
 });
 
