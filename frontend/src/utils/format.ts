@@ -191,6 +191,18 @@ export const formatMagnetopauseStandoff = (standoffRe: number): string => {
 };
 
 /**
+ * Formats an interplanetary dawn-dusk electric field in mV/m for display.
+ * Renders two fraction digits with a `mV/m` suffix (for example `1.60 mV/m`) and
+ * keeps the sign so a northward (negative) field stays distinct from a
+ * geoeffective southward one. Non-finite inputs render as an em dash so a bad
+ * feed value never shows as `NaN mV/m`.
+ */
+export const formatElectricField = (fieldMvM: number): string => {
+  if (!Number.isFinite(fieldMvM)) return "—";
+  return `${fieldMvM.toFixed(2)} mV/m`;
+};
+
+/**
  * A conjunction is treated as critical when the collision probability is at
  * least 0.005 or the miss distance is 250 m or less.
  */

@@ -3,7 +3,8 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
+import { formatDynamicPressure, formatElectricField, formatMagnetopauseStandoff } from "../../utils/format";
+import { couplingLabel, electricFieldProfile } from "../../utils/interplanetaryElectricField";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -74,6 +75,9 @@ export const HelioOverlay = (): JSX.Element | null => {
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
 
+  // Dawn-dusk coupling electric field from the L1 speed and Bz readings.
+  const efieldProfile = electricFieldProfile(spaceWeather);
+
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
   };
@@ -95,6 +99,11 @@ export const HelioOverlay = (): JSX.Element | null => {
           <HelioRow color={kpColor} label="KP INDEX" value={formatKpIndex(spaceWeather.kpIndex)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
           <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
+          <HelioRow
+            color={efieldProfile.southward ? "#ff8f6e" : "#7dff6a"}
+            label="COUPLING"
+            value={couplingLabel(efieldProfile.level)}
+          />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-cyan-500/10 pt-2 text-[10px] tracking-[0.18em] text-[#6d8ea9]">
           <span>VIEW WIDTH ~ 2.0 AU</span>
@@ -189,6 +198,12 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Bz</span>
               <span style={{ color: bzColor }}>{formatMagneticFieldNt(spaceWeather.bzComponent)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#6d8ea9]">Coupling E-field</span>
+              <span className={efieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
+                {formatElectricField(efieldProfile.fieldMvM)}
+              </span>
             </div>
           </div>
         </div>
