@@ -64,6 +64,22 @@ export const electricFieldLevel = (fieldMvM: number): ElectricFieldLevel => {
   return "extreme";
 };
 
+/** Short, uppercase status labels for each geoeffective-field band. */
+const COUPLING_LABELS: Record<ElectricFieldLevel, string> = {
+  quiet: "WEAK COUPLING",
+  moderate: "MODERATE COUPLING",
+  strong: "STRONG COUPLING",
+  extreme: "EXTREME COUPLING"
+};
+
+/**
+ * Maps a geoeffective-field band to the short status label the heliocentric
+ * overlay shows for solar-wind/magnetosphere coupling, from `WEAK COUPLING`
+ * (little forcing, including any rectified northward interval) up to
+ * `EXTREME COUPLING` for great-storm driving.
+ */
+export const couplingLabel = (level: ElectricFieldLevel): string => COUPLING_LABELS[level];
+
 /** Derived interplanetary electric field figures for the current solar-wind state. */
 export interface ElectricFieldProfile {
   /** Signed dawn-dusk field (positive for a southward, geoeffective IMF), in mV/m. */
