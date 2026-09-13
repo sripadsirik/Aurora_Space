@@ -34,3 +34,14 @@ export const interplanetaryElectricField = (speedKms: number, bzNt: number): num
   const speed = Math.max(0, speedKms);
   return -ELECTRIC_FIELD_COEFFICIENT * speed * bzNt;
 };
+
+/**
+ * Half-wave rectified dawn-dusk electric field in mV/m: the geoeffective part of
+ * `interplanetaryElectricField` that actually drives the magnetosphere. Only a
+ * southward IMF reconnects, so a northward field contributes nothing and this
+ * returns `0` rather than a negative value. This is the quantity coupling
+ * functions such as the ring-current and auroral-electrojet drivers depend on,
+ * so a northward interval reads as no forcing rather than negative forcing.
+ */
+export const geoeffectiveElectricField = (speedKms: number, bzNt: number): number =>
+  Math.max(0, interplanetaryElectricField(speedKms, bzNt));
