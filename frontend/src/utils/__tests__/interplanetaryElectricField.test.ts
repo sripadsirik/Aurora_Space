@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
+import type { SpaceWeather } from "../../types/space";
 import {
   ELECTRIC_FIELD_COEFFICIENT,
   electricFieldLevel,
+  electricFieldProfile,
   geoeffectiveElectricField,
   interplanetaryElectricField
 } from "../interplanetaryElectricField";
+
+const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
+  kpIndex: 3,
+  solarWindSpeed: 400,
+  solarWindDensity: 5,
+  bzComponent: -2,
+  xrayFlux: "B1.0",
+  stormLevel: "none",
+  auroraKp: 3,
+  lastUpdated: new Date("2026-01-01T00:00:00Z"),
+  ...overrides
+});
 
 describe("interplanetaryElectricField", () => {
   it("follows Ey = -v * Bz for a southward field", () => {
@@ -89,5 +103,31 @@ describe("electricFieldLevel", () => {
   it("falls back to quiet for negative or non-finite input", () => {
     expect(electricFieldLevel(-4)).toBe("quiet");
     expect(electricFieldLevel(Number.NaN)).toBe("quiet");
+  });
+});
+
+describe("electricFieldProfile", () => {
+  it("derives every figure from the snapshot's speed and Bz", () => {
+    const weather = makeWeather({ solarWindSpeed: 500, bzComponent: -6 });
+    const profile = electricFieldProfile(weather);
+    const field = interplanetaryElectricField(500, -6);
+    expect(profile.fieldMvM).toBeCloseTo(field, 9);
+    expect(profile.geoeffectiveMvM).toBeCloseTo(field, 9);
+    expect(profile.level).toBe(electricFieldLevel(field));
+    expect(profile.southward).toBe(true);
+  });
+
+  it("reports a quiet, non-geoeffective profile for a northward IMF", () => {
+    const profile = electricFieldProfile(makeWeather({ solarWindSpeed: 600, bzComponent: 8 }));
+    expect(profile.geoeffectiveMvM).toBe(0);
+    expect(profile.level).toBe("quiet");
+    expect(profile.southward).toBe(false);
+  });
+
+  it("strengthens the coupling field as a fast, strongly southward stream arrives", () => {
+    const quiet = electricFieldProfile(makeWeather());
+    const storm = electricFieldProfile(makeWeather({ solarWindSpeed: 800, bzComponent: -20 }));
+    expect(storm.geoeffectiveMvM).toBeGreaterThan(quiet.geoeffectiveMvM);
+    expect(storm.level).toBe("extreme");
   });
 });
