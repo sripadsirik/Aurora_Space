@@ -130,6 +130,28 @@ GEO assets to the magnetosheath. `formatDynamicPressure` and `formatMagnetopause
 display, and the heliosphere overlay's L1 DSCOVR panel surfaces both, highlighting the standoff
 when the boundary drops inside GEO.
 
+## Solar Wind Coupling
+
+How strongly the solar wind couples to the magnetosphere comes from the pure helpers in
+`frontend/src/utils/interplanetaryElectricField.ts`, using the bulk speed and IMF Bz the
+space-weather feeds already report:
+
+| Helper | Returns |
+| --- | --- |
+| `interplanetaryElectricField` | Signed dawn-dusk field in mV/m (`Ey = -v · Bz`; positive when the IMF is southward) |
+| `geoeffectiveElectricField` | Half-wave rectified field — only a southward IMF couples, so a northward interval reads as `0` |
+| `electricFieldLevel` | Qualitative band (`quiet` / `moderate` / `strong` / `extreme`) keyed off the geoeffective field |
+| `couplingLabel` | Short status label (`WEAK` / `MODERATE` / `STRONG` / `EXTREME COUPLING`) for a band |
+| `electricFieldProfile` | All of the above bundled into one `ElectricFieldProfile` for a `SpaceWeather` snapshot |
+
+The dawn-dusk motional field is the classic measure of solar-wind/magnetosphere coupling: a
+southward IMF reconnects and imposes a cross-tail electric field that drives convection, the ring
+current, and the auroral electrojets, while a northward field leaves the magnetosphere closed and
+contributes no forcing. `formatElectricField` in `frontend/src/utils/format.ts` renders the field
+(`1.60 mV/m`, keeping the sign) for display, and the heliosphere overlay surfaces both a coupling
+status row and the coupling field in its L1 DSCOVR panel, highlighting it when the IMF turns
+southward.
+
 ## Coverage Footprint
 
 How much of Earth a satellite can see or serve comes from the pure geometry helpers in
