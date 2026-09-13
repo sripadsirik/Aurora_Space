@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ELECTRIC_FIELD_COEFFICIENT,
+  electricFieldLevel,
   geoeffectiveElectricField,
   interplanetaryElectricField
 } from "../interplanetaryElectricField";
@@ -64,5 +65,29 @@ describe("geoeffectiveElectricField", () => {
   it("never returns a negative value", () => {
     expect(geoeffectiveElectricField(800, 10)).toBeGreaterThanOrEqual(0);
     expect(geoeffectiveElectricField(800, -10)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("electricFieldLevel", () => {
+  it("labels each band by its representative field", () => {
+    expect(electricFieldLevel(0.2)).toBe("quiet");
+    expect(electricFieldLevel(1.5)).toBe("moderate");
+    expect(electricFieldLevel(6)).toBe("strong");
+    expect(electricFieldLevel(20)).toBe("extreme");
+  });
+
+  it("is inclusive at the lower edge of each band", () => {
+    expect(electricFieldLevel(0.5)).toBe("moderate");
+    expect(electricFieldLevel(3)).toBe("strong");
+    expect(electricFieldLevel(10)).toBe("extreme");
+  });
+
+  it("treats a rectified (zero) field as quiet", () => {
+    expect(electricFieldLevel(0)).toBe("quiet");
+  });
+
+  it("falls back to quiet for negative or non-finite input", () => {
+    expect(electricFieldLevel(-4)).toBe("quiet");
+    expect(electricFieldLevel(Number.NaN)).toBe("quiet");
   });
 });
