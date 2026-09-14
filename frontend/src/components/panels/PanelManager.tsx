@@ -6,7 +6,7 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { conjunctionPeerName } from "../../utils/conjunctionLabels";
+import { conjunctionPeerName, conjunctionsForSatellite } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
@@ -133,10 +133,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
     return null;
   }
 
-  const relatedConjunctions = conjunctions.filter(
-    (conjunction) =>
-      conjunction.object1.noradId === selectedSatellite.noradId || conjunction.object2.noradId === selectedSatellite.noradId
-  );
+  const relatedConjunctions = conjunctionsForSatellite(selectedSatellite, conjunctions);
 
   const impact = getSpaceWeatherImpact(selectedSatellite, spaceWeather.kpIndex);
   const periodMinutes = getOrbitPeriodMinutes(selectedSatellite.altitudeKm);
