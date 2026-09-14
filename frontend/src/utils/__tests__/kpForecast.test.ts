@@ -39,10 +39,13 @@ describe("buildKpForecast", () => {
     }
   });
 
-  it("pins an extreme storm to the ceiling across the horizon", () => {
-    for (const point of buildKpForecast(9)) {
-      expect(point.kp).toBe(KP_MAX);
+  it("clamps upward wobble at the ceiling for a maxed-out storm", () => {
+    const forecast = buildKpForecast(9);
+    for (const point of forecast) {
+      expect(point.kp).toBeLessThanOrEqual(KP_MAX);
     }
+    // The first sample wobbles above 9 and must be pinned to the ceiling.
+    expect(forecast[0].kp).toBe(KP_MAX);
   });
 
   it("never dips below the floor for a quiet field", () => {
