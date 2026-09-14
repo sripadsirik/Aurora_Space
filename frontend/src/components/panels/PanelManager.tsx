@@ -19,6 +19,7 @@ import {
   formatProtonFlux,
   formatUtcTime
 } from "../../utils/format";
+import { buildKpForecast } from "../../utils/kpForecast";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
 import {
   formatAltitudeKm,
@@ -309,16 +310,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
 
-  const forecast = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, index) => {
-        const hoursAhead = index * 3;
-        const wave = Math.sin(index * 0.9) * 0.8 + Math.cos(index * 0.35) * 0.4;
-        const kp = Math.max(0, Math.min(9, Number((spaceWeather.kpIndex + wave).toFixed(1))));
-        return { hoursAhead, kp };
-      }),
-    [spaceWeather.kpIndex]
-  );
+  const forecast = useMemo(() => buildKpForecast(spaceWeather.kpIndex), [spaceWeather.kpIndex]);
 
   return (
     <PanelCard title="Space Weather" closeLabel="Close space weather panel" onClose={() => closePanel("space-weather")}>
