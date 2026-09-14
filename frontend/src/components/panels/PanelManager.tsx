@@ -17,7 +17,8 @@ import {
   formatMissDistance,
   formatProbability,
   formatProtonFlux,
-  formatUtcTime
+  formatUtcTime,
+  formatUtcTimestamp
 } from "../../utils/format";
 import { buildKpForecast } from "../../utils/kpForecast";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
@@ -259,7 +260,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">CLOSE APPROACH DATA</p>
           <div className="grid grid-cols-[1.4fr_1fr] gap-y-1">
             <span>TCA (UTC)</span>
-            <span className="text-right text-[11px]">{(selectedConjunction.tca instanceof Date ? selectedConjunction.tca : new Date(selectedConjunction.tca)).toISOString().replace("T", " ").replace(".000Z", " UTC")}</span>
+            <span className="text-right text-[11px]">{formatUtcTimestamp(selectedConjunction.tca)}</span>
             <span>Time until TCA</span>
             <span className="text-right">{formatCountdownToTca(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
@@ -314,7 +315,7 @@ const SpaceWeatherPanel = (): JSX.Element => {
       <div className="space-y-3">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--aurora-accent)]">SPACE WEATHER | NOAA SWPC</p>
-          <p className="text-[10px] text-[#9cc2de]">Last updated {spaceWeather.lastUpdated.toISOString().replace("T", " ").replace(".000Z", " UTC")}</p>
+          <p className="text-[10px] text-[#9cc2de]">Last updated {formatUtcTimestamp(spaceWeather.lastUpdated)}</p>
           <div className="mt-1 flex items-center gap-1.5 text-[10px]">
             <span className="text-[#9cc2de]">NOAA</span>
             {[noaa.geomagnetic, noaa.solarRadiation, noaa.radioBlackout].map((scale) => (
