@@ -10,7 +10,7 @@ import {
   helioPlaybackLabel,
   percentToBurstIntensity
 } from "../../utils/helioControls";
-import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
+import { formatKpIndex, formatMagneticFieldNt, formatSolarWindDensity } from "../../utils/measurements";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -174,7 +174,7 @@ export const HelioOverlay = (): JSX.Element | null => {
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Density</span>
-              <span className="text-[#e7f5ff]">{spaceWeather.solarWindDensity} p/cm³</span>
+              <span className="text-[#e7f5ff]">{formatSolarWindDensity(spaceWeather.solarWindDensity)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Ram Pressure</span>
