@@ -55,6 +55,20 @@ export const isCmeArrived = (cme: Pick<MockCME, "hoursUntilArrival">): boolean =
   cme.hoursUntilArrival <= 0;
 
 /**
+ * Tailwind text-colour class for a card's arrival line. An already-arrived CME
+ * reads in the red hazard hue, a clean miss in the calm green, and a pending
+ * impact in amber. Arrival is checked before the miss so a miss whose pass-by
+ * time has elapsed still reads as arrived, matching the countdown wording.
+ */
+export const cmeArrivalTextClass = (
+  cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">
+): string => {
+  if (isCmeArrived(cme)) return "text-[#ff6644]";
+  if (isCmeMiss(cme)) return "text-[#7dff6a]";
+  return "text-[#ffcc88]";
+};
+
+/**
  * Lists the primary operational impacts to surface for an impacting CME, in
  * escalating order of severity. HF radio and GPS effects are always present;
  * a predicted Kp of 7+ adds power-grid stress, and Kp 8+ adds satellite
