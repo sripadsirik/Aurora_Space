@@ -47,6 +47,14 @@ export const isCmeMiss = (cme: Pick<MockCME, "impactStatus">): boolean =>
   cme.impactStatus === CME_MISS_STATUS;
 
 /**
+ * True once a CME has reached Earth, i.e. its countdown has run to zero or gone
+ * negative (`hoursUntilArrival <= 0`). Mirrors the boundary {@link
+ * formatCmeArrival} uses to switch from a countdown to an "ARRIVED" readout.
+ */
+export const isCmeArrived = (cme: Pick<MockCME, "hoursUntilArrival">): boolean =>
+  cme.hoursUntilArrival <= 0;
+
+/**
  * Lists the primary operational impacts to surface for an impacting CME, in
  * escalating order of severity. HF radio and GPS effects are always present;
  * a predicted Kp of 7+ adds power-grid stress, and Kp 8+ adds satellite
