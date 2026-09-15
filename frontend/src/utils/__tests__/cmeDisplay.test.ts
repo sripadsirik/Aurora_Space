@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CME_MISS_STATUS,
+  cmeArrivalTextClass,
   cmePrimaryImpacts,
   formatCmeArrival,
   isCmeArrived,
@@ -38,6 +39,32 @@ describe("isCmeArrived", () => {
 
   it("is true once the arrival is in the past", () => {
     expect(isCmeArrived({ hoursUntilArrival: -4 })).toBe(true);
+  });
+});
+
+describe("cmeArrivalTextClass", () => {
+  it("uses the amber hue for a pending impact", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "DIRECT HIT", hoursUntilArrival: 18 })
+    ).toBe("text-[#ffcc88]");
+  });
+
+  it("uses the red hazard hue once arrived", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "DIRECT HIT", hoursUntilArrival: -2 })
+    ).toBe("text-[#ff6644]");
+  });
+
+  it("uses the calm green hue for a pending clean miss", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: 30 })
+    ).toBe("text-[#7dff6a]");
+  });
+
+  it("prefers the arrived hue over the miss hue once the pass-by has elapsed", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: -1 })
+    ).toBe("text-[#ff6644]");
   });
 });
 
