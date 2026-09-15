@@ -9,7 +9,14 @@
  * conditionals.
  */
 
-import type { MockCME } from "../types/space";
+import type { CmeImpactStatus, MockCME } from "../types/space";
+
+/**
+ * The {@link CmeImpactStatus} value marking a CME that passes Earth's orbit
+ * without striking the magnetosphere. Shared so the "clean miss" branch reads
+ * the same in every helper instead of repeating the literal string.
+ */
+export const CME_MISS_STATUS: CmeImpactStatus = "NO IMPACT — MISS";
 
 /**
  * Builds the single-line arrival status shown on a CME card. The wording depends
@@ -21,7 +28,7 @@ import type { MockCME } from "../types/space";
  *   direct hit has no prefix. Both end in `<h>h until arrival`.
  */
 export const formatCmeArrival = (cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">): string => {
-  if (cme.impactStatus === "NO IMPACT — MISS") {
+  if (cme.impactStatus === CME_MISS_STATUS) {
     return `PASSES EARTH ORBIT IN ${cme.hoursUntilArrival}h — NO IMPACT`;
   }
   if (cme.hoursUntilArrival <= 0) {
