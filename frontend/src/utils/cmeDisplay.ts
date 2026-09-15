@@ -1,3 +1,14 @@
+/**
+ * Presentation helpers for coronal mass ejection (CME) cards.
+ *
+ * The HELIO-mode CME library renders each modelled ejection as a card whose
+ * wording, badges, and accent colours all follow from the CME's impact geometry
+ * (a clean miss, a glancing blow, or a direct hit) and how long until it reaches
+ * Earth. Deriving those display strings in one tested place keeps the cards
+ * consistent and keeps the panel component free of scattered impact-status
+ * conditionals.
+ */
+
 import type { MockCME } from "../types/space";
 
 /**
