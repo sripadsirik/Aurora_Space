@@ -3,6 +3,7 @@ import {
   CME_MISS_STATUS,
   cmePrimaryImpacts,
   formatCmeArrival,
+  isCmeArrived,
   isCmeMiss
 } from "../cmeDisplay";
 
@@ -23,6 +24,20 @@ describe("isCmeMiss", () => {
 
   it("is false for a glancing blow", () => {
     expect(isCmeMiss({ impactStatus: "GLANCING BLOW" })).toBe(false);
+  });
+});
+
+describe("isCmeArrived", () => {
+  it("is false while the arrival is still in the future", () => {
+    expect(isCmeArrived({ hoursUntilArrival: 6 })).toBe(false);
+  });
+
+  it("is true at the exact arrival moment", () => {
+    expect(isCmeArrived({ hoursUntilArrival: 0 })).toBe(true);
+  });
+
+  it("is true once the arrival is in the past", () => {
+    expect(isCmeArrived({ hoursUntilArrival: -4 })).toBe(true);
   });
 });
 
