@@ -1,9 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { CME_MISS_STATUS, cmePrimaryImpacts, formatCmeArrival } from "../cmeDisplay";
+import {
+  CME_MISS_STATUS,
+  cmePrimaryImpacts,
+  formatCmeArrival,
+  isCmeMiss
+} from "../cmeDisplay";
 
 describe("CME_MISS_STATUS", () => {
   it("matches the impact-status literal used for a clean miss", () => {
     expect(CME_MISS_STATUS).toBe("NO IMPACT — MISS");
+  });
+});
+
+describe("isCmeMiss", () => {
+  it("is true for a clean miss", () => {
+    expect(isCmeMiss({ impactStatus: "NO IMPACT — MISS" })).toBe(true);
+  });
+
+  it("is false for a direct hit", () => {
+    expect(isCmeMiss({ impactStatus: "DIRECT HIT" })).toBe(false);
+  });
+
+  it("is false for a glancing blow", () => {
+    expect(isCmeMiss({ impactStatus: "GLANCING BLOW" })).toBe(false);
   });
 });
 
