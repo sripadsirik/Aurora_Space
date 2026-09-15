@@ -39,6 +39,14 @@ export const formatCmeArrival = (cme: Pick<MockCME, "impactStatus" | "hoursUntil
 };
 
 /**
+ * True when a CME cleanly misses Earth's orbit ({@link CME_MISS_STATUS}), so a
+ * card can drop the storm badge, arrival countdown, and impact list in favour of
+ * the calmer "miss" styling.
+ */
+export const isCmeMiss = (cme: Pick<MockCME, "impactStatus">): boolean =>
+  cme.impactStatus === CME_MISS_STATUS;
+
+/**
  * Lists the primary operational impacts to surface for an impacting CME, in
  * escalating order of severity. HF radio and GPS effects are always present;
  * a predicted Kp of 7+ adds power-grid stress, and Kp 8+ adds satellite
