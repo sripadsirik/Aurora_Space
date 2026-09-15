@@ -1,5 +1,72 @@
 import { describe, expect, it } from "vitest";
-import { cmePrimaryImpacts, formatCmeArrival } from "../cmeDisplay";
+import {
+  CME_MISS_STATUS,
+  cmeArrivalTextClass,
+  cmePrimaryImpacts,
+  formatCmeArrival,
+  isCmeArrived,
+  isCmeMiss
+} from "../cmeDisplay";
+
+describe("CME_MISS_STATUS", () => {
+  it("matches the impact-status literal used for a clean miss", () => {
+    expect(CME_MISS_STATUS).toBe("NO IMPACT — MISS");
+  });
+});
+
+describe("isCmeMiss", () => {
+  it("is true for a clean miss", () => {
+    expect(isCmeMiss({ impactStatus: "NO IMPACT — MISS" })).toBe(true);
+  });
+
+  it("is false for a direct hit", () => {
+    expect(isCmeMiss({ impactStatus: "DIRECT HIT" })).toBe(false);
+  });
+
+  it("is false for a glancing blow", () => {
+    expect(isCmeMiss({ impactStatus: "GLANCING BLOW" })).toBe(false);
+  });
+});
+
+describe("isCmeArrived", () => {
+  it("is false while the arrival is still in the future", () => {
+    expect(isCmeArrived({ hoursUntilArrival: 6 })).toBe(false);
+  });
+
+  it("is true at the exact arrival moment", () => {
+    expect(isCmeArrived({ hoursUntilArrival: 0 })).toBe(true);
+  });
+
+  it("is true once the arrival is in the past", () => {
+    expect(isCmeArrived({ hoursUntilArrival: -4 })).toBe(true);
+  });
+});
+
+describe("cmeArrivalTextClass", () => {
+  it("uses the amber hue for a pending impact", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "DIRECT HIT", hoursUntilArrival: 18 })
+    ).toBe("text-[#ffcc88]");
+  });
+
+  it("uses the red hazard hue once arrived", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "DIRECT HIT", hoursUntilArrival: -2 })
+    ).toBe("text-[#ff6644]");
+  });
+
+  it("uses the calm green hue for a pending clean miss", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: 30 })
+    ).toBe("text-[#7dff6a]");
+  });
+
+  it("prefers the arrived hue over the miss hue once the pass-by has elapsed", () => {
+    expect(
+      cmeArrivalTextClass({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: -1 })
+    ).toBe("text-[#ff6644]");
+  });
+});
 
 describe("formatCmeArrival", () => {
   it("describes a clean miss with the pass-by wording", () => {

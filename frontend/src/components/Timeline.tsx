@@ -6,6 +6,7 @@ import type { HistoricalEvent } from "../types/space";
 import { clamp01 } from "../utils/clamp";
 import { findNearestEvent } from "../utils/timelineEvents";
 import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
+import { STORM_KP_THRESHOLD } from "../utils/visualMode";
 import {
   buildYearTicks,
   dateToFraction as dateToFractionInWindow,
@@ -64,7 +65,7 @@ export const Timeline = (): JSX.Element | null => {
       if (nearest) {
         setTimelineEvent(nearest);
         // Auto-switch mode based on event
-        if (nearest.kpIndex !== undefined && nearest.kpIndex > 5) {
+        if (nearest.kpIndex !== undefined && nearest.kpIndex > STORM_KP_THRESHOLD) {
           setMode("STORM");
         } else {
           setMode("OPS");
