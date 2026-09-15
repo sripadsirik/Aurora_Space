@@ -1,6 +1,6 @@
 import { useAuroraStore } from "../../store/auroraStore";
 import { mockCMEs } from "../../data/mock/cmeLibrary";
-import { cmePrimaryImpacts, formatCmeArrival } from "../../utils/cmeDisplay";
+import { cmePrimaryImpacts, formatCmeArrival, isCmeMiss } from "../../utils/cmeDisplay";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor } from "../../utils/spaceWeatherScales";
 import type { MockCME } from "../../types/space";
@@ -10,7 +10,7 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
   isSelected: boolean;
   onSelect: () => void;
 }): JSX.Element => {
-  const isMiss = cme.impactStatus === "NO IMPACT — MISS";
+  const isMiss = isCmeMiss(cme);
   const isArrived = cme.hoursUntilArrival <= 0;
   const arrivalText = formatCmeArrival(cme);
 
