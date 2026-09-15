@@ -1,6 +1,11 @@
 import { useAuroraStore } from "../../store/auroraStore";
 import { mockCMEs } from "../../data/mock/cmeLibrary";
-import { cmePrimaryImpacts, formatCmeArrival, isCmeMiss } from "../../utils/cmeDisplay";
+import {
+  cmeArrivalTextClass,
+  cmePrimaryImpacts,
+  formatCmeArrival,
+  isCmeMiss
+} from "../../utils/cmeDisplay";
 import { getKpColor } from "../../utils/colors";
 import { gScaleColor } from "../../utils/spaceWeatherScales";
 import type { MockCME } from "../../types/space";
@@ -11,7 +16,6 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
   onSelect: () => void;
 }): JSX.Element => {
   const isMiss = isCmeMiss(cme);
-  const isArrived = cme.hoursUntilArrival <= 0;
   const arrivalText = formatCmeArrival(cme);
 
   return (
@@ -49,7 +53,7 @@ const CmeCard = ({ cme, isSelected, onSelect }: {
 
       <div className="mt-1 flex items-center justify-between text-[10px]">
         <span className="text-[#aaccdd]">{cme.speed} km/s</span>
-        <span className={isArrived ? "text-[#ff6644]" : isMiss ? "text-[#7dff6a]" : "text-[#ffcc88]"}>
+        <span className={cmeArrivalTextClass(cme)}>
           {arrivalText}
         </span>
       </div>
