@@ -83,3 +83,33 @@ func TestFormatEventTime(t *testing.T) {
 		t.Errorf("formatEventTime(%v) = %q, want %q", instant, got, want)
 	}
 }
+
+func TestStatusForFreshness(t *testing.T) {
+	live := 2 * time.Minute
+	stale := 10 * time.Minute
+
+	var zero time.Time
+	if got := statusForFreshness(zero, live, stale); got != "ERROR" {
+		t.Errorf("statusForFreshness(zero) = %q, want ERROR", got)
+	}
+
+	tests := []struct {
+		name string
+		age  time.Duration
+		want string
+	}{
+		{"just now is live", 1 * time.Second, "LIVE"},
+		{"within live window", 90 * time.Second, "LIVE"},
+		{"past live but within stale", 5 * time.Minute, "STALE"},
+		{"past stale window", 30 * time.Minute, "ERROR"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lastUpdated := time.Now().Add(-tt.age)
+			if got := statusForFreshness(lastUpdated, live, stale); got != tt.want {
+				t.Errorf("statusForFreshness(age=%v) = %q, want %q", tt.age, got, tt.want)
+			}
+		})
+	}
+}
