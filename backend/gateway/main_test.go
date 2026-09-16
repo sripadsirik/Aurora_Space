@@ -66,3 +66,73 @@ func TestStateCacheSetIgnoresUnknownType(t *testing.T) {
 		t.Error("unknown message type must not populate any feed")
 	}
 }
+
+func TestSatelliteBatchAssemblerPlainArray(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	data := []byte(`[{"noradId":1,"name":"A"},{"noradId":2,"name":"B"}]`)
+
+	payload, complete, err := a.ingest(data)
+	if err != nil {
+		t.Fatalf("ingest returned error: %v", err)
+	}
+	if !complete {
+		t.Fatal("plain array should be immediately complete")
+	}
+	if string(payload) != string(data) {
+		t.Errorf("payload = %s, want passthrough of input", payload)
+	}
+}
+
+func TestSatelliteBatchAssemblerSingleBatch(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	data := []byte(`{"batchId":"x","batchIndex":0,"batchCount":1,"satellites":[{"noradId":7,"name":"solo"}]}`)
+
+	payload, complete, err := a.ingest(data)
+	if err != nil {
+		t.Fatalf("ingest returned error: %v", err)
+	}
+	if !complete {
+		t.Fatal("single batch should be complete")
+	}
+
+	var satellites []map[string]any
+	if err := json.Unmarshal(payload, &satellites); err != nil {
+		t.Fatalf("payload not a satellite array: %v", err)
+	}
+	if len(satellites) != 1 {
+		t.Errorf("got %d satellites, want 1", len(satellites))
+	}
+}
+
+func TestSatelliteBatchAssemblerMultiBatch(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	part0 := []byte(`{"batchId":"m","batchIndex":0,"batchCount":2,"satellites":[{"noradId":1,"name":"A"}]}`)
+	part1 := []byte(`{"batchId":"m","batchIndex":1,"batchCount":2,"satellites":[{"noradId":2,"name":"B"}]}`)
+
+	if _, complete, err := a.ingest(part0); err != nil || complete {
+		t.Fatalf("first part: complete=%v err=%v, want incomplete", complete, err)
+	}
+
+	payload, complete, err := a.ingest(part1)
+	if err != nil {
+		t.Fatalf("second part returned error: %v", err)
+	}
+	if !complete {
+		t.Fatal("batch should be complete after final part")
+	}
+
+	var satellites []map[string]any
+	if err := json.Unmarshal(payload, &satellites); err != nil {
+		t.Fatalf("payload not a satellite array: %v", err)
+	}
+	if len(satellites) != 2 {
+		t.Errorf("got %d satellites, want 2 assembled across parts", len(satellites))
+	}
+}
+
+func TestSatelliteBatchAssemblerInvalidData(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	if _, _, err := a.ingest([]byte(`not json at all`)); err == nil {
+		t.Error("expected error for unparseable input")
+	}
+}
