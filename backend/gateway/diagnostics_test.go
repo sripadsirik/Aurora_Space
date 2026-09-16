@@ -246,3 +246,52 @@ func TestBuildEngineRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildSpaceTrackRow(t *testing.T) {
+	now := time.Now()
+
+	t.Run("fresh feed is live with alerts label", func(t *testing.T) {
+		row := buildSpaceTrackRow(
+			trackedProcessSnapshot{Running: true, LastMessage: "fetched CDMs"},
+			feedSnapshot{count: 5, lastUpdated: now},
+			true,
+		)
+		if row.Key != "spacetrack" {
+			t.Errorf("Key = %q, want spacetrack", row.Key)
+		}
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "5 alerts" {
+			t.Errorf("Records = %q, want %q", row.Records, "5 alerts")
+		}
+	})
+
+	t.Run("running without data yet is stale", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{}, true)
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("stopped without data is error", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: false}, feedSnapshot{}, true)
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+
+	t.Run("unconfigured with no messages explains missing credentials", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{lastUpdated: now}, false)
+		if row.Detail != "Set SPACETRACK_USERNAME and SPACETRACK_PASSWORD in backend/.env." {
+			t.Errorf("Detail = %q, want credentials hint", row.Detail)
+		}
+	})
+
+	t.Run("configured with no messages uses waiting detail", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{lastUpdated: now}, true)
+		if row.Detail != "Conjunction ingestion waiting for the next fetch window" {
+			t.Errorf("Detail = %q, want waiting detail", row.Detail)
+		}
+	})
+}
