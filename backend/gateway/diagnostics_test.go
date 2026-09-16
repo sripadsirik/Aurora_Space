@@ -205,3 +205,44 @@ func TestBuildCelestrakRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildEngineRow(t *testing.T) {
+	now := time.Now()
+
+	t.Run("fresh feed is live", func(t *testing.T) {
+		row := buildEngineRow(
+			trackedProcessSnapshot{Running: true},
+			feedSnapshot{count: 800, lastUpdated: now},
+		)
+		if row.Key != "engine-rust" {
+			t.Errorf("Key = %q, want engine-rust", row.Key)
+		}
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "800 positions" {
+			t.Errorf("Records = %q, want %q", row.Records, "800 positions")
+		}
+	})
+
+	t.Run("running but stale feed reports stale not error", func(t *testing.T) {
+		row := buildEngineRow(trackedProcessSnapshot{Running: true}, feedSnapshot{})
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("stopped with no data is error", func(t *testing.T) {
+		row := buildEngineRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+
+	t.Run("uses default detail when process is silent", func(t *testing.T) {
+		row := buildEngineRow(trackedProcessSnapshot{Running: true}, feedSnapshot{lastUpdated: now})
+		if row.Detail != "Waiting for initial satellite positions" {
+			t.Errorf("Detail = %q, want default placeholder", row.Detail)
+		}
+	})
+}
