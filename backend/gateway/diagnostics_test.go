@@ -68,3 +68,18 @@ func TestRecordsLabel(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	var zero time.Time
+	if got := formatEventTime(zero); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	// A non-UTC input must be rendered in UTC.
+	loc := time.FixedZone("UTC+5", 5*3600)
+	instant := time.Date(2026, 9, 16, 18, 30, 45, 0, loc)
+	want := "2026-09-16 13:30:45 UTC"
+	if got := formatEventTime(instant); got != want {
+		t.Errorf("formatEventTime(%v) = %q, want %q", instant, got, want)
+	}
+}
