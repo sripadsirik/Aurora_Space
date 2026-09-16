@@ -51,3 +51,28 @@ func TestClassifyRisk(t *testing.T) {
 		})
 	}
 }
+
+func TestDeriveStormLevel(t *testing.T) {
+	tests := []struct {
+		name string
+		kp   float64
+		want string
+	}{
+		{"quiet", 0, "none"},
+		{"just below minor", 4.9, "none"},
+		{"minor boundary", 5, "minor"},
+		{"moderate boundary", 6, "moderate"},
+		{"strong boundary", 7, "strong"},
+		{"severe boundary", 8, "severe"},
+		{"extreme boundary", 9, "extreme"},
+		{"above scale stays extreme", 12, "extreme"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := DeriveStormLevel(tt.kp); got != tt.want {
+				t.Errorf("DeriveStormLevel(%v) = %q, want %q", tt.kp, got, tt.want)
+			}
+		})
+	}
+}
