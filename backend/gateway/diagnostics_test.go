@@ -295,3 +295,47 @@ func TestBuildSpaceTrackRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildNoaaRow(t *testing.T) {
+	now := time.Now()
+
+	t.Run("fresh feed is live with records label", func(t *testing.T) {
+		row := buildNoaaRow(
+			trackedProcessSnapshot{Running: true, LastMessage: "space weather updated"},
+			feedSnapshot{count: 3, lastUpdated: now},
+		)
+		if row.Key != "noaa" {
+			t.Errorf("Key = %q, want noaa", row.Key)
+		}
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "3 records" {
+			t.Errorf("Records = %q, want %q", row.Records, "3 records")
+		}
+	})
+
+	t.Run("stopped without data is error", func(t *testing.T) {
+		row := buildNoaaRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+
+	t.Run("running but stale feed reports stale", func(t *testing.T) {
+		row := buildNoaaRow(trackedProcessSnapshot{Running: true}, feedSnapshot{})
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("live status downgrades to stale on error detail", func(t *testing.T) {
+		row := buildNoaaRow(
+			trackedProcessSnapshot{Running: true, LastError: "err=connection refused"},
+			feedSnapshot{count: 1, lastUpdated: now},
+		)
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+}
