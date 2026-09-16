@@ -26,3 +26,28 @@ func TestClassifyOrbit(t *testing.T) {
 		})
 	}
 }
+
+func TestClassifyRisk(t *testing.T) {
+	tests := []struct {
+		name        string
+		probability float64
+		want        string
+	}{
+		{"far below any threshold", 0, "nominal"},
+		{"just at watch threshold is still nominal", 0.000001, "nominal"},
+		{"just above watch threshold", 0.0000011, "watch"},
+		{"just at warning threshold is still watch", 0.0001, "watch"},
+		{"just above warning threshold", 0.00011, "warning"},
+		{"just at critical threshold is still warning", 0.001, "warning"},
+		{"just above critical threshold", 0.0011, "critical"},
+		{"certain collision", 1, "critical"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ClassifyRisk(tt.probability); got != tt.want {
+				t.Errorf("ClassifyRisk(%v) = %q, want %q", tt.probability, got, tt.want)
+			}
+		})
+	}
+}
