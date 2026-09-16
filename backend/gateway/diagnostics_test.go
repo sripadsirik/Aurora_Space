@@ -113,3 +113,55 @@ func TestStatusForFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestSummarizeLogLine(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want string
+	}{
+		{
+			name: "plain text passes through trimmed",
+			line: "  starting celestrak ingestion  ",
+			want: "starting celestrak ingestion",
+		},
+		{
+			name: "invalid json falls back to trimmed text",
+			line: "{not valid json",
+			want: "{not valid json",
+		},
+		{
+			name: "extracts msg field",
+			line: `{"msg":"fetched TLEs"}`,
+			want: "fetched TLEs",
+		},
+		{
+			name: "extracts nested fields.message",
+			line: `{"fields":{"message":"engine tick"}}`,
+			want: "engine tick",
+		},
+		{
+			name: "appends recognized top-level keys",
+			line: `{"msg":"broadcast","count":42,"topic":"aurora.satellites.positions"}`,
+			want: "broadcast | topic=aurora.satellites.positions | count=42",
+		},
+		{
+			name: "reads recognized keys from fields when absent at top level",
+			line: `{"msg":"update","fields":{"status":"ok"}}`,
+			want: "update | status=ok",
+		},
+		{
+			name: "json without recognized content returns trimmed",
+			line: `{"unrelated":"value"}`,
+			want: `{"unrelated":"value"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := summarizeLogLine(tt.line); got != tt.want {
+				t.Errorf("summarizeLogLine(%q) = %q, want %q", tt.line, got, tt.want)
+			}
+		})
+	}
+}
