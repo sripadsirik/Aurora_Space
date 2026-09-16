@@ -46,3 +46,25 @@ func TestMaxTime(t *testing.T) {
 		t.Errorf("maxTime(zero, later) = %v, want %v", got, later)
 	}
 }
+
+func TestRecordsLabel(t *testing.T) {
+	tests := []struct {
+		name  string
+		count int
+		noun  string
+		want  string
+	}{
+		{"zero count", 0, "tracked", "No data"},
+		{"negative count", -3, "tracked", "No data"},
+		{"single record", 1, "positions", "1 positions"},
+		{"many records", 1500, "alerts", "1500 alerts"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := recordsLabel(tt.count, tt.noun); got != tt.want {
+				t.Errorf("recordsLabel(%d, %q) = %q, want %q", tt.count, tt.noun, got, tt.want)
+			}
+		})
+	}
+}
