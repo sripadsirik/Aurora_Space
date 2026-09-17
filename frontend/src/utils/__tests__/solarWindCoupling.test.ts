@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  couplingLevel,
   MERGING_FIELD_COEFFICIENT,
   mergingElectricFieldMvM,
   southwardBz
@@ -46,5 +47,32 @@ describe("mergingElectricFieldMvM", () => {
     expect(mergingElectricFieldMvM(Number.NaN, -5)).toBe(0);
     expect(mergingElectricFieldMvM(Number.POSITIVE_INFINITY, -5)).toBe(0);
     expect(mergingElectricFieldMvM(-400, -5)).toBe(0);
+  });
+});
+
+describe("couplingLevel", () => {
+  it("classifies a weak field as quiet", () => {
+    expect(couplingLevel(0)).toBe("quiet");
+    expect(couplingLevel(0.49)).toBe("quiet");
+  });
+
+  it("classifies sustained coupling as moderate", () => {
+    expect(couplingLevel(0.5)).toBe("moderate");
+    expect(couplingLevel(2.9)).toBe("moderate");
+  });
+
+  it("classifies intense-storm driving as strong", () => {
+    expect(couplingLevel(3)).toBe("strong");
+    expect(couplingLevel(7.9)).toBe("strong");
+  });
+
+  it("classifies major-storm coupling as extreme", () => {
+    expect(couplingLevel(8)).toBe("extreme");
+    expect(couplingLevel(25)).toBe("extreme");
+  });
+
+  it("falls back to quiet for negative or non-finite input", () => {
+    expect(couplingLevel(-1)).toBe("quiet");
+    expect(couplingLevel(Number.NaN)).toBe("quiet");
   });
 });
