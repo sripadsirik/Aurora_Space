@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SpaceWeather } from "../../types/space";
 import {
   couplingLevel,
+  couplingLevelLabel,
   MERGING_FIELD_COEFFICIENT,
   mergingElectricFieldMvM,
   solarWindCouplingProfile,
@@ -118,5 +119,14 @@ describe("solarWindCouplingProfile", () => {
     expect(profile.mergingFieldMvM).toBeCloseTo(
       mergingElectricFieldMvM(520, -3.5)
     );
+  });
+});
+
+describe("couplingLevelLabel", () => {
+  it("maps each coupling band to its readout label", () => {
+    expect(couplingLevelLabel("quiet")).toBe("DECOUPLED");
+    expect(couplingLevelLabel("moderate")).toBe("COUPLING");
+    expect(couplingLevelLabel("strong")).toBe("STRONG COUPLING");
+    expect(couplingLevelLabel("extreme")).toBe("EXTREME COUPLING");
   });
 });
