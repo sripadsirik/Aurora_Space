@@ -66,3 +66,39 @@ export const couplingLevel = (fieldMvM: number): CouplingLevel => {
   if (fieldMvM < 8) return "strong";
   return "extreme";
 };
+
+/** Derived solar-wind coupling figures for the current space-weather state. */
+export interface SolarWindCouplingProfile {
+  /** Southward IMF magnitude `Bs` driving the coupling, in nanotesla. */
+  southwardBzNt: number;
+  /** Dawn-dusk merging electric field `VBs`, in millivolts per metre. */
+  mergingFieldMvM: number;
+  /** Qualitative band the merging field falls in. */
+  level: CouplingLevel;
+  /** True when the IMF is southward and therefore actively coupling. */
+  coupling: boolean;
+}
+
+/**
+ * Bundles the coupling figures derived from a space-weather snapshot: the
+ * southward IMF magnitude, the dawn-dusk merging electric field its speed and
+ * Bz imply, the qualitative coupling band, and whether the field is southward
+ * at all. All values come from the same rectified Bz, so they stay mutually
+ * consistent — a northward field yields a zero field, a `quiet` band, and
+ * `coupling: false`.
+ */
+export const solarWindCouplingProfile = (
+  weather: SpaceWeather
+): SolarWindCouplingProfile => {
+  const southwardBzNt = southwardBz(weather.bzComponent);
+  const mergingFieldMvM = mergingElectricFieldMvM(
+    weather.solarWindSpeed,
+    weather.bzComponent
+  );
+  return {
+    southwardBzNt,
+    mergingFieldMvM,
+    level: couplingLevel(mergingFieldMvM),
+    coupling: southwardBzNt > 0
+  };
+};
