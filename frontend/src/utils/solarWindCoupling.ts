@@ -25,3 +25,25 @@ export const southwardBz = (bz: number): number => {
   if (!Number.isFinite(bz) || bz >= 0) return 0;
   return -bz;
 };
+
+/**
+ * Coefficient that converts a solar-wind speed (km/s) and southward field
+ * (nT) into a merging electric field in millivolts per metre via
+ * `E = k * v * Bs`. It folds the km/s -> m/s (`1e3`), nT -> T (`1e-9`), and
+ * V/m -> mV/m (`1e3`) unit conversions into a single factor, so a 400 km/s wind
+ * with a 5 nT southward field gives `1e-3 * 400 * 5 = 2 mV/m`.
+ */
+export const MERGING_FIELD_COEFFICIENT = 1e-3;
+
+/**
+ * Dawn-dusk merging (motional) electric field `VBs` in millivolts per metre for
+ * the given solar-wind speed (km/s) and IMF Bz (nT), from `E = k * v * Bs`.
+ * Only the southward part of Bz contributes (see {@link southwardBz}), so a
+ * northward field yields `0`. Non-finite or negative speeds are treated as
+ * zero, so a bad feed value yields `0` rather than a `NaN` field.
+ */
+export const mergingElectricFieldMvM = (speedKms: number, bz: number): number => {
+  if (!Number.isFinite(speedKms)) return 0;
+  const speed = Math.max(0, speedKms);
+  return MERGING_FIELD_COEFFICIENT * speed * southwardBz(bz);
+};
