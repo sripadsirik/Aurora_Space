@@ -15,7 +15,10 @@ import {
   percentToBurstIntensity
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
-import { solarWindCouplingProfile } from "../../utils/solarWindCoupling";
+import {
+  couplingLevelLabel,
+  solarWindCouplingProfile
+} from "../../utils/solarWindCoupling";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -81,6 +84,7 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Dawn-dusk merging electric field VBs — how strongly the wind couples in.
   const couplingProfile = solarWindCouplingProfile(spaceWeather);
+  const couplingLabel = couplingLevelLabel(couplingProfile.level);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
@@ -103,6 +107,11 @@ export const HelioOverlay = (): JSX.Element | null => {
           <HelioRow color={kpColor} label="KP INDEX" value={formatKpIndex(spaceWeather.kpIndex)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
           <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
+          <HelioRow
+            color={couplingProfile.coupling ? "#ff8f6e" : "#7dff6a"}
+            label="COUPLING"
+            value={couplingLabel}
+          />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-cyan-500/10 pt-2 text-[10px] tracking-[0.18em] text-[#6d8ea9]">
           <span>VIEW WIDTH ~ 2.0 AU</span>
