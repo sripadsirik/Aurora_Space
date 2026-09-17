@@ -47,3 +47,22 @@ export const mergingElectricFieldMvM = (speedKms: number, bz: number): number =>
   const speed = Math.max(0, speedKms);
   return MERGING_FIELD_COEFFICIENT * speed * southwardBz(bz);
 };
+
+/** Qualitative bands for the merging-field coupling, from quiet to storm-level. */
+export type CouplingLevel = "quiet" | "moderate" | "strong" | "extreme";
+
+/**
+ * Buckets a merging electric field (mV/m) into a qualitative coupling band for
+ * the readouts. Below 0.5 mV/m the field is `quiet` — a northward or weak IMF
+ * feeds little energy in; 0.5-3 mV/m is `moderate`, sustained coupling that can
+ * seed a storm; 3-8 mV/m is `strong`, the driving seen in intense storms; and
+ * 8 mV/m or more is `extreme`, the coupling that accompanies a major
+ * CME-driven storm. The thresholds are approximate operational bands. Negative
+ * or non-finite inputs fall back to `quiet`.
+ */
+export const couplingLevel = (fieldMvM: number): CouplingLevel => {
+  if (!Number.isFinite(fieldMvM) || fieldMvM < 0.5) return "quiet";
+  if (fieldMvM < 3) return "moderate";
+  if (fieldMvM < 8) return "strong";
+  return "extreme";
+};
