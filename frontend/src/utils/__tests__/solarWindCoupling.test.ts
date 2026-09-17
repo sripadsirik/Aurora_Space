@@ -1,11 +1,25 @@
 import { describe, expect, it } from "vitest";
 
+import type { SpaceWeather } from "../../types/space";
 import {
   couplingLevel,
   MERGING_FIELD_COEFFICIENT,
   mergingElectricFieldMvM,
+  solarWindCouplingProfile,
   southwardBz
 } from "../solarWindCoupling";
+
+const baseWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
+  kpIndex: 3,
+  solarWindSpeed: 400,
+  solarWindDensity: 5,
+  bzComponent: -5,
+  xrayFlux: "B1.0",
+  stormLevel: "none",
+  auroraKp: 3,
+  lastUpdated: new Date("2026-09-17T00:00:00Z"),
+  ...overrides
+});
 
 describe("southwardBz", () => {
   it("returns the magnitude of a southward (negative) Bz", () => {
@@ -74,5 +88,35 @@ describe("couplingLevel", () => {
   it("falls back to quiet for negative or non-finite input", () => {
     expect(couplingLevel(-1)).toBe("quiet");
     expect(couplingLevel(Number.NaN)).toBe("quiet");
+  });
+});
+
+describe("solarWindCouplingProfile", () => {
+  it("derives mutually consistent figures from a southward field", () => {
+    const profile = solarWindCouplingProfile(
+      baseWeather({ solarWindSpeed: 600, bzComponent: -10 })
+    );
+    expect(profile.southwardBzNt).toBe(10);
+    expect(profile.mergingFieldMvM).toBeCloseTo(6);
+    expect(profile.level).toBe("strong");
+    expect(profile.coupling).toBe(true);
+  });
+
+  it("reports no coupling for a northward field", () => {
+    const profile = solarWindCouplingProfile(
+      baseWeather({ solarWindSpeed: 800, bzComponent: 6 })
+    );
+    expect(profile.southwardBzNt).toBe(0);
+    expect(profile.mergingFieldMvM).toBe(0);
+    expect(profile.level).toBe("quiet");
+    expect(profile.coupling).toBe(false);
+  });
+
+  it("keeps the field consistent with the standalone helper", () => {
+    const weather = baseWeather({ solarWindSpeed: 520, bzComponent: -3.5 });
+    const profile = solarWindCouplingProfile(weather);
+    expect(profile.mergingFieldMvM).toBeCloseTo(
+      mergingElectricFieldMvM(520, -3.5)
+    );
   });
 });
