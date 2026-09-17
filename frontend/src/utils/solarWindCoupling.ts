@@ -67,6 +67,25 @@ export const couplingLevel = (fieldMvM: number): CouplingLevel => {
   return "extreme";
 };
 
+/**
+ * Short status label for a coupling band, for a magnetosphere readout that
+ * mirrors the Bz shield label: a `quiet` field reads as `DECOUPLED` (the wind
+ * slides past a closed magnetosphere), `moderate` as `COUPLING`, `strong` as
+ * `STRONG COUPLING`, and `extreme` as `EXTREME COUPLING`.
+ */
+export const couplingLevelLabel = (level: CouplingLevel): string => {
+  switch (level) {
+    case "quiet":
+      return "DECOUPLED";
+    case "moderate":
+      return "COUPLING";
+    case "strong":
+      return "STRONG COUPLING";
+    case "extreme":
+      return "EXTREME COUPLING";
+  }
+};
+
 /** Derived solar-wind coupling figures for the current space-weather state. */
 export interface SolarWindCouplingProfile {
   /** Southward IMF magnitude `Bs` driving the coupling, in nanotesla. */
