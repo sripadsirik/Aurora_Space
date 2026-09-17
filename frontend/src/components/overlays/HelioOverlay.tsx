@@ -3,7 +3,11 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
+import {
+  formatDynamicPressure,
+  formatMagnetopauseStandoff,
+  formatMergingField
+} from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -11,6 +15,7 @@ import {
   percentToBurstIntensity
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
+import { solarWindCouplingProfile } from "../../utils/solarWindCoupling";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -73,6 +78,9 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
+
+  // Dawn-dusk merging electric field VBs — how strongly the wind couples in.
+  const couplingProfile = solarWindCouplingProfile(spaceWeather);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
