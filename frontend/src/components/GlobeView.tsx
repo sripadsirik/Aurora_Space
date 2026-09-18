@@ -60,6 +60,7 @@ import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
 import { createAuroraCapHierarchy } from "../utils/auroraCap";
+import { createFireConeFrontPositions } from "../utils/cmeFlameCone";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
 import { createConjunctionOrbitArcPositions, getSatellitePositionAtOffset } from "../utils/satelliteOrbitAnim";
@@ -210,41 +211,6 @@ const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { cur
     const baseMax = isStorm ? Math.min(maxAlpha * 2.5, 0.8) : maxAlpha;
     return AURORA_COLOR.withAlpha(baseMin + (baseMax - baseMin) * phase);
   }, false));
-
-const createFireConeFrontPositions = (
-  sunToEarth: Cartesian3,
-  right: Cartesian3,
-  up: Cartesian3,
-  length: number,
-  halfAngle: number,
-  timeSeconds: number,
-  flareScale: number,
-  liftScale: number,
-  segments = 18
-): Cartesian3[] => {
-  const positions: Cartesian3[] = [];
-  const spread = Math.tan(halfAngle);
-
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments;
-    const lateralFactor = CesiumMath.lerp(-1, 1, t);
-    const centerBias = 1 - Math.pow(Math.abs(lateralFactor), 1.45);
-    const tongue = Math.max(0, Math.sin(timeSeconds * 4.4 + t * 19)) * centerBias;
-    const flutter = Math.sin(timeSeconds * 10.5 + t * 31) * 0.035;
-    const forwardScale = clamp(0.8 + centerBias * 0.14 + tongue * (0.22 * flareScale) + flutter, 0.62, 1.28);
-    const verticalFactor = Math.sin(timeSeconds * 3.8 + t * 13) * centerBias * liftScale;
-    const direction = new Cartesian3(
-      sunToEarth.x + lateralFactor * spread * right.x + verticalFactor * up.x,
-      sunToEarth.y + lateralFactor * spread * right.y + verticalFactor * up.y,
-      sunToEarth.z + lateralFactor * spread * right.z + verticalFactor * up.z
-    );
-
-    Cartesian3.normalize(direction, direction);
-    positions.push(Cartesian3.multiplyByScalar(direction, length * forwardScale, new Cartesian3()));
-  }
-
-  return positions;
-};
 
 const createMutableFlameFront = (count: number): Cartesian3[] => Array.from({ length: count }, () => new Cartesian3());
 
