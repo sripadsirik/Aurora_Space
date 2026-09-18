@@ -44,7 +44,10 @@ import {
   createOrbitArcPositions,
   createOrbitRingPositions,
   formatHelioArrivalLabel,
+  getHelioCmeProgress,
   HELIO_CME_DURATION_SECONDS,
+  HELIO_CME_PROGRESS_END,
+  HELIO_CME_PROGRESS_START,
   getHelioOrbitAngle,
   HELIO_AU_SCENE_UNITS,
   HELIO_L1_OFFSET,
@@ -157,8 +160,6 @@ const EARTH_ONLY_ROTATION_DEGREES_PER_SECOND = 2.4;
 const EARTH_ONLY_IDLE_DELAY_MS = 1800;
 const HELIO_VISUAL_SUN_RADIUS = HELIO_SUN_RADIUS * 1.4;
 const HELIO_CME_VISUAL_HALF_ANGLE = CesiumMath.toRadians(25);
-const HELIO_CME_PROGRESS_START = 0.4;
-const HELIO_CME_PROGRESS_END = 1.2;
 const HELIO_ORBIT_TIME_SCALE_SECONDS = 12 * 3600;
 const HELIO_PLAYBACK_BASE_RATE = 1;
 const HELIO_ORBIT_DASH_PATTERN = Number.parseInt("1111111100000000", 2);
@@ -1063,12 +1064,6 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       getHelioOrbitAngle(getHelioSimulationDate(), orbitalPeriodDays, phase);
     const getHelioEarthAngle = (): number => getHelioPlanetAngle(365.25, HELIO_PHASES.earth);
     const getHelioElapsedSeconds = (): number => helioSimulationSecondsRef.current;
-    const getHelioCmeProgress = (): number =>
-      clamp(
-        HELIO_CME_PROGRESS_START + (helioSimulationSecondsRef.current / HELIO_CME_DURATION_SECONDS) * (HELIO_CME_PROGRESS_END - HELIO_CME_PROGRESS_START),
-        HELIO_CME_PROGRESS_START,
-        HELIO_CME_PROGRESS_END
-      );
     const createHelioCoronaPrimitive = (radius: number, color: Color): Primitive =>
       viewer.scene.primitives.add(new Primitive({
         geometryInstances: new GeometryInstance({
@@ -1416,7 +1411,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     registerHelio(viewer.entities.add({
       position: new CallbackPositionProperty((_time, result) => {
         const earthDistance = Cartesian3.distance(Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle()));
-        const coneLength = earthDistance * getHelioCmeProgress() + HELIO_AU_SCENE_UNITS * 0.07;
+        const coneLength = earthDistance * getHelioCmeProgress(getHelioElapsedSeconds()) + HELIO_AU_SCENE_UNITS * 0.07;
         return Cartesian3.multiplyByScalar(helioCurrentCmeDirection, coneLength, result ?? new Cartesian3());
       }, false),
       label: {
@@ -1467,7 +1462,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         Cartesian3.subtract(helioEarthPosition, Cartesian3.ZERO, helioSunToEarthScratch),
         helioSunToEarthScratch
       );
-      const cmeProgress = getHelioCmeProgress();
+      const cmeProgress = getHelioCmeProgress(getHelioElapsedSeconds());
       helioCurrentCmeDirection = Cartesian3.normalize(new Cartesian3(
         helioCmeLaunchDirection.x + helioCmeLaunchRight.x * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.x * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI)),
         helioCmeLaunchDirection.y + helioCmeLaunchRight.y * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.y * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI)),
@@ -1553,7 +1548,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       });
 
       helioCmeEmberStates.forEach((ember, index) => {
-        const emberProgress = (getHelioCmeProgress() * 0.52 + ember.progressOffset + flameTime * 0.038 * ember.speedScale) % 1.16;
+        const emberProgress = (getHelioCmeProgress(getHelioElapsedSeconds()) * 0.52 + ember.progressOffset + flameTime * 0.038 * ember.speedScale) % 1.16;
         const progressAlongCone = clamp(0.08 + emberProgress * 0.92, 0.08, 1.08);
         const lateralScale = ember.lateralBias * spread * (0.2 + progressAlongCone * 0.7);
         const liftScale = ember.liftBias * (0.14 + progressAlongCone * 0.06);
