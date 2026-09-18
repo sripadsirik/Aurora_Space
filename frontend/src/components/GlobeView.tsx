@@ -59,6 +59,7 @@ import {
 import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
+import { createAuroraCapHierarchy } from "../utils/auroraCap";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
 import { createConjunctionOrbitArcPositions, getSatellitePositionAtOffset } from "../utils/satelliteOrbitAnim";
@@ -199,17 +200,6 @@ const isSatellitePickPayload = (value: unknown): value is SatellitePickPayload =
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
   return record.type === "satellite" && typeof record.satellite === "object" && record.satellite !== null;
-};
-
-const createAuroraCapHierarchy = (isNorth: boolean, radiusDeg: number, pointCount = 96): PolygonHierarchy => {
-  const positions: Cartesian3[] = [];
-  const poleSign = isNorth ? 1 : -1;
-  for (let index = 0; index <= pointCount; index += 1) {
-    const theta = (index / pointCount) * CesiumMath.TWO_PI;
-    const wobble = 1 + 0.12 * Math.sin(theta * 3);
-    positions.push(Cartesian3.fromDegrees(CesiumMath.toDegrees(theta) - 180, poleSign * (90 - radiusDeg * wobble)));
-  }
-  return new PolygonHierarchy(positions);
 };
 
 const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { current: string }): ColorMaterialProperty =>
