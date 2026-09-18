@@ -1,8 +1,8 @@
-import { Cartographic, Math as CesiumMath } from "cesium";
+import { Cartesian3, Cartographic, Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
 import { AURORA_CAP_POINT_COUNT, AURORA_CAP_WOBBLE, createAuroraCapHierarchy } from "../auroraCap";
 
-const latitudesDeg = (positions: { x: number; y: number; z: number }[]): number[] =>
+const latitudesDeg = (positions: Cartesian3[]): number[] =>
   positions.map((position) => CesiumMath.toDegrees(Cartographic.fromCartesian(position).latitude));
 
 describe("createAuroraCapHierarchy", () => {
