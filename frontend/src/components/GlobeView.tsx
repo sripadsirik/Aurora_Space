@@ -60,6 +60,7 @@ import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
 import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../utils/satelliteOrbitAnim";
 
 interface GlobeViewProps {
@@ -73,15 +74,9 @@ interface SatellitePickPayload {
   satellite: Satellite;
 }
 
-interface SatelliteAnimState {
+interface SatelliteAnimState extends SatelliteOrbitAnim {
   point: PointPrimitive;
   satellite: Satellite;
-  radius: number;
-  inclination: number;
-  ascendingNode: number;
-  period: number;
-  initialTheta: number;
-  thetaEpochSeconds: number;
 }
 
 interface ConjunctionVisualState {
