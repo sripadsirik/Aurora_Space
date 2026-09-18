@@ -1,4 +1,5 @@
 import { Cartesian3, Math as CesiumMath, PolygonHierarchy } from "cesium";
+import { clamp } from "./clamp";
 
 export const HELIO_AU_SCENE_UNITS = 30_000_000;
 export const HELIO_ORBIT_RADII = {
@@ -119,6 +120,21 @@ export const createHelioBandHierarchy = (
     new Cartesian3(cos * startRadius - nx * halfWidth, sin * startRadius - ny * halfWidth, 0)
   ]);
 };
+
+/**
+ * Visual progress of the CME cone at `elapsedSeconds`, interpolated linearly
+ * from {@link HELIO_CME_PROGRESS_START} to {@link HELIO_CME_PROGRESS_END} across
+ * {@link HELIO_CME_DURATION_SECONDS} and clamped to that range. Unlike the
+ * physical radius from {@link getHelioCmeRadius}, this scalar never wraps — it
+ * drives the visible reach of the cone and its embers.
+ */
+export const getHelioCmeProgress = (elapsedSeconds: number): number =>
+  clamp(
+    HELIO_CME_PROGRESS_START +
+      (elapsedSeconds / HELIO_CME_DURATION_SECONDS) * (HELIO_CME_PROGRESS_END - HELIO_CME_PROGRESS_START),
+    HELIO_CME_PROGRESS_START,
+    HELIO_CME_PROGRESS_END
+  );
 
 /** Scene-space radius of the expanding CME front, wrapping at the outer bound. */
 export const getHelioCmeRadius = (elapsedSeconds: number): number =>
