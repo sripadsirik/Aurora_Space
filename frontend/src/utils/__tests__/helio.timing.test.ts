@@ -3,8 +3,11 @@ import {
   HELIO_CME_DURATION_SECONDS,
   HELIO_CME_IMMINENT_THRESHOLD_SECONDS,
   HELIO_CME_MAX_RADIUS,
+  HELIO_CME_PROGRESS_END,
+  HELIO_CME_PROGRESS_START,
   HELIO_ORBIT_RADII,
   formatHelioArrivalLabel,
+  getHelioCmeProgress,
   getHelioCmeRadius,
   getHelioRemainingSeconds,
   isHelioCmeImminent
@@ -51,6 +54,29 @@ describe("formatHelioArrivalLabel", () => {
 
   it("shows all zeros once the CME has arrived", () => {
     expect(formatHelioArrivalLabel(HELIO_CME_DURATION_SECONDS)).toBe("0h 00m 00s");
+  });
+});
+
+describe("getHelioCmeProgress", () => {
+  it("starts at the progress floor", () => {
+    expect(getHelioCmeProgress(0)).toBeCloseTo(HELIO_CME_PROGRESS_START, 10);
+  });
+
+  it("reaches the progress ceiling after the full CME duration", () => {
+    expect(getHelioCmeProgress(HELIO_CME_DURATION_SECONDS)).toBeCloseTo(HELIO_CME_PROGRESS_END, 10);
+  });
+
+  it("interpolates linearly at the midpoint", () => {
+    const midpoint = (HELIO_CME_PROGRESS_START + HELIO_CME_PROGRESS_END) / 2;
+    expect(getHelioCmeProgress(HELIO_CME_DURATION_SECONDS / 2)).toBeCloseTo(midpoint, 10);
+  });
+
+  it("clamps to the ceiling once the CME has passed Earth", () => {
+    expect(getHelioCmeProgress(HELIO_CME_DURATION_SECONDS * 3)).toBe(HELIO_CME_PROGRESS_END);
+  });
+
+  it("clamps to the floor for negative elapsed time", () => {
+    expect(getHelioCmeProgress(-3600)).toBe(HELIO_CME_PROGRESS_START);
   });
 });
 
