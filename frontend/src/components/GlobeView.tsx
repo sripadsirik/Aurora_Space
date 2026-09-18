@@ -61,7 +61,7 @@ import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
 import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
-import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../utils/satelliteOrbitAnim";
+import { createConjunctionOrbitArcPositions, getSatellitePositionAtOffset } from "../utils/satelliteOrbitAnim";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -170,43 +170,10 @@ const HELIO_PLANET_RADII = {
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
-const CONJUNCTION_ARC_POINT_COUNT = 20;
 
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
-
-const createConjunctionOrbitArcPositions = (
-  state: SatelliteAnimState,
-  elapsedSeconds: number,
-  timeUntilTcaSeconds: number,
-  pointCount = CONJUNCTION_ARC_POINT_COUNT
-): Cartesian3[] => {
-  const angularVelocity = CesiumMath.TWO_PI / state.period;
-  const lookAheadSeconds = Math.min(
-    Math.max(timeUntilTcaSeconds, state.period * 0.04),
-    state.period * 0.32
-  );
-  const startOffsetSeconds = -Math.min(lookAheadSeconds * 0.2, state.period * 0.05);
-  const endOffsetSeconds = Math.max(lookAheadSeconds, state.period * 0.08);
-  const currentTheta = getSatelliteThetaAtElapsed(state, elapsedSeconds);
-  const positions: Cartesian3[] = [];
-
-  for (let index = 0; index < pointCount; index += 1) {
-    const t = pointCount === 1 ? 0 : index / (pointCount - 1);
-    const offsetSeconds = CesiumMath.lerp(startOffsetSeconds, endOffsetSeconds, t);
-    positions.push(
-      orbitPoint(
-        currentTheta + angularVelocity * offsetSeconds,
-        state.radius,
-        state.inclination,
-        state.ascendingNode
-      )
-    );
-  }
-
-  return positions;
-};
 
 const computeSolarWindFrame = (time: JulianDate, earthR: number): SolarWindFrame => {
   const sunPos = Simon1994PlanetaryPositions.computeSunPositionInEarthInertialFrame(time);
