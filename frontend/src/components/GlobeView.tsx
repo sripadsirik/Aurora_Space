@@ -59,7 +59,8 @@ import {
 import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
-import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../utils/satelliteOrbitAnim";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -179,17 +180,6 @@ const CONJUNCTION_ARC_POINT_COUNT = 20;
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
-
-const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
-  orbitThetaAtElapsed(state.initialTheta, state.period, state.thetaEpochSeconds, elapsedSeconds);
-
-const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
-  orbitPoint(
-    getSatelliteThetaAtElapsed(state, elapsedSeconds) + (CesiumMath.TWO_PI / state.period) * offsetSeconds,
-    state.radius,
-    state.inclination,
-    state.ascendingNode
-  );
 
 const createConjunctionOrbitArcPositions = (
   state: SatelliteAnimState,
