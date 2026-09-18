@@ -38,7 +38,8 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import { conjunctionArcColorBytes, conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
+import { conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
+import { getConjunctionColor } from "../utils/conjunctionVisual";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -189,11 +190,6 @@ const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds:
     state.inclination,
     state.ascendingNode
   );
-
-const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
-  const bytes = conjunctionArcColorBytes(riskLevel);
-  return bytes ? Color.fromBytes(bytes[0], bytes[1], bytes[2], bytes[3]) : Color.TRANSPARENT.clone();
-};
 
 const createConjunctionOrbitArcPositions = (
   state: SatelliteAnimState,
