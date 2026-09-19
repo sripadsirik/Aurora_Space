@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 // Valid 69-character ISS TLE lines used to build test records.
 const (
@@ -49,4 +52,39 @@ func TestIsTLEValid(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIngestTLE(t *testing.T) {
+	t.Run("stores a valid record", func(t *testing.T) {
+		cache := &tleCache{records: make(map[string]gpRecord)}
+		data, _ := json.Marshal(validRecord())
+
+		if !ingestTLE(data, cache) {
+			t.Fatal("expected ingestTLE to accept a valid record")
+		}
+		if cache.count() != 1 {
+			t.Errorf("cache.count() = %d, want 1", cache.count())
+		}
+	})
+
+	t.Run("rejects zero NORAD id", func(t *testing.T) {
+		cache := &tleCache{records: make(map[string]gpRecord)}
+		rec := validRecord()
+		rec.NoradCatID = 0
+		data, _ := json.Marshal(rec)
+
+		if ingestTLE(data, cache) {
+			t.Error("expected ingestTLE to reject a record with NORAD id 0")
+		}
+		if cache.count() != 0 {
+			t.Errorf("cache.count() = %d, want 0", cache.count())
+		}
+	})
+
+	t.Run("rejects invalid json", func(t *testing.T) {
+		cache := &tleCache{records: make(map[string]gpRecord)}
+		if ingestTLE([]byte("not json"), cache) {
+			t.Error("expected ingestTLE to reject invalid json")
+		}
+	})
 }
