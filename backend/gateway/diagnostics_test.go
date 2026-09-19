@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestRecordsLabel(t *testing.T) {
 	cases := []struct {
@@ -19,6 +22,31 @@ func TestRecordsLabel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := recordsLabel(tc.count, tc.noun); got != tc.want {
 				t.Errorf("recordsLabel(%d, %q) = %q, want %q", tc.count, tc.noun, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestStatusForFreshness(t *testing.T) {
+	live := 30 * time.Second
+	stale := 5 * time.Minute
+
+	cases := []struct {
+		name        string
+		lastUpdated time.Time
+		want        string
+	}{
+		{"never updated", time.Time{}, "ERROR"},
+		{"just now is live", time.Now(), "LIVE"},
+		{"within live window", time.Now().Add(-10 * time.Second), "LIVE"},
+		{"within stale window", time.Now().Add(-2 * time.Minute), "STALE"},
+		{"beyond stale window", time.Now().Add(-10 * time.Minute), "ERROR"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := statusForFreshness(tc.lastUpdated, live, stale); got != tc.want {
+				t.Errorf("statusForFreshness = %q, want %q", got, tc.want)
 			}
 		})
 	}
