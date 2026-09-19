@@ -51,3 +51,18 @@ func TestStatusForFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestMaxTime(t *testing.T) {
+	earlier := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	later := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+
+	if got := maxTime(earlier, later); !got.Equal(later) {
+		t.Errorf("maxTime(earlier, later) = %v, want %v", got, later)
+	}
+	if got := maxTime(later, earlier); !got.Equal(later) {
+		t.Errorf("maxTime(later, earlier) = %v, want %v", got, later)
+	}
+	if got := maxTime(later, later); !got.Equal(later) {
+		t.Errorf("maxTime(equal) = %v, want %v", got, later)
+	}
+}
