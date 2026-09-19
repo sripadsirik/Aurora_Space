@@ -88,3 +88,25 @@ func TestIngestTLE(t *testing.T) {
 		}
 	})
 }
+
+func TestTLECacheSetAndSnapshot(t *testing.T) {
+	cache := &tleCache{records: make(map[string]gpRecord)}
+
+	cache.set("25544", validRecord())
+	cache.set("40000", gpRecord{NoradCatID: 40000})
+
+	if cache.count() != 2 {
+		t.Fatalf("cache.count() = %d, want 2", cache.count())
+	}
+
+	snapshot := cache.snapshot()
+	if len(snapshot) != 2 {
+		t.Errorf("snapshot len = %d, want 2", len(snapshot))
+	}
+
+	// Re-setting the same NORAD key overwrites rather than duplicating.
+	cache.set("25544", validRecord())
+	if cache.count() != 2 {
+		t.Errorf("after overwrite cache.count() = %d, want 2", cache.count())
+	}
+}
