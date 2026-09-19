@@ -66,3 +66,25 @@ func TestMaxTime(t *testing.T) {
 		t.Errorf("maxTime(equal) = %v, want %v", got, later)
 	}
 }
+
+func TestFirstNonEmpty(t *testing.T) {
+	cases := []struct {
+		name   string
+		values []string
+		want   string
+	}{
+		{"first wins", []string{"a", "b"}, "a"},
+		{"skips empty", []string{"", "b"}, "b"},
+		{"skips whitespace-only", []string{"   ", "b"}, "b"},
+		{"all empty", []string{"", "  "}, ""},
+		{"no args", nil, ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := firstNonEmpty(tc.values...); got != tc.want {
+				t.Errorf("firstNonEmpty(%v) = %q, want %q", tc.values, got, tc.want)
+			}
+		})
+	}
+}
