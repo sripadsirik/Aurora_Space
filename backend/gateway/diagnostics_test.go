@@ -99,3 +99,45 @@ func TestFormatEventTime(t *testing.T) {
 		t.Errorf("formatEventTime = %q, want %q", got, "2026-09-19 13:42:05 UTC")
 	}
 }
+
+func TestSummarizeLogLine(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+		want string
+	}{
+		{
+			name: "plain text passthrough",
+			line: "  starting up  ",
+			want: "starting up",
+		},
+		{
+			name: "invalid json passthrough",
+			line: "{not valid json",
+			want: "{not valid json",
+		},
+		{
+			name: "json with no recognized fields passthrough",
+			line: `{"foo":"bar"}`,
+			want: `{"foo":"bar"}`,
+		},
+		{
+			name: "msg plus recognized top-level keys",
+			line: `{"msg":"kafka publish retry","err":"timeout","topic":"aurora.satellites.tle"}`,
+			want: "kafka publish retry | err=timeout | topic=aurora.satellites.tle",
+		},
+		{
+			name: "nested fields.message and fields keys",
+			line: `{"fields":{"message":"processed batch","count":128}}`,
+			want: "processed batch | count=128",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := summarizeLogLine(tc.line); got != tc.want {
+				t.Errorf("summarizeLogLine(%q) = %q, want %q", tc.line, got, tc.want)
+			}
+		})
+	}
+}
