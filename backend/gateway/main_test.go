@@ -80,3 +80,30 @@ func TestSatelliteBatchAssemblerInvalid(t *testing.T) {
 		t.Fatal("expected error for invalid payload")
 	}
 }
+
+func TestSatelliteBatchAssemblerMultiPart(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+
+	// First part of a two-part batch: not complete yet.
+	payload, complete, err := a.ingest([]byte(
+		`{"batchId":"b","batchIndex":0,"batchCount":2,"satellites":[{"noradId":1}]}`))
+	if err != nil {
+		t.Fatalf("ingest part 0 returned error: %v", err)
+	}
+	if complete || payload != nil {
+		t.Fatalf("expected incomplete batch after first part, got complete=%v payload=%v", complete, payload)
+	}
+
+	// Second part completes the batch and yields the merged, index-ordered set.
+	payload, complete, err = a.ingest([]byte(
+		`{"batchId":"b","batchIndex":1,"batchCount":2,"satellites":[{"noradId":2},{"noradId":3}]}`))
+	if err != nil {
+		t.Fatalf("ingest part 1 returned error: %v", err)
+	}
+	if !complete {
+		t.Fatal("expected batch to be complete after final part")
+	}
+	if n := countSatellites(t, payload); n != 3 {
+		t.Errorf("got %d satellites, want 3", n)
+	}
+}
