@@ -65,3 +65,25 @@ func TestWeatherStateToMessage(t *testing.T) {
 		t.Errorf("LastUpdated %q is not RFC3339: %v", msg.LastUpdated, err)
 	}
 }
+
+func TestEnvOr(t *testing.T) {
+	t.Run("returns fallback when unset", func(t *testing.T) {
+		if got := envOr("AURORA_NOAA_MISSING", "fallback"); got != "fallback" {
+			t.Errorf("envOr(unset) = %q, want fallback", got)
+		}
+	})
+
+	t.Run("returns value when set", func(t *testing.T) {
+		t.Setenv("AURORA_NOAA_SET", "actual")
+		if got := envOr("AURORA_NOAA_SET", "fallback"); got != "actual" {
+			t.Errorf("envOr(set) = %q, want actual", got)
+		}
+	})
+
+	t.Run("empty value falls back", func(t *testing.T) {
+		t.Setenv("AURORA_NOAA_EMPTY", "")
+		if got := envOr("AURORA_NOAA_EMPTY", "fallback"); got != "fallback" {
+			t.Errorf("envOr(empty) = %q, want fallback", got)
+		}
+	})
+}
