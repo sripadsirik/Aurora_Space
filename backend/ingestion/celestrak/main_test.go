@@ -30,3 +30,13 @@ func TestParseNoradCatID(t *testing.T) {
 		})
 	}
 }
+
+func TestParseEccentricity(t *testing.T) {
+	if got := parseEccentricity(issLine2); got != 0.0006703 {
+		t.Errorf("parseEccentricity(iss) = %v, want %v", got, 0.0006703)
+	}
+
+	if got := parseEccentricity("2 25544  51.6416"); got != 0 {
+		t.Errorf("parseEccentricity(short line) = %v, want 0", got)
+	}
+}
