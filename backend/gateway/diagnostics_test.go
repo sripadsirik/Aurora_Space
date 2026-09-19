@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -173,6 +174,28 @@ func TestBuildCelestrakRow(t *testing.T) {
 		row := buildCelestrakRow(process, feed)
 		if row.Status != "STALE" {
 			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+}
+
+func TestBuildSpaceTrackRow(t *testing.T) {
+	t.Run("unconfigured with no data hints at credentials", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: false}, feedSnapshot{}, false)
+		if row.Status != "ERROR" {
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+		if !strings.Contains(row.Detail, "SPACETRACK_USERNAME") {
+			t.Errorf("Detail = %q, want it to mention SPACETRACK_USERNAME", row.Detail)
+		}
+	})
+
+	t.Run("configured but awaiting first fetch is stale", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{}, true)
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+		if strings.Contains(row.Detail, "SPACETRACK_USERNAME") {
+			t.Errorf("Detail = %q, should not show credential hint when configured", row.Detail)
 		}
 	})
 }
