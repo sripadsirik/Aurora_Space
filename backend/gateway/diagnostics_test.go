@@ -88,3 +88,14 @@ func TestFirstNonEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	if got := formatEventTime(time.Time{}); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	when := time.Date(2026, 9, 19, 13, 42, 5, 0, time.UTC)
+	if got := formatEventTime(when); got != "2026-09-19 13:42:05 UTC" {
+		t.Errorf("formatEventTime = %q, want %q", got, "2026-09-19 13:42:05 UTC")
+	}
+}
