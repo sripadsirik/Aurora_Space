@@ -40,3 +40,13 @@ func TestParseEccentricity(t *testing.T) {
 		t.Errorf("parseEccentricity(short line) = %v, want 0", got)
 	}
 }
+
+func TestParseMeanMotion(t *testing.T) {
+	if got := parseMeanMotion(issLine2); got != 15.72125391 {
+		t.Errorf("parseMeanMotion(iss) = %v, want %v", got, 15.72125391)
+	}
+
+	if got := parseMeanMotion("2 25544  51.6416 247.4627 0006703"); got != 0 {
+		t.Errorf("parseMeanMotion(short line) = %v, want 0", got)
+	}
+}
