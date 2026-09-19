@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -41,5 +42,46 @@ func TestLoadDotEnvMissingFileIsNoError(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "does-not-exist.env")
 	if err := LoadDotEnv(path); err != nil {
 		t.Fatalf("LoadDotEnv(missing) returned error: %v", err)
+	}
+}
+
+func TestLoadDotEnvSetsUnsetVars(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	content := "# comment\nAURORA_TEST_NEW=fromfile\nexport AURORA_TEST_QUOTED=\"quoted value\"\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write temp env: %v", err)
+	}
+
+	t.Cleanup(func() {
+		os.Unsetenv("AURORA_TEST_NEW")
+		os.Unsetenv("AURORA_TEST_QUOTED")
+	})
+
+	if err := LoadDotEnv(path); err != nil {
+		t.Fatalf("LoadDotEnv returned error: %v", err)
+	}
+
+	if got := os.Getenv("AURORA_TEST_NEW"); got != "fromfile" {
+		t.Errorf("AURORA_TEST_NEW = %q, want %q", got, "fromfile")
+	}
+	if got := os.Getenv("AURORA_TEST_QUOTED"); got != "quoted value" {
+		t.Errorf("AURORA_TEST_QUOTED = %q, want %q", got, "quoted value")
+	}
+}
+
+func TestLoadDotEnvDoesNotOverrideExisting(t *testing.T) {
+	t.Setenv("AURORA_TEST_EXISTING", "original")
+
+	path := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(path, []byte("AURORA_TEST_EXISTING=fromfile\n"), 0o600); err != nil {
+		t.Fatalf("write temp env: %v", err)
+	}
+
+	if err := LoadDotEnv(path); err != nil {
+		t.Fatalf("LoadDotEnv returned error: %v", err)
+	}
+
+	if got := os.Getenv("AURORA_TEST_EXISTING"); got != "original" {
+		t.Errorf("AURORA_TEST_EXISTING = %q, want it left as %q", got, "original")
 	}
 }
