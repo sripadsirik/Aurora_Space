@@ -50,3 +50,60 @@ func TestParseMeanMotion(t *testing.T) {
 		t.Errorf("parseMeanMotion(short line) = %v, want 0", got)
 	}
 }
+
+func TestParseThreeLineElementsWithName(t *testing.T) {
+	body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\n")
+
+	records := parseThreeLineElements(body)
+	if len(records) != 1 {
+		t.Fatalf("got %d records, want 1", len(records))
+	}
+
+	rec := records[0]
+	if rec.ObjectName != "ISS (ZARYA)" {
+		t.Errorf("ObjectName = %q, want %q", rec.ObjectName, "ISS (ZARYA)")
+	}
+	if rec.NoradCatID != 25544 {
+		t.Errorf("NoradCatID = %d, want 25544", rec.NoradCatID)
+	}
+	if rec.MeanMotion != 15.72125391 {
+		t.Errorf("MeanMotion = %v, want 15.72125391", rec.MeanMotion)
+	}
+	if rec.Eccentricity != 0.0006703 {
+		t.Errorf("Eccentricity = %v, want 0.0006703", rec.Eccentricity)
+	}
+}
+
+func TestParseThreeLineElementsTwoLineForm(t *testing.T) {
+	// A bare TLE with no leading name line still yields a record.
+	body := []byte(issLine1 + "\n" + issLine2 + "\n")
+
+	records := parseThreeLineElements(body)
+	if len(records) != 1 {
+		t.Fatalf("got %d records, want 1", len(records))
+	}
+	if records[0].ObjectName != "" {
+		t.Errorf("ObjectName = %q, want empty", records[0].ObjectName)
+	}
+	if records[0].NoradCatID != 25544 {
+		t.Errorf("NoradCatID = %d, want 25544", records[0].NoradCatID)
+	}
+}
+
+func TestParseThreeLineElementsSkipsMalformed(t *testing.T) {
+	// Second element is missing its line 2, so it must be skipped while the
+	// first, well-formed element is still returned.
+	body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\nDANGLING NAME\n")
+
+	records := parseThreeLineElements(body)
+	if len(records) != 1 {
+		t.Fatalf("got %d records, want 1", len(records))
+	}
+}
+
+func TestParseThreeLineElementsEmpty(t *testing.T) {
+	records := parseThreeLineElements([]byte(""))
+	if len(records) != 0 {
+		t.Errorf("got %d records, want 0", len(records))
+	}
+}
