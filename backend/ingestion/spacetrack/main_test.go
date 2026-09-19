@@ -48,3 +48,44 @@ func TestParseCDMsValid(t *testing.T) {
 		t.Errorf("RiskLevel = %q, want critical", w.RiskLevel)
 	}
 }
+
+func TestParseCDMsEmptyFields(t *testing.T) {
+	// Empty MIN_RNG and PC are tolerated and default to zero.
+	body := []byte(`[{"CDM_ID":"c2","MIN_RNG":"","PC":"","SAT_1_ID":"","SAT_2_ID":""}]`)
+
+	warnings, err := parseCDMs(body)
+	if err != nil {
+		t.Fatalf("parseCDMs returned error: %v", err)
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1", len(warnings))
+	}
+
+	w := warnings[0]
+	if w.MissDistanceM != 0 || w.Pc != 0 {
+		t.Errorf("expected zero miss distance and Pc, got %v / %v", w.MissDistanceM, w.Pc)
+	}
+	if w.Object1.NoradID != 0 || w.Object2.NoradID != 0 {
+		t.Errorf("expected zero NORAD ids, got %d / %d", w.Object1.NoradID, w.Object2.NoradID)
+	}
+	// ClassifyRisk(0) => nominal.
+	if w.RiskLevel != "nominal" {
+		t.Errorf("RiskLevel = %q, want nominal", w.RiskLevel)
+	}
+}
+
+func TestParseCDMsEmptyArray(t *testing.T) {
+	warnings, err := parseCDMs([]byte(`[]`))
+	if err != nil {
+		t.Fatalf("parseCDMs returned error: %v", err)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("got %d warnings, want 0", len(warnings))
+	}
+}
+
+func TestParseCDMsInvalidJSON(t *testing.T) {
+	if _, err := parseCDMs([]byte(`not json`)); err == nil {
+		t.Error("expected error for invalid json")
+	}
+}
