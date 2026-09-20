@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -137,4 +139,47 @@ func TestSummarizeLogLine(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLoadTrackedProcessRecords(t *testing.T) {
+	dir := t.TempDir()
+
+	t.Run("missing file returns nil", func(t *testing.T) {
+		if got := loadTrackedProcessRecords(filepath.Join(dir, "absent.json")); got != nil {
+			t.Errorf("expected nil for missing file, got %v", got)
+		}
+	})
+
+	t.Run("array of records", func(t *testing.T) {
+		path := filepath.Join(dir, "array.json")
+		body := `[{"Name":"celestrak","Pid":10},{"Name":"noaa","Pid":20}]`
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		got := loadTrackedProcessRecords(path)
+		if len(got) != 2 || got[0].Name != "celestrak" || got[1].Pid != 20 {
+			t.Errorf("unexpected records: %+v", got)
+		}
+	})
+
+	t.Run("single record object", func(t *testing.T) {
+		path := filepath.Join(dir, "single.json")
+		if err := os.WriteFile(path, []byte(`{"Name":"engine-rust","Pid":7}`), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		got := loadTrackedProcessRecords(path)
+		if len(got) != 1 || got[0].Name != "engine-rust" || got[0].Pid != 7 {
+			t.Errorf("unexpected records: %+v", got)
+		}
+	})
+
+	t.Run("single object without name returns nil", func(t *testing.T) {
+		path := filepath.Join(dir, "nameless.json")
+		if err := os.WriteFile(path, []byte(`{"Pid":3}`), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := loadTrackedProcessRecords(path); got != nil {
+			t.Errorf("expected nil for nameless single record, got %+v", got)
+		}
+	})
 }
