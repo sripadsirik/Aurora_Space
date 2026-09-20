@@ -93,11 +93,14 @@ func TestStatusForFreshness(t *testing.T) {
 		lastUpdated time.Time
 		want        string
 	}{
+		// Times sit comfortably inside each band rather than on the exact
+		// window edge, since time.Since elapses a little past the anchor by
+		// the time the function runs.
 		{"zero time is error", time.Time{}, "ERROR"},
 		{"fresh reading is live", now.Add(-1 * time.Minute), "LIVE"},
-		{"at live window edge is live", now.Add(-5 * time.Minute), "LIVE"},
+		{"within live window is live", now.Add(-4 * time.Minute), "LIVE"},
 		{"past live window is stale", now.Add(-10 * time.Minute), "STALE"},
-		{"at stale window edge is stale", now.Add(-15 * time.Minute), "STALE"},
+		{"within stale window is stale", now.Add(-14 * time.Minute), "STALE"},
 		{"past stale window is error", now.Add(-30 * time.Minute), "ERROR"},
 	}
 
