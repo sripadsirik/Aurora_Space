@@ -87,3 +87,51 @@ func TestSatelliteBatchAssemblerSingle(t *testing.T) {
 		}
 	})
 }
+
+func TestSatelliteBatchAssemblerMultiPart(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+
+	part0 := []byte(`{"batchId":"multi","batchIndex":0,"batchCount":2,"satellites":[{"noradId":1,"name":"A"}]}`)
+	part1 := []byte(`{"batchId":"multi","batchIndex":1,"batchCount":2,"satellites":[{"noradId":2,"name":"B"}]}`)
+
+	payload, complete, err := a.ingest(part0)
+	if err != nil {
+		t.Fatalf("ingest part 0: %v", err)
+	}
+	if complete || payload != nil {
+		t.Fatalf("batch should not complete after first part, got complete=%v", complete)
+	}
+
+	payload, complete, err = a.ingest(part1)
+	if err != nil {
+		t.Fatalf("ingest part 1: %v", err)
+	}
+	if !complete {
+		t.Fatal("batch should complete once all parts arrive")
+	}
+
+	var sats []map[string]any
+	if err := json.Unmarshal(payload, &sats); err != nil {
+		t.Fatalf("assembled payload not an array: %v", err)
+	}
+	if len(sats) != 2 {
+		t.Fatalf("expected 2 satellites in assembled batch, got %d", len(sats))
+	}
+	// Parts are concatenated in ascending batchIndex order.
+	if sats[0]["name"] != "A" || sats[1]["name"] != "B" {
+		t.Errorf("unexpected assembly order: %+v", sats)
+	}
+}
+
+func TestSatelliteBatchAssemblerDuplicatePart(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	part0 := []byte(`{"batchId":"dup","batchIndex":0,"batchCount":2,"satellites":[{"noradId":1,"name":"A"}]}`)
+
+	if _, complete, _ := a.ingest(part0); complete {
+		t.Fatal("first part should not complete a 2-part batch")
+	}
+	// Re-delivering the same index must not falsely complete the batch.
+	if _, complete, _ := a.ingest(part0); complete {
+		t.Fatal("duplicate part should not complete the batch")
+	}
+}
