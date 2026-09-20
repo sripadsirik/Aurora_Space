@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -214,6 +215,39 @@ func TestBuildCelestrakRow(t *testing.T) {
 		)
 		if row.Status != "STALE" {
 			t.Errorf("status = %q, want STALE", row.Status)
+		}
+	})
+}
+
+func TestBuildSpaceTrackRow(t *testing.T) {
+	t.Run("unconfigured with no data prompts for credentials", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{}, false)
+		if row.Key != "spacetrack" || row.Status != "STALE" {
+			t.Errorf("expected stale spacetrack row, got %+v", row)
+		}
+		if !strings.Contains(row.Detail, "SPACETRACK_USERNAME") {
+			t.Errorf("detail should prompt for credentials, got %q", row.Detail)
+		}
+	})
+
+	t.Run("idle and never fetched is error", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: false}, feedSnapshot{}, true)
+		if row.Status != "ERROR" {
+			t.Errorf("status = %q, want ERROR", row.Status)
+		}
+	})
+
+	t.Run("configured with fresh feed is live", func(t *testing.T) {
+		row := buildSpaceTrackRow(
+			trackedProcessSnapshot{Running: true, LastMessage: "12 CDMs"},
+			feedSnapshot{count: 12, lastUpdated: time.Now().Add(-time.Hour)},
+			true,
+		)
+		if row.Status != "LIVE" {
+			t.Errorf("status = %q, want LIVE", row.Status)
+		}
+		if row.Detail != "12 CDMs" {
+			t.Errorf("detail = %q, want %q", row.Detail, "12 CDMs")
 		}
 	})
 }
