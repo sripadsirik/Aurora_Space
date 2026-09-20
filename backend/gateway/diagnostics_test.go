@@ -251,3 +251,35 @@ func TestBuildSpaceTrackRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildEngineRow(t *testing.T) {
+	t.Run("fresh positions are live", func(t *testing.T) {
+		row := buildEngineRow(
+			trackedProcessSnapshot{Running: true, LastMessage: "propagated"},
+			feedSnapshot{count: 8000, lastUpdated: time.Now().Add(-30 * time.Second)},
+		)
+		if row.Key != "engine-rust" || row.Status != "LIVE" {
+			t.Errorf("expected live engine row, got %+v", row)
+		}
+		if row.Records != "8000 positions" {
+			t.Errorf("records = %q, want %q", row.Records, "8000 positions")
+		}
+	})
+
+	t.Run("running but stale feed reports stale not error", func(t *testing.T) {
+		row := buildEngineRow(
+			trackedProcessSnapshot{Running: true},
+			feedSnapshot{count: 10, lastUpdated: time.Now().Add(-time.Hour)},
+		)
+		if row.Status != "STALE" {
+			t.Errorf("status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("idle and never emitted is error", func(t *testing.T) {
+		row := buildEngineRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
+		if row.Status != "ERROR" {
+			t.Errorf("status = %q, want ERROR", row.Status)
+		}
+	})
+}
