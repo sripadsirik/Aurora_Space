@@ -112,3 +112,29 @@ func TestStatusForFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestSummarizeLogLine(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+		want string
+	}{
+		{"plain text passes through", "starting ingestion", "starting ingestion"},
+		{"trims surrounding whitespace", "  hello  ", "hello"},
+		{"non-json braces are returned raw", "{not json", "{not json"},
+		{"invalid json is returned raw", "{\"msg\":}", "{\"msg\":}"},
+		{"extracts msg field", `{"msg":"fetched TLEs"}`, "fetched TLEs"},
+		{"extracts nested fields.message", `{"fields":{"message":"nested msg"}}`, "nested msg"},
+		{"appends known top-level keys", `{"msg":"done","count":12,"status":"ok"}`, "done | status=ok | count=12"},
+		{"reads keys from fields object", `{"msg":"tick","fields":{"norad":25544}}`, "tick | norad=25544"},
+		{"json with no known keys returns raw", `{"other":"x"}`, `{"other":"x"}`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := summarizeLogLine(tc.line); got != tc.want {
+				t.Errorf("summarizeLogLine(%q) = %q, want %q", tc.line, got, tc.want)
+			}
+		})
+	}
+}
