@@ -68,3 +68,17 @@ func TestMaxTime(t *testing.T) {
 		t.Errorf("maxTime(equal, equal) = %v, want %v", got, later)
 	}
 }
+
+func TestFormatEventTime(t *testing.T) {
+	if got := formatEventTime(time.Time{}); got != "No activity yet" {
+		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
+	}
+
+	// A non-UTC input is normalised to UTC in the formatted output.
+	loc := time.FixedZone("UTC+2", 2*60*60)
+	stamp := time.Date(2026, 9, 20, 14, 30, 5, 0, loc)
+	want := "2026-09-20 12:30:05 UTC"
+	if got := formatEventTime(stamp); got != want {
+		t.Errorf("formatEventTime(%v) = %q, want %q", stamp, got, want)
+	}
+}
