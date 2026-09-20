@@ -283,3 +283,35 @@ func TestBuildEngineRow(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildNoaaRow(t *testing.T) {
+	t.Run("fresh space weather is live", func(t *testing.T) {
+		row := buildNoaaRow(
+			trackedProcessSnapshot{Running: true, LastMessage: "Kp 3"},
+			feedSnapshot{count: 1, lastUpdated: time.Now().Add(-time.Minute)},
+		)
+		if row.Key != "noaa" || row.Status != "LIVE" {
+			t.Errorf("expected live noaa row, got %+v", row)
+		}
+		if row.Records != "1 records" {
+			t.Errorf("records = %q, want %q", row.Records, "1 records")
+		}
+	})
+
+	t.Run("error keyword downgrades live to stale", func(t *testing.T) {
+		row := buildNoaaRow(
+			trackedProcessSnapshot{Running: true, LastError: "request err=503"},
+			feedSnapshot{count: 1, lastUpdated: time.Now().Add(-time.Minute)},
+		)
+		if row.Status != "STALE" {
+			t.Errorf("status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("idle and never fetched is error", func(t *testing.T) {
+		row := buildNoaaRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
+		if row.Status != "ERROR" {
+			t.Errorf("status = %q, want ERROR", row.Status)
+		}
+	})
+}
