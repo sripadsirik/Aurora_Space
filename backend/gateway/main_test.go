@@ -44,3 +44,46 @@ func TestPayloadCount(t *testing.T) {
 		})
 	}
 }
+
+func TestSatelliteBatchAssemblerSingle(t *testing.T) {
+	t.Run("plain satellite array passes through", func(t *testing.T) {
+		a := newSatelliteBatchAssembler()
+		raw := []byte(`[{"noradId":1,"name":"A"},{"noradId":2,"name":"B"}]`)
+		payload, complete, err := a.ingest(raw)
+		if err != nil {
+			t.Fatalf("ingest returned error: %v", err)
+		}
+		if !complete {
+			t.Fatal("plain array should complete immediately")
+		}
+		if string(payload) != string(raw) {
+			t.Errorf("payload = %s, want passthrough %s", payload, raw)
+		}
+	})
+
+	t.Run("single-part batch emits its satellites", func(t *testing.T) {
+		a := newSatelliteBatchAssembler()
+		raw := []byte(`{"batchId":"b1","batchIndex":0,"batchCount":1,"satellites":[{"noradId":9,"name":"Z"}]}`)
+		payload, complete, err := a.ingest(raw)
+		if err != nil {
+			t.Fatalf("ingest returned error: %v", err)
+		}
+		if !complete {
+			t.Fatal("single-part batch should complete immediately")
+		}
+		var sats []map[string]any
+		if err := json.Unmarshal(payload, &sats); err != nil {
+			t.Fatalf("payload not a satellite array: %v", err)
+		}
+		if len(sats) != 1 {
+			t.Errorf("expected 1 satellite, got %d", len(sats))
+		}
+	})
+
+	t.Run("invalid json returns error", func(t *testing.T) {
+		a := newSatelliteBatchAssembler()
+		if _, _, err := a.ingest([]byte(`not json`)); err == nil {
+			t.Error("expected error for invalid json")
+		}
+	})
+}
