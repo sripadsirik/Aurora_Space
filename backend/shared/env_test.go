@@ -1,6 +1,10 @@
 package shared
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestParseDotEnvLine(t *testing.T) {
 	cases := []struct {
@@ -36,5 +40,56 @@ func TestParseDotEnvLine(t *testing.T) {
 				t.Errorf("parseDotEnvLine(%q) = (%q, %q), want (%q, %q)", tc.line, key, value, tc.wantKey, tc.wantValue)
 			}
 		})
+	}
+}
+
+func TestLoadDotEnvSetsUnsetKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	contents := "# header comment\nEXPORTED=export me\nexport WITH_PREFIX=prefixed\nQUOTED=\"spaced value\"\n\nBLANK_SKIPPED\n"
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write temp env: %v", err)
+	}
+
+	for _, key := range []string{"EXPORTED", "WITH_PREFIX", "QUOTED"} {
+		t.Setenv(key, "")
+		os.Unsetenv(key)
+	}
+
+	if err := LoadDotEnv(path); err != nil {
+		t.Fatalf("LoadDotEnv returned error: %v", err)
+	}
+
+	want := map[string]string{
+		"EXPORTED":    "export me",
+		"WITH_PREFIX": "prefixed",
+		"QUOTED":      "spaced value",
+	}
+	for key, expected := range want {
+		if got := os.Getenv(key); got != expected {
+			t.Errorf("after LoadDotEnv, %s = %q, want %q", key, got, expected)
+		}
+	}
+}
+
+func TestLoadDotEnvDoesNotOverrideExisting(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	if err := os.WriteFile(path, []byte("PRESET=fromfile\n"), 0o600); err != nil {
+		t.Fatalf("write temp env: %v", err)
+	}
+
+	t.Setenv("PRESET", "fromenv")
+	if err := LoadDotEnv(path); err != nil {
+		t.Fatalf("LoadDotEnv returned error: %v", err)
+	}
+	if got := os.Getenv("PRESET"); got != "fromenv" {
+		t.Errorf("LoadDotEnv overrode existing value: got %q, want %q", got, "fromenv")
+	}
+}
+
+func TestLoadDotEnvMissingFileIsNoError(t *testing.T) {
+	if err := LoadDotEnv(filepath.Join(t.TempDir(), "does-not-exist.env")); err != nil {
+		t.Errorf("LoadDotEnv on missing file = %v, want nil", err)
 	}
 }
