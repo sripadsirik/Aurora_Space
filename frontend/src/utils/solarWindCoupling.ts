@@ -90,3 +90,14 @@ const couplingLevelColorMap: Record<CouplingLevel, string> = {
  */
 export const couplingLevelColor = (level: string): string =>
   couplingLevelColorMap[level as CouplingLevel] ?? couplingLevelColorMap.quiet;
+
+/**
+ * Short human labels for each coupling band, for legends and badges. Centralised
+ * so every display names the bands identically.
+ */
+export const COUPLING_LEVEL_LABELS: Record<CouplingLevel, string> = {
+  quiet: "Weak coupling",
+  elevated: "Elevated coupling",
+  high: "Strong coupling",
+  extreme: "Extreme coupling"
+};
