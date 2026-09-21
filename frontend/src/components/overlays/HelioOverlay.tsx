@@ -3,7 +3,11 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatMagnetopauseStandoff } from "../../utils/format";
+import {
+  formatDynamicPressure,
+  formatElectricFieldMvM,
+  formatMagnetopauseStandoff
+} from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -12,6 +16,7 @@ import {
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
+import { couplingLevelColor, solarWindCouplingProfile } from "../../utils/solarWindCoupling";
 
 interface HelioRowProps {
   color: string;
@@ -73,6 +78,8 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
+  // Dawn-dusk coupling field derived from the same wind speed and Bz readouts.
+  const couplingProfile = solarWindCouplingProfile(spaceWeather);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
