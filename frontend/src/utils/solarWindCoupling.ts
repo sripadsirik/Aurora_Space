@@ -101,3 +101,41 @@ export const COUPLING_LEVEL_LABELS: Record<CouplingLevel, string> = {
   high: "Strong coupling",
   extreme: "Extreme coupling"
 };
+
+/** Derived solar-wind–magnetosphere coupling figures for the current state. */
+export interface SolarWindCouplingProfile {
+  /** Total motional (dawn-dusk) electric field the wind carries, in mV/m. */
+  dawnDuskFieldMvM: number;
+  /** The southward, reconnection-driving part of that field, in mV/m. */
+  geoeffectiveFieldMvM: number;
+  /** True when Bz points southward, so the field couples to the dayside. */
+  southward: boolean;
+  /** Qualitative band the geoeffective field falls in. */
+  level: CouplingLevel;
+}
+
+/**
+ * Bundles the coupling figures derived from a space-weather snapshot: the total
+ * dawn-dusk field from its solar-wind speed and Bz, the southward geoeffective
+ * part that drives reconnection, whether Bz points southward at all, and the
+ * qualitative band the geoeffective field falls in. The band is derived from the
+ * same geoeffective field it reports, so the figures stay mutually consistent.
+ */
+export const solarWindCouplingProfile = (
+  weather: SpaceWeather
+): SolarWindCouplingProfile => {
+  const dawnDuskFieldMvM = dawnDuskElectricField(
+    weather.solarWindSpeed,
+    weather.bzComponent
+  );
+  const geoeffectiveFieldMvM = geoeffectiveElectricField(
+    weather.solarWindSpeed,
+    weather.bzComponent
+  );
+  return {
+    dawnDuskFieldMvM,
+    geoeffectiveFieldMvM,
+    southward: Number.isFinite(weather.bzComponent) && weather.bzComponent < 0,
+    level: couplingLevel(geoeffectiveFieldMvM)
+  };
+};
