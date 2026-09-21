@@ -20,3 +20,17 @@ import type { SpaceWeather } from "../types/space";
  * single factor `1e3 * 1e-9 * 1e3 = 1e-3`.
  */
 export const MERGING_FIELD_COEFFICIENT = 1e-3;
+
+/**
+ * The motional (dawn-dusk) electric field magnitude in mV/m carried by a solar
+ * wind of the given bulk speed (km/s) and field magnitude (nT), from
+ * `E = k * V * B`. The field magnitude is taken as an absolute value, so the sign
+ * of `bzNt` does not matter here — this is the total field the wind carries, not
+ * the geoeffective part (see {@link geoeffectiveElectricField}). Non-finite
+ * inputs are treated as zero so a bad feed value yields `0` rather than `NaN`.
+ */
+export const dawnDuskElectricField = (speedKms: number, bzNt: number): number => {
+  if (!Number.isFinite(speedKms) || !Number.isFinite(bzNt)) return 0;
+  const speed = Math.max(0, speedKms);
+  return MERGING_FIELD_COEFFICIENT * speed * Math.abs(bzNt);
+};
