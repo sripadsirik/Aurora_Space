@@ -118,3 +118,16 @@ describe("couplingLevelColor", () => {
     expect(couplingLevelColor("None")).toBe(couplingLevelColor("quiet"));
   });
 });
+
+describe("COUPLING_LEVEL_LABELS", () => {
+  it("labels every band with distinct, non-empty text", () => {
+    const labels = Object.values(COUPLING_LEVEL_LABELS);
+    labels.forEach((label) => expect(label.length).toBeGreaterThan(0));
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it("has a label for the band each field maps to", () => {
+    expect(COUPLING_LEVEL_LABELS[couplingLevel(0)]).toBe("Weak coupling");
+    expect(COUPLING_LEVEL_LABELS[couplingLevel(10)]).toBe("Extreme coupling");
+  });
+});
