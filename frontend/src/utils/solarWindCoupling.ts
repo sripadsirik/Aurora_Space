@@ -46,3 +46,32 @@ export const geoeffectiveElectricField = (speedKms: number, bzNt: number): numbe
   if (!Number.isFinite(bzNt) || bzNt >= 0) return 0;
   return dawnDuskElectricField(speedKms, bzNt);
 };
+
+/**
+ * Ring-current injection threshold in mV/m. Below this geoeffective field the
+ * ring current decays faster than the solar wind can feed it, so no net storm
+ * growth occurs. This is the `Ec` of the Burton et al. (1975) `Dst` model, whose
+ * canonical value is ~0.5 mV/m.
+ */
+export const RING_CURRENT_INJECTION_THRESHOLD_MV_M = 0.5;
+
+/** Qualitative bands for the geoeffective coupling field, from calm to storm. */
+export type CouplingLevel = "quiet" | "elevated" | "high" | "extreme";
+
+/**
+ * Buckets a geoeffective electric field (mV/m) into a qualitative coupling band
+ * for the readouts: below the {@link RING_CURRENT_INJECTION_THRESHOLD_MV_M} of
+ * 0.5 mV/m no storm growth occurs (`quiet`); 0.5-3 mV/m sustains the ring current
+ * enough for `elevated` activity; 3-8 mV/m drives `high` storm-level coupling;
+ * and 8 mV/m or more is the `extreme` forcing seen behind a strong CME shock. The
+ * upper bands are display thresholds rather than a formal scale. Negative or
+ * non-finite inputs fall back to `quiet`.
+ */
+export const couplingLevel = (fieldMvM: number): CouplingLevel => {
+  if (!Number.isFinite(fieldMvM) || fieldMvM < RING_CURRENT_INJECTION_THRESHOLD_MV_M) {
+    return "quiet";
+  }
+  if (fieldMvM < 3) return "elevated";
+  if (fieldMvM < 8) return "high";
+  return "extreme";
+};
