@@ -34,3 +34,15 @@ export const dawnDuskElectricField = (speedKms: number, bzNt: number): number =>
   const speed = Math.max(0, speedKms);
   return MERGING_FIELD_COEFFICIENT * speed * Math.abs(bzNt);
 };
+
+/**
+ * The *geoeffective* dawn-dusk electric field in mV/m: the part of the motional
+ * field that actually drives dayside reconnection. Only a southward (negative)
+ * Bz reconnects efficiently with Earth's northward-pointing dayside field, so a
+ * northward or zero Bz contributes nothing and this returns `0`. For a southward
+ * field it equals {@link dawnDuskElectricField}. Non-finite inputs yield `0`.
+ */
+export const geoeffectiveElectricField = (speedKms: number, bzNt: number): number => {
+  if (!Number.isFinite(bzNt) || bzNt >= 0) return 0;
+  return dawnDuskElectricField(speedKms, bzNt);
+};
