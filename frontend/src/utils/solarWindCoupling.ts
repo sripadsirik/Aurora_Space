@@ -75,3 +75,18 @@ export const couplingLevel = (fieldMvM: number): CouplingLevel => {
   if (fieldMvM < 8) return "high";
   return "extreme";
 };
+
+/** CSS hex colour for each coupling band, escalating from calm cyan to red. */
+const couplingLevelColorMap: Record<CouplingLevel, string> = {
+  quiet: "#3ad6ff",
+  elevated: "#ffcc00",
+  high: "#ff6600",
+  extreme: "#ff0000"
+};
+
+/**
+ * Returns the CSS hex colour for a coupling band. Unknown values fall back to
+ * the calm `quiet` cyan, so a display can pass a raw string without guarding.
+ */
+export const couplingLevelColor = (level: string): string =>
+  couplingLevelColorMap[level as CouplingLevel] ?? couplingLevelColorMap.quiet;
