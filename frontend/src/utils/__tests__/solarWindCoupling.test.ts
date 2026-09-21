@@ -101,3 +101,20 @@ describe("couplingLevel", () => {
     expect(couplingLevel(Number.NaN)).toBe("quiet");
   });
 });
+
+describe("couplingLevelColor", () => {
+  it("returns a distinct hex colour for each band", () => {
+    const colors = [
+      couplingLevelColor("quiet"),
+      couplingLevelColor("elevated"),
+      couplingLevelColor("high"),
+      couplingLevelColor("extreme")
+    ];
+    colors.forEach((color) => expect(color).toMatch(/^#[0-9a-f]{6}$/i));
+    expect(new Set(colors).size).toBe(4);
+  });
+
+  it("falls back to the quiet colour for an unknown band", () => {
+    expect(couplingLevelColor("None")).toBe(couplingLevelColor("quiet"));
+  });
+});
