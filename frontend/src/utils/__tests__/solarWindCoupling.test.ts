@@ -53,3 +53,24 @@ describe("dawnDuskElectricField", () => {
     expect(dawnDuskElectricField(400, Number.POSITIVE_INFINITY)).toBe(0);
   });
 });
+
+describe("geoeffectiveElectricField", () => {
+  it("equals the full field when Bz points southward", () => {
+    expect(geoeffectiveElectricField(450, -12.4)).toBeCloseTo(
+      dawnDuskElectricField(450, -12.4),
+      12
+    );
+  });
+
+  it("is zero for a northward field, which does not reconnect", () => {
+    expect(geoeffectiveElectricField(450, 12.4)).toBe(0);
+  });
+
+  it("is zero when Bz is exactly zero", () => {
+    expect(geoeffectiveElectricField(450, 0)).toBe(0);
+  });
+
+  it("returns zero for a non-finite Bz", () => {
+    expect(geoeffectiveElectricField(450, Number.NaN)).toBe(0);
+  });
+});
