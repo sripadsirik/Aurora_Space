@@ -131,3 +131,32 @@ describe("COUPLING_LEVEL_LABELS", () => {
     expect(COUPLING_LEVEL_LABELS[couplingLevel(10)]).toBe("Extreme coupling");
   });
 });
+
+describe("solarWindCouplingProfile", () => {
+  it("derives all figures from the snapshot's speed and Bz", () => {
+    const weather = makeWeather({ solarWindSpeed: 450, bzComponent: -12.4 });
+    const profile = solarWindCouplingProfile(weather);
+    expect(profile.dawnDuskFieldMvM).toBeCloseTo(dawnDuskElectricField(450, -12.4), 12);
+    expect(profile.geoeffectiveFieldMvM).toBeCloseTo(
+      geoeffectiveElectricField(450, -12.4),
+      12
+    );
+    expect(profile.southward).toBe(true);
+    expect(profile.level).toBe(couplingLevel(profile.geoeffectiveFieldMvM));
+  });
+
+  it("reports no geoeffective coupling under a northward field", () => {
+    const profile = solarWindCouplingProfile(makeWeather({ bzComponent: 8 }));
+    expect(profile.southward).toBe(false);
+    expect(profile.geoeffectiveFieldMvM).toBe(0);
+    expect(profile.level).toBe("quiet");
+    expect(profile.dawnDuskFieldMvM).toBeGreaterThan(0);
+  });
+
+  it("classifies a strong southward CME field as high or extreme coupling", () => {
+    const profile = solarWindCouplingProfile(
+      makeWeather({ solarWindSpeed: 800, bzComponent: -20 })
+    );
+    expect(["high", "extreme"]).toContain(profile.level);
+  });
+});
