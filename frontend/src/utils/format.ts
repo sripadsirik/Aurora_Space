@@ -196,3 +196,11 @@ export const formatMagnetopauseStandoff = (standoffRe: number): string => {
  */
 export const isCriticalConjunction = (conjunction: ConjunctionWarning): boolean =>
   conjunction.probability >= 0.005 || conjunction.missDistanceM <= 250;
+
+/**
+ * Tailwind class string for the alert dot beside a conjunction in the HUD's
+ * active-alerts list. A {@link isCriticalConjunction | critical} conjunction
+ * pulses in red; everything else shows a steady warning orange.
+ */
+export const conjunctionAlertDotClass = (conjunction: ConjunctionWarning): string =>
+  isCriticalConjunction(conjunction) ? "animate-pulse bg-[#ff0000]" : "bg-[#ff6600]";
