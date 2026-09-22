@@ -3,6 +3,7 @@ import {
   formatAltitudeKm,
   formatKpIndex,
   formatMagneticFieldNt,
+  formatSolarWindDensity,
   formatSpeedKms
 } from "../measurements";
 
@@ -57,5 +58,17 @@ describe("formatSpeedKms", () => {
 
   it("renders a non-finite value as an em dash", () => {
     expect(formatSpeedKms(NaN)).toBe("—");
+  });
+});
+
+describe("formatSolarWindDensity", () => {
+  it("renders one decimal place with the p/cm³ unit", () => {
+    expect(formatSolarWindDensity(5.14)).toBe("5.1 p/cm³");
+    expect(formatSolarWindDensity(12)).toBe("12.0 p/cm³");
+  });
+
+  it("renders a non-finite value as an em dash", () => {
+    expect(formatSolarWindDensity(NaN)).toBe("—");
+    expect(formatSolarWindDensity(Infinity)).toBe("—");
   });
 });
