@@ -1,6 +1,14 @@
 import type { MockCME } from "../types/space";
 
 /**
+ * Whether a modelled CME cleanly misses Earth rather than striking it. Wraps the
+ * `NO IMPACT — MISS` status string so callers never re-type the magic value and
+ * the em-dash spelling lives in one place.
+ */
+export const isCmeMiss = (cme: Pick<MockCME, "impactStatus">): boolean =>
+  cme.impactStatus === "NO IMPACT — MISS";
+
+/**
  * Builds the single-line arrival status shown on a CME card. The wording depends
  * on the modelled impact geometry:
  *
@@ -10,7 +18,7 @@ import type { MockCME } from "../types/space";
  *   direct hit has no prefix. Both end in `<h>h until arrival`.
  */
 export const formatCmeArrival = (cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">): string => {
-  if (cme.impactStatus === "NO IMPACT — MISS") {
+  if (isCmeMiss(cme)) {
     return `PASSES EARTH ORBIT IN ${cme.hoursUntilArrival}h — NO IMPACT`;
   }
   if (cme.hoursUntilArrival <= 0) {
