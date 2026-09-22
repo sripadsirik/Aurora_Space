@@ -25,3 +25,21 @@ export const modeForTimelineEvent = (event: HistoricalEvent | null): VisualMode 
   }
   return "OPS";
 };
+
+/**
+ * Resolves a numeric keyboard shortcut to the visual mode at that 1-based
+ * position in `modes` (so `"1"` selects the first mode, `"2"` the second, and so
+ * on). Returns `null` for any key that is not a whole number within range,
+ * letting the caller drive selection off the same ordered list the UI renders
+ * rather than a hardcoded key count.
+ */
+export const modeForShortcutKey = (
+  key: string,
+  modes: readonly VisualMode[]
+): VisualMode | null => {
+  const index = Number.parseInt(key, 10);
+  if (!Number.isInteger(index) || index < 1 || index > modes.length) {
+    return null;
+  }
+  return modes[index - 1];
+};
