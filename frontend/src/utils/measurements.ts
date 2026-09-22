@@ -43,3 +43,12 @@ export const formatAltitudeKm = (km: number): string =>
  */
 export const formatSpeedKms = (kms: number, fractionDigits = 1): string =>
   Number.isFinite(kms) ? `${kms.toFixed(fractionDigits)} km/s` : EM_DASH;
+
+/**
+ * Formats a solar-wind proton number density to one decimal place with its unit
+ * (for example `5.1 p/cm³`). Centralises the precision and the `p/cm³` unit,
+ * which the HUD and helio overlay previously rendered inconsistently. A
+ * non-finite value renders as an em dash.
+ */
+export const formatSolarWindDensity = (protonsPerCm3: number): string =>
+  Number.isFinite(protonsPerCm3) ? `${protonsPerCm3.toFixed(1)} p/cm³` : EM_DASH;
