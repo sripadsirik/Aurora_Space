@@ -9,6 +9,14 @@ export const isCmeMiss = (cme: Pick<MockCME, "impactStatus">): boolean =>
   cme.impactStatus === "NO IMPACT — MISS";
 
 /**
+ * Whether a CME has already reached Earth orbit, i.e. its countdown to arrival
+ * has run down to zero or gone negative. Centralises the `hoursUntilArrival <= 0`
+ * check so the "arrived" boundary is defined once.
+ */
+export const hasCmeArrived = (cme: Pick<MockCME, "hoursUntilArrival">): boolean =>
+  cme.hoursUntilArrival <= 0;
+
+/**
  * Builds the single-line arrival status shown on a CME card. The wording depends
  * on the modelled impact geometry:
  *
@@ -21,7 +29,7 @@ export const formatCmeArrival = (cme: Pick<MockCME, "impactStatus" | "hoursUntil
   if (isCmeMiss(cme)) {
     return `PASSES EARTH ORBIT IN ${cme.hoursUntilArrival}h — NO IMPACT`;
   }
-  if (cme.hoursUntilArrival <= 0) {
+  if (hasCmeArrived(cme)) {
     return `ARRIVED ${Math.abs(cme.hoursUntilArrival)}h ago`;
   }
   const prefix = cme.impactStatus === "GLANCING BLOW" ? "GLANCING ARRIVAL — " : "";
