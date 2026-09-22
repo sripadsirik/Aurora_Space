@@ -8,7 +8,7 @@ import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFre
 import { conjunctionAlertDotClass, formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime } from "../utils/format";
 import { buildHudDataLayers } from "../utils/hudDataLayers";
 import { deriveHudTheme } from "../utils/hudTheme";
-import { formatKpIndex, formatMagneticFieldNt } from "../utils/measurements";
+import { formatKpIndex, formatMagneticFieldNt, formatSolarWindDensity } from "../utils/measurements";
 import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
@@ -88,7 +88,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             </div>
             <div className="flex justify-between">
               <span>Solar Wind Density</span>
-              <span>{spaceWeather.solarWindDensity.toFixed(1)} p/cm</span>
+              <span>{formatSolarWindDensity(spaceWeather.solarWindDensity)}</span>
             </div>
             <div className="flex justify-between">
               <span>Bz Component</span>
