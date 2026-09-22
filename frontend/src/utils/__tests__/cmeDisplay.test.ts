@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cmePrimaryImpacts, formatCmeArrival } from "../cmeDisplay";
+import {
+  cmeArrivalTextClass,
+  cmePrimaryImpacts,
+  formatCmeArrival,
+  hasCmeArrived,
+  isCmeMiss
+} from "../cmeDisplay";
 
 describe("formatCmeArrival", () => {
   it("describes a clean miss with the pass-by wording", () => {
@@ -36,6 +42,54 @@ describe("formatCmeArrival", () => {
     expect(
       formatCmeArrival({ impactStatus: "GLANCING BLOW", hoursUntilArrival: 12 })
     ).toBe("GLANCING ARRIVAL — 12h until arrival");
+  });
+});
+
+describe("isCmeMiss", () => {
+  it("is true only for the clean-miss impact status", () => {
+    expect(isCmeMiss({ impactStatus: "NO IMPACT — MISS" })).toBe(true);
+  });
+
+  it("is false for impacting statuses", () => {
+    expect(isCmeMiss({ impactStatus: "DIRECT HIT" })).toBe(false);
+    expect(isCmeMiss({ impactStatus: "GLANCING BLOW" })).toBe(false);
+  });
+});
+
+describe("hasCmeArrived", () => {
+  it("is true at or past zero hours to arrival", () => {
+    expect(hasCmeArrived({ hoursUntilArrival: 0 })).toBe(true);
+    expect(hasCmeArrived({ hoursUntilArrival: -3 })).toBe(true);
+  });
+
+  it("is false while arrival is still pending", () => {
+    expect(hasCmeArrived({ hoursUntilArrival: 5 })).toBe(false);
+  });
+});
+
+describe("cmeArrivalTextClass", () => {
+  it("uses the alert colour for an already-arrived CME", () => {
+    expect(cmeArrivalTextClass({ impactStatus: "DIRECT HIT", hoursUntilArrival: -2 })).toBe(
+      "text-[#ff6644]"
+    );
+  });
+
+  it("prefers the arrived colour over the miss colour when both apply", () => {
+    expect(cmeArrivalTextClass({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: -1 })).toBe(
+      "text-[#ff6644]"
+    );
+  });
+
+  it("uses the calm colour for a pending clean miss", () => {
+    expect(cmeArrivalTextClass({ impactStatus: "NO IMPACT — MISS", hoursUntilArrival: 20 })).toBe(
+      "text-[#7dff6a]"
+    );
+  });
+
+  it("uses the warning colour for a pending impact", () => {
+    expect(cmeArrivalTextClass({ impactStatus: "GLANCING BLOW", hoursUntilArrival: 12 })).toBe(
+      "text-[#ffcc88]"
+    );
   });
 });
 
