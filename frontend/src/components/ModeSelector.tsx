@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuroraStore } from "../store/auroraStore";
 import type { VisualMode } from "../types/space";
+import { modeForShortcutKey } from "../utils/visualMode";
 
 const MODES: { key: VisualMode; label: string; subtitle: string; shortcut: string }[] = [
   { key: "OPS", label: "OPS", subtitle: "Operator Dashboard", shortcut: "1" },
@@ -9,6 +10,8 @@ const MODES: { key: VisualMode; label: string; subtitle: string; shortcut: strin
   { key: "INTEL", label: "INTEL", subtitle: "Conjunction Analysis", shortcut: "3" },
   { key: "HELIO", label: "HELIO", subtitle: "Solar Forecasting", shortcut: "4" }
 ];
+
+const MODE_KEYS: VisualMode[] = MODES.map((mode) => mode.key);
 
 export const ModeSelector = (): JSX.Element => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -35,9 +38,9 @@ export const ModeSelector = (): JSX.Element => {
         closeAllPanels();
         return;
       }
-      const index = parseInt(e.key, 10);
-      if (index >= 1 && index <= 4) {
-        handleSetMode(MODES[index - 1].key);
+      const shortcutMode = modeForShortcutKey(e.key, MODE_KEYS);
+      if (shortcutMode) {
+        handleSetMode(shortcutMode);
       }
     };
     window.addEventListener("keydown", onKeyDown);
