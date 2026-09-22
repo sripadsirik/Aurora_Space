@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { HistoricalEvent } from "../../types/space";
-import { STORM_KP_THRESHOLD, isStormModeActive, modeForTimelineEvent } from "../visualMode";
+import type { VisualMode } from "../../types/space";
+import {
+  STORM_KP_THRESHOLD,
+  isStormModeActive,
+  modeForShortcutKey,
+  modeForTimelineEvent
+} from "../visualMode";
+
+const MODE_ORDER: VisualMode[] = ["OPS", "STORM", "INTEL", "HELIO"];
 
 const makeEvent = (overrides: Partial<HistoricalEvent> = {}): HistoricalEvent => ({
   id: "evt",
@@ -51,5 +59,24 @@ describe("modeForTimelineEvent", () => {
 
   it("stays in OPS for an event with no recorded Kp index", () => {
     expect(modeForTimelineEvent(makeEvent({ type: "conjunction" }))).toBe("OPS");
+  });
+});
+
+describe("modeForShortcutKey", () => {
+  it("maps a 1-based digit to the mode at that position", () => {
+    expect(modeForShortcutKey("1", MODE_ORDER)).toBe("OPS");
+    expect(modeForShortcutKey("2", MODE_ORDER)).toBe("STORM");
+    expect(modeForShortcutKey("4", MODE_ORDER)).toBe("HELIO");
+  });
+
+  it("returns null for digits outside the list range", () => {
+    expect(modeForShortcutKey("0", MODE_ORDER)).toBeNull();
+    expect(modeForShortcutKey("5", MODE_ORDER)).toBeNull();
+  });
+
+  it("returns null for non-numeric keys", () => {
+    expect(modeForShortcutKey("Enter", MODE_ORDER)).toBeNull();
+    expect(modeForShortcutKey(" ", MODE_ORDER)).toBeNull();
+    expect(modeForShortcutKey("t", MODE_ORDER)).toBeNull();
   });
 });
