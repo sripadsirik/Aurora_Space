@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConjunctionWarning } from "../../types/space";
 import {
+  conjunctionAlertDotClass,
   formatConjunctionWarningLabel,
   formatCountdownToTca,
   formatDurationToTca,
@@ -125,6 +126,20 @@ describe("isCriticalConjunction", () => {
 
   it("returns false for nominal conjunctions", () => {
     expect(isCriticalConjunction(makeConjunction({ probability: 0.001, missDistanceM: 5000 }))).toBe(false);
+  });
+});
+
+describe("conjunctionAlertDotClass", () => {
+  it("pulses red for a critical conjunction", () => {
+    expect(conjunctionAlertDotClass(makeConjunction({ probability: 0.006, missDistanceM: 5000 }))).toBe(
+      "animate-pulse bg-[#ff0000]"
+    );
+  });
+
+  it("shows a steady orange for a nominal conjunction", () => {
+    expect(conjunctionAlertDotClass(makeConjunction({ probability: 0.001, missDistanceM: 5000 }))).toBe(
+      "bg-[#ff6600]"
+    );
   });
 });
 
