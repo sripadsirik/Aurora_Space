@@ -5,7 +5,7 @@ import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
 import {
   formatDynamicPressure,
-  formatGeoeffectiveField,
+  formatElectricField,
   formatMagnetopauseStandoff
 } from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
@@ -16,6 +16,7 @@ import {
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
 import { couplingLevelLabel, solarWindCouplingProfile } from "../../utils/solarWindCoupling";
+import { solarWindElectricFieldProfile } from "../../utils/solarWindElectricField";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -78,6 +79,8 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
+  // Interplanetary coupling electric field derived from the wind speed and Bz.
+  const electricFieldProfile = solarWindElectricFieldProfile(spaceWeather);
 
   // Geoeffective dawn-dusk electric field driving reconnection, from V and Bz.
   const couplingProfile = solarWindCouplingProfile(spaceWeather);
@@ -204,9 +207,12 @@ export const HelioOverlay = (): JSX.Element | null => {
               <span style={{ color: bzColor }}>{formatMagneticFieldNt(spaceWeather.bzComponent)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#6d8ea9]">Coupling</span>
-              <span className={couplingProfile.strong ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
-                {formatGeoeffectiveField(couplingProfile.electricFieldMvM)}
+              <span className="text-[#6d8ea9]">Coupling E-field</span>
+              <span
+                className={electricFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}
+                title={`${electricFieldProfile.levelLabel} coupling`}
+              >
+                {formatElectricField(electricFieldProfile.geoeffectiveMvM)}
               </span>
             </div>
           </div>

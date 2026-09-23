@@ -72,6 +72,18 @@ $env:SPACETRACK_PASSWORD="xxx"
 .\bin\spacetrack.exe
 ```
 
+## Testing
+
+The Go services and shared package are covered by unit tests. Run them all
+from the `backend` directory:
+
+```bash
+cd backend
+go test ./...      # or: make test
+```
+
+The tests are pure and require no Kafka broker or network access.
+
 ## Environment Variables
 
 Copy `backend/.env.example` to `backend/.env`.
@@ -87,6 +99,17 @@ Copy `backend/.env.example` to `backend/.env`.
 | `METRICS_PORT_SPACETRACK` | `2116` | Space-Track ingestion metrics |
 | `SPACETRACK_USERNAME` | — | Space-Track.org login |
 | `SPACETRACK_PASSWORD` | — | Space-Track.org password |
+
+## Testing
+
+Unit tests cover the pure helper logic in the `shared` package (orbit/risk/storm
+classification, `.env` parsing) and the `gateway` diagnostics helpers (status
+derivation, log summarisation, source-row builders). Run them from `backend/`:
+
+```bash
+make test   # go test ./...
+make vet    # go vet ./...
+```
 
 ## Monitoring
 
