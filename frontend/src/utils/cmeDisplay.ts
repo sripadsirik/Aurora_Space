@@ -80,3 +80,5 @@ export const cmePrimaryImpacts = (cme: Pick<MockCME, "predictedKp">): string[] =
   if (cme.predictedKp >= 8) impacts.push("Satellite charging risk");
   return impacts;
 };
+
+export const hasCmeArrived = isCmeArrived;
