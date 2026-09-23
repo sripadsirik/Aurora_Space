@@ -5,7 +5,7 @@ import { resolveDisplayedWeather } from "../../utils/displayedWeather";
 import { formatKpIndex } from "../../utils/measurements";
 import { kpToGScale } from "../../utils/spaceWeatherScales";
 import { buildStormOverlayStyle } from "../../utils/stormOverlayStyle";
-import { isStormModeActive, STORM_KP_THRESHOLD } from "../../utils/visualMode";
+import { isStormModeActive, shouldAutoActivateStorm } from "../../utils/visualMode";
 
 export const StormOverlay = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -20,9 +20,9 @@ export const StormOverlay = (): JSX.Element | null => {
   const { kpIndex: kp, stormLevel } = resolveDisplayedWeather(spaceWeather, timelineEvent);
   const isStormActive = isStormModeActive(currentMode, kp);
 
-  // Auto-trigger STORM mode once the effective Kp climbs past the storm threshold
+  // Auto-trigger STORM mode when Kp climbs to storm level.
   useEffect(() => {
-    if (kp > STORM_KP_THRESHOLD && currentMode !== "STORM") {
+    if (shouldAutoActivateStorm(currentMode, kp)) {
       setMode("STORM");
       setStormAutoTriggered(true);
       setBannerDismissed(false);

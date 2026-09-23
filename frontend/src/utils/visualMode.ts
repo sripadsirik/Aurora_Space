@@ -4,10 +4,27 @@ import type { VisualMode } from "../types/space";
 export const STORM_KP_THRESHOLD = 5;
 
 /**
+ * Whether a Kp reading represents storm-level geomagnetic activity, i.e. it has
+ * climbed strictly past {@link STORM_KP_THRESHOLD}. This is the single predicate
+ * every storm-mode decision keys off, so the exclusive threshold stays in one
+ * place instead of being re-spelled as a bare `kp > 5` across the components.
+ */
+export const isStormLevelKp = (kpIndex: number): boolean => kpIndex > STORM_KP_THRESHOLD;
+
+/**
  * Whether the storm treatment (warm palette, storm overlay, auto-trigger) should
  * be active. True when the operator has explicitly selected STORM mode, or when
  * the effective Kp index has climbed past {@link STORM_KP_THRESHOLD} regardless
  * of the current mode.
  */
 export const isStormModeActive = (mode: VisualMode, kpIndex: number): boolean =>
-  mode === "STORM" || kpIndex > STORM_KP_THRESHOLD;
+  mode === "STORM" || isStormLevelKp(kpIndex);
+
+/**
+ * Whether the HUD should automatically switch the operator into STORM mode: the
+ * effective Kp index is storm-level ({@link isStormLevelKp}) and the operator is
+ * not already in STORM mode. Guarding on the current mode keeps the auto-trigger
+ * from re-firing (and re-showing its banner) once STORM mode is active.
+ */
+export const shouldAutoActivateStorm = (mode: VisualMode, kpIndex: number): boolean =>
+  mode !== "STORM" && isStormLevelKp(kpIndex);

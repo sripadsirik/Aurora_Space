@@ -185,21 +185,21 @@ func parseThreeLineElements(body []byte) []gpRecord {
 		}
 	}
 
+parseLoop:
 	for i := 0; i < len(lines); {
 		var name, line1, line2 string
 
 		switch {
 		case strings.HasPrefix(lines[i], "1 "):
 			if i+1 >= len(lines) {
-				i++
-				continue
+				break parseLoop
 			}
 			line1 = lines[i]
 			line2 = lines[i+1]
 			i += 2
 		default:
 			if i+2 >= len(lines) {
-				break
+				break parseLoop
 			}
 			name = lines[i]
 			line1 = lines[i+1]
