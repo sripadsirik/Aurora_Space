@@ -192,8 +192,7 @@ parseLoop:
 		switch {
 		case strings.HasPrefix(lines[i], "1 "):
 			if i+1 >= len(lines) {
-				i++
-				continue
+				break parseLoop
 			}
 			line1 = lines[i]
 			line2 = lines[i+1]

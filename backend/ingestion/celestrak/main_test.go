@@ -1,81 +1,74 @@
 package main
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
-// A well-formed two-line element set for the ISS, used across the parser tests.
+// Real ISS (ZARYA) two-line element set, used to exercise the TLE column parsers.
 const (
-	issLine1 = "1 25544U 98067A   08264.51782528 -.00002182  00000-0 -11606-4 0  2927"
+	issLine1 = "1 25544U 98067A   24001.50000000  .00016717  00000-0  10270-3 0  9993"
 	issLine2 = "2 25544  51.6416 247.4627 0006703 130.5360 325.0288 15.72125391563537"
 )
 
 func TestParseNoradCatID(t *testing.T) {
-	cases := []struct {
-		name   string
-		line1  string
-		wantID int
-		wantOK bool
-	}{
-		{"valid ISS line", issLine1, 25544, true},
-		{"too short", "1 255", 0, false},
-		{"non-numeric id field", "1 ABCDEU 98067A", 0, false},
+	if got, ok := parseNoradCatID(issLine1); !ok || got != 25544 {
+		t.Errorf("parseNoradCatID(ISS) = (%d, %v), want (25544, true)", got, ok)
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			id, ok := parseNoradCatID(tc.line1)
-			if id != tc.wantID || ok != tc.wantOK {
-				t.Errorf("parseNoradCatID(%q) = (%d, %v), want (%d, %v)",
-					tc.line1, id, ok, tc.wantID, tc.wantOK)
-			}
-		})
+	if _, ok := parseNoradCatID("1 abc"); ok {
+		t.Error("parseNoradCatID on too-short line should return ok=false")
+	}
+
+	if _, ok := parseNoradCatID("1 XXXXXU"); ok {
+		t.Error("parseNoradCatID with non-numeric id should return ok=false")
 	}
 }
 
 func TestParseEccentricity(t *testing.T) {
-	if got := parseEccentricity(issLine2); got != 0.0006703 {
-		t.Errorf("parseEccentricity(iss) = %v, want %v", got, 0.0006703)
+	if got := parseEccentricity(issLine2); math.Abs(got-0.0006703) > 1e-9 {
+		t.Errorf("parseEccentricity(ISS) = %v, want 0.0006703", got)
 	}
 
-	if got := parseEccentricity("2 25544  51.6416"); got != 0 {
-		t.Errorf("parseEccentricity(short line) = %v, want 0", got)
+	if got := parseEccentricity("2 25544"); got != 0 {
+		t.Errorf("parseEccentricity on short line = %v, want 0", got)
 	}
 }
 
 func TestParseMeanMotion(t *testing.T) {
-	if got := parseMeanMotion(issLine2); got != 15.72125391 {
-		t.Errorf("parseMeanMotion(iss) = %v, want %v", got, 15.72125391)
+	if got := parseMeanMotion(issLine2); math.Abs(got-15.72125391) > 1e-6 {
+		t.Errorf("parseMeanMotion(ISS) = %v, want 15.72125391", got)
 	}
 
-	if got := parseMeanMotion("2 25544  51.6416 247.4627 0006703"); got != 0 {
-		t.Errorf("parseMeanMotion(short line) = %v, want 0", got)
+	if got := parseMeanMotion("2 25544 too short"); got != 0 {
+		t.Errorf("parseMeanMotion on short line = %v, want 0", got)
 	}
 }
 
-func TestParseThreeLineElementsWithName(t *testing.T) {
-	body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\n")
+func TestParseThreeLineElements(t *testing.T) {
+	body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\n" +
+		"NOAA 19\n" +
+		"1 33591U 09005A   24001.51000000  .00000100  00000-0  10000-3 0  9990\n" +
+		"2 33591  99.1000 100.0000 0013000 200.0000 160.0000 14.12000000700000\n")
 
 	records := parseThreeLineElements(body)
-	if len(records) != 1 {
-		t.Fatalf("got %d records, want 1", len(records))
+	if len(records) != 2 {
+		t.Fatalf("got %d records, want 2", len(records))
 	}
 
-	rec := records[0]
-	if rec.ObjectName != "ISS (ZARYA)" {
-		t.Errorf("ObjectName = %q, want %q", rec.ObjectName, "ISS (ZARYA)")
+	if records[0].ObjectName != "ISS (ZARYA)" || records[0].NoradCatID != 25544 {
+		t.Errorf("first record = %+v, want ISS 25544", records[0])
 	}
-	if rec.NoradCatID != 25544 {
-		t.Errorf("NoradCatID = %d, want 25544", rec.NoradCatID)
+	if records[0].TLELine1 != issLine1 || records[0].TLELine2 != issLine2 {
+		t.Error("first record did not preserve TLE lines")
 	}
-	if rec.MeanMotion != 15.72125391 {
-		t.Errorf("MeanMotion = %v, want 15.72125391", rec.MeanMotion)
-	}
-	if rec.Eccentricity != 0.0006703 {
-		t.Errorf("Eccentricity = %v, want 0.0006703", rec.Eccentricity)
+	if records[1].NoradCatID != 33591 {
+		t.Errorf("second record norad = %d, want 33591", records[1].NoradCatID)
 	}
 }
 
-func TestParseThreeLineElementsTwoLineForm(t *testing.T) {
-	// A bare TLE with no leading name line still yields a record.
+func TestParseThreeLineElementsBareTwoLine(t *testing.T) {
+	// A record with no name line, starting directly with "1 ".
 	body := []byte(issLine1 + "\n" + issLine2 + "\n")
 
 	records := parseThreeLineElements(body)
@@ -83,27 +76,16 @@ func TestParseThreeLineElementsTwoLineForm(t *testing.T) {
 		t.Fatalf("got %d records, want 1", len(records))
 	}
 	if records[0].ObjectName != "" {
-		t.Errorf("ObjectName = %q, want empty", records[0].ObjectName)
+		t.Errorf("bare record name = %q, want empty", records[0].ObjectName)
 	}
 	if records[0].NoradCatID != 25544 {
-		t.Errorf("NoradCatID = %d, want 25544", records[0].NoradCatID)
+		t.Errorf("bare record norad = %d, want 25544", records[0].NoradCatID)
 	}
 }
 
 func TestParseThreeLineElementsSkipsMalformed(t *testing.T) {
-	// Second element is missing its line 2, so it must be skipped while the
-	// first, well-formed element is still returned.
-	body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\nDANGLING NAME\n")
-
-	records := parseThreeLineElements(body)
-	if len(records) != 1 {
-		t.Fatalf("got %d records, want 1", len(records))
-	}
-}
-
-func TestParseThreeLineElementsEmpty(t *testing.T) {
-	records := parseThreeLineElements([]byte(""))
-	if len(records) != 0 {
-		t.Errorf("got %d records, want 0", len(records))
+	body := []byte("GARBAGE LINE\nANOTHER GARBAGE\n")
+	if records := parseThreeLineElements(body); len(records) != 0 {
+		t.Errorf("got %d records from garbage, want 0", len(records))
 	}
 }

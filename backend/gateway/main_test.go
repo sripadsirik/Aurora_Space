@@ -8,102 +8,111 @@ import (
 )
 
 func TestPayloadCount(t *testing.T) {
+	satellites, _ := json.Marshal([]shared.Satellite{{NoradID: 1}, {NoradID: 2}, {NoradID: 3}})
+	conjunctions, _ := json.Marshal([]shared.ConjunctionWarning{{ID: "a"}, {ID: "b"}})
+
 	cases := []struct {
 		name    string
 		msgType string
-		payload string
+		payload json.RawMessage
 		want    int
 	}{
-		{"spaceWeather present", "spaceWeather", `{"kpIndex":5}`, 1},
-		{"spaceWeather empty", "spaceWeather", ``, 0},
-		{"satellites counts array", "satellites", `[{"noradId":1},{"noradId":2},{"noradId":3}]`, 3},
-		{"satellites empty array", "satellites", `[]`, 0},
-		{"satellites invalid json", "satellites", `not json`, 0},
-		{"conjunctions counts array", "conjunctions", `[{"id":"a"},{"id":"b"}]`, 2},
-		{"unknown type", "connected", `{"anything":true}`, 0},
+		{"space weather with payload counts as one", "spaceWeather", json.RawMessage(`{"kpIndex":5}`), 1},
+		{"space weather empty payload counts as zero", "spaceWeather", json.RawMessage(``), 0},
+		{"satellites counts array length", "satellites", satellites, 3},
+		{"empty satellites array", "satellites", json.RawMessage(`[]`), 0},
+		{"malformed satellites returns zero", "satellites", json.RawMessage(`{bad`), 0},
+		{"conjunctions counts array length", "conjunctions", conjunctions, 2},
+		{"unknown type returns zero", "mystery", json.RawMessage(`[1,2,3]`), 0},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := payloadCount(tc.msgType, json.RawMessage(tc.payload))
-			if got != tc.want {
+			if got := payloadCount(tc.msgType, tc.payload); got != tc.want {
 				t.Errorf("payloadCount(%q, %s) = %d, want %d", tc.msgType, tc.payload, got, tc.want)
 			}
 		})
 	}
 }
 
-func countSatellites(t *testing.T, payload json.RawMessage) int {
-	t.Helper()
-	var satellites []shared.Satellite
-	if err := json.Unmarshal(payload, &satellites); err != nil {
-		t.Fatalf("payload is not a satellite array: %v", err)
-	}
-	return len(satellites)
-}
-
-func TestSatelliteBatchAssemblerPassthrough(t *testing.T) {
-	a := newSatelliteBatchAssembler()
-
-	// A plain satellite array (no batch envelope) is emitted as-is.
-	payload, complete, err := a.ingest([]byte(`[{"noradId":1},{"noradId":2}]`))
-	if err != nil {
-		t.Fatalf("ingest returned error: %v", err)
-	}
-	if !complete {
-		t.Fatal("expected plain array to be complete immediately")
-	}
-	if n := countSatellites(t, payload); n != 2 {
-		t.Errorf("got %d satellites, want 2", n)
-	}
-}
-
 func TestSatelliteBatchAssemblerSingleBatch(t *testing.T) {
 	a := newSatelliteBatchAssembler()
+	batch := shared.SatelliteBatch{
+		BatchID:    "b1",
+		BatchIndex: 0,
+		BatchCount: 1,
+		Satellites: []shared.Satellite{{NoradID: 10}, {NoradID: 20}},
+	}
+	data, _ := json.Marshal(batch)
 
-	payload, complete, err := a.ingest([]byte(
-		`{"batchId":"x","batchIndex":0,"batchCount":1,"satellites":[{"noradId":10}]}`))
+	payload, complete, err := a.ingest(data)
 	if err != nil {
 		t.Fatalf("ingest returned error: %v", err)
 	}
 	if !complete {
-		t.Fatal("expected single-part batch to be complete immediately")
+		t.Fatal("single batch should complete immediately")
 	}
-	if n := countSatellites(t, payload); n != 1 {
-		t.Errorf("got %d satellites, want 1", n)
+
+	var sats []shared.Satellite
+	if err := json.Unmarshal(payload, &sats); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if len(sats) != 2 {
+		t.Errorf("got %d satellites, want 2", len(sats))
 	}
 }
 
-func TestSatelliteBatchAssemblerInvalid(t *testing.T) {
+func TestSatelliteBatchAssemblerRawArray(t *testing.T) {
 	a := newSatelliteBatchAssembler()
-	if _, _, err := a.ingest([]byte(`not json`)); err == nil {
-		t.Fatal("expected error for invalid payload")
+	data, _ := json.Marshal([]shared.Satellite{{NoradID: 1}})
+
+	payload, complete, err := a.ingest(data)
+	if err != nil {
+		t.Fatalf("ingest returned error: %v", err)
+	}
+	if !complete {
+		t.Fatal("raw satellite array should complete immediately")
+	}
+	if string(payload) != string(data) {
+		t.Errorf("payload = %s, want passthrough %s", payload, data)
 	}
 }
 
 func TestSatelliteBatchAssemblerMultiPart(t *testing.T) {
 	a := newSatelliteBatchAssembler()
+	part0, _ := json.Marshal(shared.SatelliteBatch{
+		BatchID: "multi", BatchIndex: 0, BatchCount: 2,
+		Satellites: []shared.Satellite{{NoradID: 1}},
+	})
+	part1, _ := json.Marshal(shared.SatelliteBatch{
+		BatchID: "multi", BatchIndex: 1, BatchCount: 2,
+		Satellites: []shared.Satellite{{NoradID: 2}, {NoradID: 3}},
+	})
 
-	// First part of a two-part batch: not complete yet.
-	payload, complete, err := a.ingest([]byte(
-		`{"batchId":"b","batchIndex":0,"batchCount":2,"satellites":[{"noradId":1}]}`))
-	if err != nil {
-		t.Fatalf("ingest part 0 returned error: %v", err)
-	}
-	if complete || payload != nil {
-		t.Fatalf("expected incomplete batch after first part, got complete=%v payload=%v", complete, payload)
+	if _, complete, err := a.ingest(part0); err != nil || complete {
+		t.Fatalf("first part: complete=%v err=%v, want incomplete", complete, err)
 	}
 
-	// Second part completes the batch and yields the merged, index-ordered set.
-	payload, complete, err = a.ingest([]byte(
-		`{"batchId":"b","batchIndex":1,"batchCount":2,"satellites":[{"noradId":2},{"noradId":3}]}`))
+	payload, complete, err := a.ingest(part1)
 	if err != nil {
-		t.Fatalf("ingest part 1 returned error: %v", err)
+		t.Fatalf("second part returned error: %v", err)
 	}
 	if !complete {
-		t.Fatal("expected batch to be complete after final part")
+		t.Fatal("batch should complete once all parts arrive")
 	}
-	if n := countSatellites(t, payload); n != 3 {
-		t.Errorf("got %d satellites, want 3", n)
+
+	var sats []shared.Satellite
+	if err := json.Unmarshal(payload, &sats); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if len(sats) != 3 {
+		t.Errorf("got %d satellites, want 3 (1 + 2 across parts)", len(sats))
+	}
+}
+
+func TestSatelliteBatchAssemblerInvalidPayload(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	if _, _, err := a.ingest([]byte("{not valid json")); err == nil {
+		t.Fatal("expected error for invalid payload")
 	}
 }

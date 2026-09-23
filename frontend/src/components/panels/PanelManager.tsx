@@ -6,7 +6,7 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { conjunctionPeerName } from "../../utils/conjunctionLabels";
+import { conjunctionPeerName, conjunctionsForSatellite } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
@@ -17,8 +17,10 @@ import {
   formatMissDistance,
   formatProbability,
   formatProtonFlux,
-  formatUtcTime
+  formatUtcTime,
+  formatUtcTimestamp
 } from "../../utils/format";
+import { buildKpForecast } from "../../utils/kpForecast";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
 import {
   formatAltitudeKm,
@@ -132,10 +134,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
     return null;
   }
 
-  const relatedConjunctions = conjunctions.filter(
-    (conjunction) =>
-      conjunction.object1.noradId === selectedSatellite.noradId || conjunction.object2.noradId === selectedSatellite.noradId
-  );
+  const relatedConjunctions = conjunctionsForSatellite(selectedSatellite, conjunctions);
 
   const impact = getSpaceWeatherImpact(selectedSatellite, spaceWeather.kpIndex);
   const periodMinutes = getOrbitPeriodMinutes(selectedSatellite.altitudeKm);
@@ -261,7 +260,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">CLOSE APPROACH DATA</p>
           <div className="grid grid-cols-[1.4fr_1fr] gap-y-1">
             <span>TCA (UTC)</span>
-            <span className="text-right text-[11px]">{(selectedConjunction.tca instanceof Date ? selectedConjunction.tca : new Date(selectedConjunction.tca)).toISOString().replace("T", " ").replace(".000Z", " UTC")}</span>
+            <span className="text-right text-[11px]">{formatUtcTimestamp(selectedConjunction.tca)}</span>
             <span>Time until TCA</span>
             <span className="text-right">{formatCountdownToTca(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
@@ -309,23 +308,14 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
 
-  const forecast = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, index) => {
-        const hoursAhead = index * 3;
-        const wave = Math.sin(index * 0.9) * 0.8 + Math.cos(index * 0.35) * 0.4;
-        const kp = Math.max(0, Math.min(9, Number((spaceWeather.kpIndex + wave).toFixed(1))));
-        return { hoursAhead, kp };
-      }),
-    [spaceWeather.kpIndex]
-  );
+  const forecast = useMemo(() => buildKpForecast(spaceWeather.kpIndex), [spaceWeather.kpIndex]);
 
   return (
     <PanelCard title="Space Weather" closeLabel="Close space weather panel" onClose={() => closePanel("space-weather")}>
       <div className="space-y-3">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--aurora-accent)]">SPACE WEATHER | NOAA SWPC</p>
-          <p className="text-[10px] text-[#9cc2de]">Last updated {spaceWeather.lastUpdated.toISOString().replace("T", " ").replace(".000Z", " UTC")}</p>
+          <p className="text-[10px] text-[#9cc2de]">Last updated {formatUtcTimestamp(spaceWeather.lastUpdated)}</p>
           <div className="mt-1 flex items-center gap-1.5 text-[10px]">
             <span className="text-[#9cc2de]">NOAA</span>
             {[noaa.geomagnetic, noaa.solarRadiation, noaa.radioBlackout].map((scale) => (
