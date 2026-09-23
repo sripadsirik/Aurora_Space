@@ -1,3 +1,5 @@
+import { electricFieldProfile } from "../../utils/interplanetaryElectricField";
+import { formatSignedElectricField } from "../../utils/format";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
@@ -80,7 +82,7 @@ export const HelioOverlay = (): JSX.Element | null => {
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
   // Interplanetary coupling electric field derived from the wind speed and Bz.
-  const electricFieldProfile = solarWindElectricFieldProfile(spaceWeather);
+  const rectifiedFieldProfile = solarWindElectricFieldProfile(spaceWeather);
 
   // Geoeffective dawn-dusk electric field driving reconnection, from V and Bz.
   const couplingProfile = solarWindCouplingProfile(spaceWeather);
@@ -102,9 +104,11 @@ export const HelioOverlay = (): JSX.Element | null => {
         <div className="mt-2 h-px w-full bg-[repeating-linear-gradient(90deg,rgba(0,212,255,0.4)_0_10px,rgba(0,212,255,0.08)_10px_18px)]" />
         <div className="mt-3 space-y-2">
           <HelioRow color="#00d4ff" label="SOLAR WIND @ L1" value={`${spaceWeather.solarWindSpeed} km/s`} />
+          <HelioRow color={bzColor} label="SIGNED IMF FIELD" value={formatSignedElectricField(electricFieldProfile(spaceWeather).fieldMvM)} />
           <HelioRow color={bzColor} label="BZ COMPONENT" value={formatMagneticFieldNt(spaceWeather.bzComponent)} />
           <HelioRow color={kpColor} label="KP INDEX" value={formatKpIndex(spaceWeather.kpIndex)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
+          <HelioRow color={bzColor} label="SIGNED IMF FIELD" value={formatSignedElectricField(electricFieldProfile(spaceWeather).fieldMvM)} />
           <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
           <HelioRow
             color={couplingProfile.strong ? "#ff8f6e" : bzColor}
@@ -209,10 +213,10 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Coupling E-field</span>
               <span
-                className={electricFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}
-                title={`${electricFieldProfile.levelLabel} coupling`}
+                className={rectifiedFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}
+                title={`${rectifiedFieldProfile.levelLabel} coupling`}
               >
-                {formatElectricField(electricFieldProfile.geoeffectiveMvM)}
+                {formatElectricField(rectifiedFieldProfile.geoeffectiveMvM)}
               </span>
             </div>
           </div>
