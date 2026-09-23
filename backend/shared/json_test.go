@@ -8,7 +8,7 @@ import (
 // TestSatelliteJSONTags guards the wire contract shared with the frontend
 // (frontend/src/types/space.ts). Renaming a JSON tag here would silently break
 // the client, so the field names are asserted explicitly.
-func TestSatelliteJSONTags(t *testing.T) {
+func TestSatelliteJSONTagsPR45(t *testing.T) {
 	sat := Satellite{
 		NoradID:          25544,
 		Name:             "ISS (ZARYA)",
@@ -92,7 +92,7 @@ func TestConjunctionWarningJSONTags(t *testing.T) {
 
 // TestSpaceWeatherJSONTags guards the space-weather wire contract consumed by
 // the HUD and storm overlays.
-func TestSpaceWeatherJSONTags(t *testing.T) {
+func TestSpaceWeatherJSONTagsPR45(t *testing.T) {
 	weather := SpaceWeather{
 		KpIndex:          6.3,
 		SolarWindSpeed:   540,

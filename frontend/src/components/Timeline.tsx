@@ -6,6 +6,7 @@ import type { HistoricalEvent } from "../types/space";
 import { clamp01 } from "../utils/clamp";
 import { findNearestEvent } from "../utils/timelineEvents";
 import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
+import { modeForTimelineEvent } from "../utils/timelineMode";
 import {
   buildYearTicks,
   dateToFraction as dateToFractionInWindow,
@@ -61,18 +62,8 @@ export const Timeline = (): JSX.Element | null => {
       // Snap to the nearest historical event within the shared tolerance.
       const nearest = findNearestEvent(historicalEvents, fraction, (event) => dateToFraction(event.date));
 
-      if (nearest) {
-        setTimelineEvent(nearest);
-        // Auto-switch mode based on event
-        if (nearest.kpIndex !== undefined && nearest.kpIndex > 5) {
-          setMode("STORM");
-        } else {
-          setMode("OPS");
-        }
-      } else {
-        setTimelineEvent(null);
-        setMode("OPS");
-      }
+      setTimelineEvent(nearest);
+      setMode(modeForTimelineEvent(nearest));
     },
     [setTimelinePosition, setTimelineEvent, setMode]
   );

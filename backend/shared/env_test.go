@@ -7,75 +7,73 @@ import (
 )
 
 func TestParseDotEnvLine(t *testing.T) {
-	tests := []struct {
-		name    string
-		line    string
-		wantKey string
-		wantVal string
-		wantOK  bool
+	cases := []struct {
+		name      string
+		line      string
+		wantKey   string
+		wantValue string
+		wantOK    bool
 	}{
-		{"simple pair", "KEY=value", "KEY", "value", true},
-		{"trims surrounding space", "  KEY = value  ", "KEY", "value", true},
-		{"export prefix stripped", "export KEY=value", "KEY", "value", true},
-		{"double quotes stripped", `KEY="quoted value"`, "KEY", "quoted value", true},
-		{"single quotes stripped", "KEY='quoted value'", "KEY", "quoted value", true},
-		{"value may contain equals", "KEY=a=b", "KEY", "a=b", true},
-		{"empty value allowed", "KEY=", "KEY", "", true},
-		{"blank line ignored", "", "", "", false},
-		{"whitespace line ignored", "   ", "", "", false},
-		{"comment ignored", "# a comment", "", "", false},
-		{"missing separator ignored", "NOEQUALS", "", "", false},
-		{"empty key ignored", "=value", "", "", false},
+		{"simple pair", "FOO=bar", "FOO", "bar", true},
+		{"trims surrounding whitespace", "  FOO = bar  ", "FOO", "bar", true},
+		{"strips export prefix", "export FOO=bar", "FOO", "bar", true},
+		{"double quoted value", `FOO="hello world"`, "FOO", "hello world", true},
+		{"single quoted value", "FOO='hello world'", "FOO", "hello world", true},
+		{"value may contain equals", "FOO=a=b=c", "FOO", "a=b=c", true},
+		{"empty value is allowed", "FOO=", "FOO", "", true},
+		{"blank line skipped", "   ", "", "", false},
+		{"comment skipped", "# a comment", "", "", false},
+		{"missing separator skipped", "NOTAPAIR", "", "", false},
+		{"leading equals skipped", "=novalue", "", "", false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			key, val, ok := parseDotEnvLine(tt.line)
-			if ok != tt.wantOK || key != tt.wantKey || val != tt.wantVal {
-				t.Errorf("parseDotEnvLine(%q) = (%q, %q, %v), want (%q, %q, %v)",
-					tt.line, key, val, ok, tt.wantKey, tt.wantVal, tt.wantOK)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			key, value, ok := parseDotEnvLine(tc.line)
+			if ok != tc.wantOK {
+				t.Fatalf("parseDotEnvLine(%q) ok = %v, want %v", tc.line, ok, tc.wantOK)
+			}
+			if key != tc.wantKey || value != tc.wantValue {
+				t.Errorf("parseDotEnvLine(%q) = (%q, %q), want (%q, %q)", tc.line, key, value, tc.wantKey, tc.wantValue)
 			}
 		})
 	}
 }
 
 func TestLoadDotEnvMissingFileIsNoError(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "does-not-exist.env")
-	if err := LoadDotEnv(path); err != nil {
-		t.Errorf("LoadDotEnv(missing) = %v, want nil", err)
+	if err := LoadDotEnv(filepath.Join(t.TempDir(), "does-not-exist.env")); err != nil {
+		t.Fatalf("LoadDotEnv on missing file returned error: %v", err)
 	}
 }
 
-func TestLoadDotEnvSetsUnsetVars(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, ".env")
-	contents := "# comment\nAURORA_TEST_KEY=hello\nexport AURORA_TEST_QUOTED=\"spaced value\"\n"
+func TestLoadDotEnvSetsUnsetVariables(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	contents := "# comment\nAURORA_TEST_FRESH=applied\nexport AURORA_TEST_EXPORTED=\"quoted value\"\n"
 	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
-		t.Fatalf("write env file: %v", err)
+		t.Fatalf("write temp env: %v", err)
 	}
 
-	t.Setenv("AURORA_TEST_KEY", "")
-	os.Unsetenv("AURORA_TEST_KEY")
-	t.Setenv("AURORA_TEST_QUOTED", "")
-	os.Unsetenv("AURORA_TEST_QUOTED")
+	t.Setenv("AURORA_TEST_FRESH", "")
+	os.Unsetenv("AURORA_TEST_FRESH")
+	t.Setenv("AURORA_TEST_EXPORTED", "")
+	os.Unsetenv("AURORA_TEST_EXPORTED")
 
 	if err := LoadDotEnv(path); err != nil {
 		t.Fatalf("LoadDotEnv: %v", err)
 	}
 
-	if got := os.Getenv("AURORA_TEST_KEY"); got != "hello" {
-		t.Errorf("AURORA_TEST_KEY = %q, want %q", got, "hello")
+	if got := os.Getenv("AURORA_TEST_FRESH"); got != "applied" {
+		t.Errorf("AURORA_TEST_FRESH = %q, want %q", got, "applied")
 	}
-	if got := os.Getenv("AURORA_TEST_QUOTED"); got != "spaced value" {
-		t.Errorf("AURORA_TEST_QUOTED = %q, want %q", got, "spaced value")
+	if got := os.Getenv("AURORA_TEST_EXPORTED"); got != "quoted value" {
+		t.Errorf("AURORA_TEST_EXPORTED = %q, want %q", got, "quoted value")
 	}
 }
 
 func TestLoadDotEnvDoesNotOverrideExisting(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, ".env")
+	path := filepath.Join(t.TempDir(), ".env")
 	if err := os.WriteFile(path, []byte("AURORA_TEST_EXISTING=fromfile\n"), 0o600); err != nil {
-		t.Fatalf("write env file: %v", err)
+		t.Fatalf("write temp env: %v", err)
 	}
 
 	t.Setenv("AURORA_TEST_EXISTING", "preset")
@@ -85,6 +83,6 @@ func TestLoadDotEnvDoesNotOverrideExisting(t *testing.T) {
 	}
 
 	if got := os.Getenv("AURORA_TEST_EXISTING"); got != "preset" {
-		t.Errorf("AURORA_TEST_EXISTING = %q, want preset (existing value must win)", got)
+		t.Errorf("AURORA_TEST_EXISTING = %q, want it to stay %q", got, "preset")
 	}
 }
