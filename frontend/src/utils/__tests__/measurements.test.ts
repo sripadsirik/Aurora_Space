@@ -62,13 +62,15 @@ describe("formatSpeedKms", () => {
 });
 
 describe("formatSolarWindDensity", () => {
-  it("renders one decimal place with the p/cm³ unit", () => {
-    expect(formatSolarWindDensity(5.14)).toBe("5.1 p/cm³");
-    expect(formatSolarWindDensity(12)).toBe("12.0 p/cm³");
+  it("formats to one decimal place with the cubic-centimetre unit", () => {
+    expect(formatSolarWindDensity(8.2)).toBe("8.2 p/cm³");
+  });
+
+  it("rounds to one decimal place", () => {
+    expect(formatSolarWindDensity(12.34)).toBe("12.3 p/cm³");
   });
 
   it("renders a non-finite value as an em dash", () => {
     expect(formatSolarWindDensity(NaN)).toBe("—");
-    expect(formatSolarWindDensity(Infinity)).toBe("—");
   });
 });

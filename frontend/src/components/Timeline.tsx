@@ -6,7 +6,7 @@ import type { HistoricalEvent } from "../types/space";
 import { clamp01 } from "../utils/clamp";
 import { findNearestEvent } from "../utils/timelineEvents";
 import { markerColorForEvent, markerShapeForEvent } from "../utils/timelineMarkers";
-import { modeForTimelineEvent } from "../utils/visualMode";
+import { modeForTimelineEvent } from "../utils/timelineMode";
 import {
   buildYearTicks,
   dateToFraction as dateToFractionInWindow,
@@ -63,7 +63,7 @@ export const Timeline = (): JSX.Element | null => {
       const nearest = findNearestEvent(historicalEvents, fraction, (event) => dateToFraction(event.date));
 
       setTimelineEvent(nearest);
-      // Auto-switch mode: stormy events open in STORM, everything else in OPS.
+      // Auto-switch mode based on the snapped event (or lack of one).
       setMode(modeForTimelineEvent(nearest));
     },
     [setTimelinePosition, setTimelineEvent, setMode]

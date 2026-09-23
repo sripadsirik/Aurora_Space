@@ -43,3 +43,46 @@ export const getSatellitePositionAtOffset = (
     state.inclination,
     state.ascendingNode
   );
+
+/** Default number of samples used to draw a conjunction look-ahead arc. */
+export const CONJUNCTION_ARC_POINT_COUNT = 20;
+
+/**
+ * Samples a short arc of a satellite's orbit around its current position, biased
+ * to look ahead toward a conjunction's time of closest approach. The look-ahead
+ * span tracks `timeUntilTcaSeconds` but is bounded to a fraction of the orbital
+ * `period` (never less than 4% nor more than 32%), so both imminent and distant
+ * conjunctions render a legible arc; a small slice behind the current position
+ * is included for context. Returns `pointCount` positions from behind to ahead.
+ */
+export const createConjunctionOrbitArcPositions = (
+  state: SatelliteOrbitAnim,
+  elapsedSeconds: number,
+  timeUntilTcaSeconds: number,
+  pointCount = CONJUNCTION_ARC_POINT_COUNT
+): Cartesian3[] => {
+  const angularVelocity = CesiumMath.TWO_PI / state.period;
+  const lookAheadSeconds = Math.min(
+    Math.max(timeUntilTcaSeconds, state.period * 0.04),
+    state.period * 0.32
+  );
+  const startOffsetSeconds = -Math.min(lookAheadSeconds * 0.2, state.period * 0.05);
+  const endOffsetSeconds = Math.max(lookAheadSeconds, state.period * 0.08);
+  const currentTheta = getSatelliteThetaAtElapsed(state, elapsedSeconds);
+  const positions: Cartesian3[] = [];
+
+  for (let index = 0; index < pointCount; index += 1) {
+    const t = pointCount === 1 ? 0 : index / (pointCount - 1);
+    const offsetSeconds = CesiumMath.lerp(startOffsetSeconds, endOffsetSeconds, t);
+    positions.push(
+      orbitPoint(
+        currentTheta + angularVelocity * offsetSeconds,
+        state.radius,
+        state.inclination,
+        state.ascendingNode
+      )
+    );
+  }
+
+  return positions;
+};

@@ -72,6 +72,20 @@ $env:SPACETRACK_PASSWORD="xxx"
 .\bin\spacetrack.exe
 ```
 
+## Testing
+
+Unit tests cover the shared domain helpers (orbit/risk/storm classification,
+dotenv parsing) and the gateway's state cache and diagnostics logic. Run them
+with:
+
+```bash
+# From the repo root
+make test-go
+
+# Or directly
+cd backend && go test ./...
+```
+
 ## Environment Variables
 
 Copy `backend/.env.example` to `backend/.env`.

@@ -2,16 +2,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuroraStore } from "../store/auroraStore";
 import type { VisualMode } from "../types/space";
-import { modeForShortcutKey } from "../utils/visualMode";
+import { MODE_SHORTCUT_ORDER, modeForShortcutKey } from "../utils/modeShortcuts";
 
-const MODES: { key: VisualMode; label: string; subtitle: string; shortcut: string }[] = [
-  { key: "OPS", label: "OPS", subtitle: "Operator Dashboard", shortcut: "1" },
-  { key: "STORM", label: "STORM", subtitle: "Weather Response", shortcut: "2" },
-  { key: "INTEL", label: "INTEL", subtitle: "Conjunction Analysis", shortcut: "3" },
-  { key: "HELIO", label: "HELIO", subtitle: "Solar Forecasting", shortcut: "4" }
-];
+const MODE_SUBTITLES: Record<VisualMode, string> = {
+  OPS: "Operator Dashboard",
+  STORM: "Weather Response",
+  INTEL: "Conjunction Analysis",
+  HELIO: "Solar Forecasting"
+};
 
-const MODE_KEYS: VisualMode[] = MODES.map((mode) => mode.key);
+// Rendered buttons follow the shared shortcut order so the on-screen 1-4 labels
+// always match the keys modeForShortcutKey resolves.
+const MODES: { key: VisualMode; label: string; subtitle: string; shortcut: string }[] =
+  MODE_SHORTCUT_ORDER.map((key, index) => ({
+    key,
+    label: key,
+    subtitle: MODE_SUBTITLES[key],
+    shortcut: String(index + 1)
+  }));
 
 export const ModeSelector = (): JSX.Element => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -38,7 +46,7 @@ export const ModeSelector = (): JSX.Element => {
         closeAllPanels();
         return;
       }
-      const shortcutMode = modeForShortcutKey(e.key, MODE_KEYS);
+      const shortcutMode = modeForShortcutKey(e.key);
       if (shortcutMode) {
         handleSetMode(shortcutMode);
       }

@@ -1,11 +1,11 @@
 import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
-import { bzComponentTextClass, getKpColor } from "../utils/colors";
+import { bzComponentTextClass, conjunctionAlertDotClass, getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { resolveDisplayedWeather } from "../utils/displayedWeather";
 import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
-import { conjunctionAlertDotClass, formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime } from "../utils/format";
+import { formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime, isCriticalConjunction } from "../utils/format";
 import { buildHudDataLayers } from "../utils/hudDataLayers";
 import { deriveHudTheme } from "../utils/hudTheme";
 import { formatKpIndex, formatMagneticFieldNt, formatSolarWindDensity } from "../utils/measurements";
@@ -117,6 +117,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>ACTIVE ALERTS</p>
             <div className="mt-2 space-y-1 text-xs" style={{ color: alertTextColor }}>
               {conjunctions.map((conjunction) => {
+                const isCritical = isCriticalConjunction(conjunction);
                 const isSelected = selectedConjunction?.id === conjunction.id;
                 return (
                   <button
@@ -129,7 +130,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
                         : "border-white/10 hover:border-cyan-400/50"
                     }`}
                   >
-                    <span className={`h-2 w-2 rounded-full ${conjunctionAlertDotClass(conjunction)}`} />
+                    <span className={`h-2 w-2 rounded-full ${conjunctionAlertDotClass(isCritical)}`} />
                     <span className="truncate">
                       {formatConjunctionPairLabel(conjunction, "-")} | TCA {formatDurationToTca(conjunction.tca)} | Pc{" "}
                       {formatProbability(conjunction.probability)}

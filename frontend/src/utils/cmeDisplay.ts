@@ -1,20 +1,22 @@
-import type { MockCME } from "../types/space";
+/**
+ * Presentation helpers for coronal mass ejection (CME) cards.
+ *
+ * The HELIO-mode CME library renders each modelled ejection as a card whose
+ * wording, badges, and accent colours all follow from the CME's impact geometry
+ * (a clean miss, a glancing blow, or a direct hit) and how long until it reaches
+ * Earth. Deriving those display strings in one tested place keeps the cards
+ * consistent and keeps the panel component free of scattered impact-status
+ * conditionals.
+ */
+
+import type { CmeImpactStatus, MockCME } from "../types/space";
 
 /**
- * Whether a modelled CME cleanly misses Earth rather than striking it. Wraps the
- * `NO IMPACT — MISS` status string so callers never re-type the magic value and
- * the em-dash spelling lives in one place.
+ * The {@link CmeImpactStatus} value marking a CME that passes Earth's orbit
+ * without striking the magnetosphere. Shared so the "clean miss" branch reads
+ * the same in every helper instead of repeating the literal string.
  */
-export const isCmeMiss = (cme: Pick<MockCME, "impactStatus">): boolean =>
-  cme.impactStatus === "NO IMPACT — MISS";
-
-/**
- * Whether a CME has already reached Earth orbit, i.e. its countdown to arrival
- * has run down to zero or gone negative. Centralises the `hoursUntilArrival <= 0`
- * check so the "arrived" boundary is defined once.
- */
-export const hasCmeArrived = (cme: Pick<MockCME, "hoursUntilArrival">): boolean =>
-  cme.hoursUntilArrival <= 0;
+export const CME_MISS_STATUS: CmeImpactStatus = "NO IMPACT — MISS";
 
 /**
  * Builds the single-line arrival status shown on a CME card. The wording depends
@@ -26,10 +28,10 @@ export const hasCmeArrived = (cme: Pick<MockCME, "hoursUntilArrival">): boolean 
  *   direct hit has no prefix. Both end in `<h>h until arrival`.
  */
 export const formatCmeArrival = (cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">): string => {
-  if (isCmeMiss(cme)) {
+  if (cme.impactStatus === CME_MISS_STATUS) {
     return `PASSES EARTH ORBIT IN ${cme.hoursUntilArrival}h — NO IMPACT`;
   }
-  if (hasCmeArrived(cme)) {
+  if (cme.hoursUntilArrival <= 0) {
     return `ARRIVED ${Math.abs(cme.hoursUntilArrival)}h ago`;
   }
   const prefix = cme.impactStatus === "GLANCING BLOW" ? "GLANCING ARRIVAL — " : "";
@@ -37,15 +39,31 @@ export const formatCmeArrival = (cme: Pick<MockCME, "impactStatus" | "hoursUntil
 };
 
 /**
- * Tailwind text-colour utility class for a CME card's arrival readout. An
- * already-arrived CME reads in an alert red-orange; a clean miss reads in a calm
- * green; a pending impact reads in a warning amber. The arrived state takes
- * precedence over the miss state, matching the card's visual ordering.
+ * True when a CME cleanly misses Earth's orbit ({@link CME_MISS_STATUS}), so a
+ * card can drop the storm badge, arrival countdown, and impact list in favour of
+ * the calmer "miss" styling.
+ */
+export const isCmeMiss = (cme: Pick<MockCME, "impactStatus">): boolean =>
+  cme.impactStatus === CME_MISS_STATUS;
+
+/**
+ * True once a CME has reached Earth, i.e. its countdown has run to zero or gone
+ * negative (`hoursUntilArrival <= 0`). Mirrors the boundary {@link
+ * formatCmeArrival} uses to switch from a countdown to an "ARRIVED" readout.
+ */
+export const isCmeArrived = (cme: Pick<MockCME, "hoursUntilArrival">): boolean =>
+  cme.hoursUntilArrival <= 0;
+
+/**
+ * Tailwind text-colour class for a card's arrival line. An already-arrived CME
+ * reads in the red hazard hue, a clean miss in the calm green, and a pending
+ * impact in amber. Arrival is checked before the miss so a miss whose pass-by
+ * time has elapsed still reads as arrived, matching the countdown wording.
  */
 export const cmeArrivalTextClass = (
   cme: Pick<MockCME, "impactStatus" | "hoursUntilArrival">
 ): string => {
-  if (hasCmeArrived(cme)) return "text-[#ff6644]";
+  if (isCmeArrived(cme)) return "text-[#ff6644]";
   if (isCmeMiss(cme)) return "text-[#7dff6a]";
   return "text-[#ffcc88]";
 };
@@ -62,3 +80,5 @@ export const cmePrimaryImpacts = (cme: Pick<MockCME, "predictedKp">): string[] =
   if (cme.predictedKp >= 8) impacts.push("Satellite charging risk");
   return impacts;
 };
+
+export const hasCmeArrived = isCmeArrived;
