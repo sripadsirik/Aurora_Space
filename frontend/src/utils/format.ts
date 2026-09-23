@@ -1,10 +1,11 @@
 import type { ConjunctionWarning } from "../types/space";
 
-const pad = (value: number): string => value.toString().padStart(2, "0");
+/** Zero-pads a number to at least two digits (for example `7` becomes `07`). */
+export const zeroPad = (value: number): string => value.toString().padStart(2, "0");
 
 /** Formats a date as a zero-padded `HH:MM:SS UTC` wall-clock string. */
 export const formatUtcTime = (date: Date): string =>
-  `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;
+  `${zeroPad(date.getUTCHours())}:${zeroPad(date.getUTCMinutes())}:${zeroPad(date.getUTCSeconds())} UTC`;
 
 /**
  * Formats a date as a full `YYYY-MM-DD HH:MM:SS UTC` timestamp for "last
@@ -15,18 +16,20 @@ export const formatUtcTime = (date: Date): string =>
  */
 export const formatUtcTimestamp = (value: Date | string): string => {
   const date = value instanceof Date ? value : new Date(value);
-  const dateParts = `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+  const dateParts = `${date.getUTCFullYear()}-${zeroPad(date.getUTCMonth() + 1)}-${zeroPad(date.getUTCDate())}`;
   return `${dateParts} ${formatUtcTime(date)}`;
 };
 
 /**
  * Renders the time until (or since) a time of closest approach. Future TCAs
  * count down as `Hh Mm`; past TCAs read as `PASSED …ago`, switching to days and
- * hours once more than a day has elapsed. Accepts a `Date` or ISO string.
+ * hours once more than a day has elapsed. Accepts a `Date` or ISO string; an
+ * unparseable date renders as an em dash rather than `NaNh NaNm`.
  */
 export const formatDurationToTca = (tca: Date | string): string => {
   const tcaDate = tca instanceof Date ? tca : new Date(tca);
   const rawDiffMs = tcaDate.getTime() - Date.now();
+  if (Number.isNaN(rawDiffMs)) return "—";
   if (rawDiffMs < 0) {
     const elapsed = Math.abs(rawDiffMs);
     const totalMinutes = Math.floor(elapsed / 60000);
@@ -47,11 +50,13 @@ export const formatDurationToTca = (tca: Date | string): string => {
  * read as a zero-padded `HH:MM:SS` clock; past TCAs read as `PASSED …ago`,
  * switching from `HH:MM:SS` to `Dd HHh` once more than a day has elapsed. Accepts
  * a `Date` or ISO string. Unlike {@link formatDurationToTca} this keeps
- * second-level precision, so it suits a live-ticking detail readout.
+ * second-level precision, so it suits a live-ticking detail readout. An
+ * unparseable date renders as an em dash rather than `NaN:NaN:NaN`.
  */
 export const formatCountdownToTca = (tca: Date | string): string => {
   const tcaDate = tca instanceof Date ? tca : new Date(tca);
   const rawDiffMs = tcaDate.getTime() - Date.now();
+  if (Number.isNaN(rawDiffMs)) return "—";
   if (rawDiffMs < 0) {
     const elapsed = Math.abs(rawDiffMs);
     const totalSeconds = Math.floor(elapsed / 1000);
@@ -59,18 +64,26 @@ export const formatCountdownToTca = (tca: Date | string): string => {
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    if (days > 0) return `PASSED ${days}d ${pad(hours)}h ago`;
-    return `PASSED ${pad(hours)}:${pad(minutes)}:${pad(seconds)} ago`;
+    if (days > 0) return `PASSED ${days}d ${zeroPad(hours)}h ago`;
+    return `PASSED ${zeroPad(hours)}:${zeroPad(minutes)}:${zeroPad(seconds)} ago`;
   }
   const totalSeconds = Math.floor(rawDiffMs / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  return `${zeroPad(hours)}:${zeroPad(minutes)}:${zeroPad(seconds)}`;
 };
 
-/** Formats a collision probability in exponential notation with one fraction digit. */
-export const formatProbability = (probability: number): string => probability.toExponential(1);
+/**
+ * Formats a collision probability in exponential notation with one fraction
+ * digit (for example `1.2e-3`). Negative or non-finite inputs render as an em
+ * dash so a bad feed value never shows as `NaN` or a nonsensical negative
+ * probability.
+ */
+export const formatProbability = (probability: number): string => {
+  if (!Number.isFinite(probability) || probability < 0) return "—";
+  return probability.toExponential(1);
+};
 
 /**
  * Formats a conjunction miss distance for display. Distances below 10 km are
@@ -90,9 +103,13 @@ export const formatMissDistance = (meters: number): string => {
  * is a first-order display estimate that scales linearly with collision
  * probability (`probability × 10000` m/s) and is prefixed with `~` and rounded to
  * one decimal to signal that it is indicative rather than a computed burn.
+ * Negative or non-finite inputs render as an em dash so a bad feed value never
+ * shows as `NaN m/s`.
  */
-export const formatManeuverDeltaV = (probability: number): string =>
-  `~${(probability * 10000).toFixed(1)} m/s`;
+export const formatManeuverDeltaV = (probability: number): string => {
+  if (!Number.isFinite(probability) || probability < 0) return "—";
+  return `~${(probability * 10000).toFixed(1)} m/s`;
+};
 
 /**
  * Formats an orbital period given in minutes as a compact wall-clock string.
@@ -154,7 +171,7 @@ export const formatPassDuration = (seconds: number): string => {
   if (totalSeconds < 60) return `${totalSeconds}s`;
   if (totalSeconds < 3600) {
     const minutes = Math.floor(totalSeconds / 60);
-    return `${minutes}m ${pad(totalSeconds % 60)}s`;
+    return `${minutes}m ${zeroPad(totalSeconds % 60)}s`;
   }
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -164,9 +181,11 @@ export const formatPassDuration = (seconds: number): string => {
 /**
  * Renders an orbit fraction (0-1), such as an eclipse or sunlight fraction, as a
  * whole-percent string like `37%`. Values are clamped to the 0-1 range before
- * rounding, so out-of-range inputs read as `0%` or `100%`.
+ * rounding, so out-of-range inputs read as `0%` or `100%`. A non-finite input
+ * renders as an em dash so a bad value never shows as `NaN%`.
  */
 export const formatEclipseFraction = (fraction: number): string => {
+  if (!Number.isFinite(fraction)) return "—";
   const clamped = Math.min(1, Math.max(0, fraction));
   return `${Math.round(clamped * 100)}%`;
 };
@@ -204,8 +223,34 @@ export const formatMagnetopauseStandoff = (standoffRe: number): string => {
 };
 
 /**
+ * Formats an interplanetary electric field in millivolts per metre for display.
+ * Renders two fraction digits with a `mV/m` suffix (for example `2.10 mV/m`).
+ * Negative or non-finite inputs render as an em dash so a bad feed value never
+ * shows as `NaN mV/m`.
+ */
+export const formatElectricField = (fieldMvM: number): string => {
+  if (!Number.isFinite(fieldMvM) || fieldMvM < 0) return "—";
+  return `${fieldMvM.toFixed(2)} mV/m`;
+};
+
+/**
  * A conjunction is treated as critical when the collision probability is at
  * least 0.005 or the miss distance is 250 m or less.
  */
 export const isCriticalConjunction = (conjunction: ConjunctionWarning): boolean =>
   conjunction.probability >= 0.005 || conjunction.missDistanceM <= 250;
+
+/** Formats the nonnegative coupling field in mV/m. */
+export const formatGeoeffectiveField = formatElectricField;
+
+/**
+ * Formats an interplanetary dawn-dusk electric field in mV/m for display.
+ * Renders two fraction digits with a `mV/m` suffix (for example `1.60 mV/m`) and
+ * keeps the sign so a northward (negative) field stays distinct from a
+ * geoeffective southward one. Non-finite inputs render as an em dash so a bad
+ * feed value never shows as `NaN mV/m`.
+ */
+export const formatSignedElectricField = (fieldMvM: number): string => {
+  if (!Number.isFinite(fieldMvM)) return "—";
+  return `${fieldMvM.toFixed(2)} mV/m`;
+};

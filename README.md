@@ -130,6 +130,28 @@ GEO assets to the magnetosheath. `formatDynamicPressure` and `formatMagnetopause
 display, and the heliosphere overlay's L1 DSCOVR panel surfaces both, highlighting the standoff
 when the boundary drops inside GEO.
 
+## Solar Wind Coupling
+
+How hard the solar wind couples into geomagnetic activity comes from the pure helpers in
+`frontend/src/utils/solarWindCoupling.ts`, using the bulk speed and IMF Bz component the
+space-weather feeds already report:
+
+| Helper | Returns |
+| --- | --- |
+| `geoeffectiveElectricField` | Rectified dawn-dusk electric field in mV/m (`Ey = V · Bs`, `Bs = max(0, -Bz)`) |
+| `couplingLevel` | Qualitative band (`closed` / `weak` / `moderate` / `strong`) |
+| `isStrongGeomagneticCoupling` | True at or above the strong-coupling threshold (5 mV/m) |
+| `solarWindCouplingProfile` | All of the above bundled into one `SolarWindCouplingProfile` for a `SpaceWeather` snapshot |
+
+Only a southward IMF reconnects with the magnetosphere, so only the southward part of the field
+is geoeffective — a northward or zero Bz reads as `closed` and drives no coupling. When the field
+does turn south, the wind sweeps a motional electric field across the dayside that feeds the ring
+current and sets storm intensity, so a fast stream carrying a strongly southward field pushes the
+coupling into the `strong` band. `formatGeoeffectiveField` in `frontend/src/utils/format.ts`
+renders the field for display (`3.20 mV/m`), and the heliosphere overlay's L1 DSCOVR panel
+surfaces it alongside the ram pressure and magnetopause standoff, highlighting it under strong
+coupling.
+
 ## Coverage Footprint
 
 How much of Earth a satellite can see or serve comes from the pure geometry helpers in
@@ -451,6 +473,49 @@ still be glimpsed low on the poleward horizon. Observer latitude is compared by 
 the helpers work for either hemisphere, and non-finite inputs fall back to a safe result
 (`none`/`null`) rather than throwing.
 
+## Moonlight
+
+Knowing the aurora reaches your latitude still leaves out a decisive factor: a bright sky
+washes out faint aurora, and the Moon is the dominant natural source of that glare on a clear
+night. The pure helpers in `frontend/src/utils/moonlight.ts` turn a date into the Moon's phase
+and how much its light is likely to interfere, tracking the synodic (new-Moon-to-new-Moon)
+cycle from a known new-Moon epoch:
+
+| Helper | Returns |
+| --- | --- |
+| `moonAgeDays` | Days since the most recent new Moon, in `[0, 29.53)` |
+| `moonPhaseFraction` | Position in the synodic cycle, `0` (new) → `0.5` (full) → `1` |
+| `moonIlluminatedFraction` | Fraction of the disk sunlit, `0` (new) to `1` (full) |
+| `moonPhaseName` | The named phase (`New Moon`, `Waxing Crescent`, … `Waning Crescent`) |
+| `classifyMoonlight` | The `dark`/`moderate`/`bright` interference tier for an illuminated fraction |
+| `summarizeMoonlight` | All of the above bundled into one `MoonlightSummary` |
+
+`MOONLIGHT_DARK_MAX_ILLUMINATION` and `MOONLIGHT_BRIGHT_MIN_ILLUMINATION` set the tier
+boundaries, and `MOONLIGHT_LEVEL_LABELS` gives each tier its observer-facing copy. The phase
+model ignores libration and orbital-eccentricity effects that shift each phase by a few hours —
+well within the precision needed to plan a night out — and invalid dates fall back to a safe
+result (`NaN`/`null`/`dark`) rather than throwing.
+
+### Moonlight Interference
+
+Being *above the horizon* is not the same as being *visible*: a bright Moon floods the sky
+with scattered light that washes out faint aurora. The pure helpers in
+`frontend/src/utils/auroraMoonlight.ts` turn the Moon's illuminated fraction (`0` at new Moon,
+`1` at full) into a viewing outlook and fold it back into the aurora chance:
+
+| Helper | Returns |
+| --- | --- |
+| `moonIlluminationFraction` | The reading normalised to `[0, 1]` (non-finite → new Moon) |
+| `classifyMoonlightInterference` | The `dark`/`dim`/`bright`/`washed-out` interference tier |
+| `moonlightSeverity` | A perceptual sky-glow weight (illuminated fraction squared) |
+| `adjustAuroraChanceForMoonlight` | Demotes a faint `horizon` glow to `none` under a bright Moon |
+| `summarizeMoonlight` | All of the above bundled into one `MoonlightSummary` |
+
+`MOONLIGHT_INTERFERENCE_THRESHOLDS` holds the illuminated-fraction cut points between tiers and
+`MOONLIGHT_INTERFERENCE_LABELS` supplies panel copy. The adjustment keeps the physical
+asymmetry that vivid `overhead` aurora survive any Moon while a subtle horizon glow does not, so
+the HUD can warn "great storm, but the Moon will drown it out" from a single tested source.
+
 ## Repo Layout
 
 ```text
@@ -680,7 +745,7 @@ The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently coveri
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
 `catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
 `conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`,
-`conjunctionLeadTime`, `auroraVisibility`, `solarWindPressure`), the Zustand store, and the mock datasets under `src/data/mock/`
+`conjunctionLeadTime`, `auroraVisibility`, `moonlight`, `solarWindPressure`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
@@ -733,3 +798,25 @@ Node environment with Cesium available through `vite-plugin-cesium`.
 ## License
 
 MIT
+
+## Signed Interplanetary Electric Field
+
+How strongly the solar wind couples to the magnetosphere comes from the pure helpers in
+`frontend/src/utils/interplanetaryElectricField.ts`, using the bulk speed and IMF Bz the
+space-weather feeds already report:
+
+| Helper | Returns |
+| --- | --- |
+| `interplanetaryElectricField` | Signed dawn-dusk field in mV/m (`Ey = -v · Bz`; positive when the IMF is southward) |
+| `geoeffectiveElectricField` | Half-wave rectified field — only a southward IMF couples, so a northward interval reads as `0` |
+| `electricFieldLevel` | Qualitative band (`quiet` / `moderate` / `strong` / `extreme`) keyed off the geoeffective field |
+| `couplingLabel` | Short status label (`WEAK` / `MODERATE` / `STRONG` / `EXTREME COUPLING`) for a band |
+| `electricFieldProfile` | All of the above bundled into one `ElectricFieldProfile` for a `SpaceWeather` snapshot |
+
+The dawn-dusk motional field is the classic measure of solar-wind/magnetosphere coupling: a
+southward IMF reconnects and imposes a cross-tail electric field that drives convection, the ring
+current, and the auroral electrojets, while a northward field leaves the magnetosphere closed and
+contributes no forcing. `formatSignedElectricField` in `frontend/src/utils/format.ts` renders the field
+(`1.60 mV/m`, keeping the sign) for display, and the heliosphere overlay surfaces both a coupling
+status row and the coupling field in its L1 DSCOVR panel, highlighting it when the IMF turns
+southward.

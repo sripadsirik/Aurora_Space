@@ -2,6 +2,7 @@ import { Color } from "cesium";
 import { describe, expect, it } from "vitest";
 import {
   bzComponentTextClass,
+  conjunctionAlertDotClass,
   conjunctionFleetSeverityColor,
   conjunctionRowTextClass,
   getKpColor,
@@ -96,5 +97,15 @@ describe("riskColorMap", () => {
     }
     const serialized = levels.map((level) => riskColorMap[level].toCssHexString());
     expect(new Set(serialized).size).toBe(levels.length);
+  });
+});
+
+describe("conjunctionAlertDotClass", () => {
+  it("returns a pulsing red for a critical conjunction", () => {
+    expect(conjunctionAlertDotClass(true)).toBe("animate-pulse bg-[#ff0000]");
+  });
+
+  it("returns a steady orange for a non-critical conjunction", () => {
+    expect(conjunctionAlertDotClass(false)).toBe("bg-[#ff6600]");
   });
 });
