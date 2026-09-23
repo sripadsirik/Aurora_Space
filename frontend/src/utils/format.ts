@@ -254,3 +254,6 @@ export const formatSignedElectricField = (fieldMvM: number): string => {
   if (!Number.isFinite(fieldMvM)) return "—";
   return `${fieldMvM.toFixed(2)} mV/m`;
 };
+
+/** Formats the nonnegative merging field in mV/m. */
+export const formatMergingField = formatElectricField;

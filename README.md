@@ -820,3 +820,5 @@ contributes no forcing. `formatSignedElectricField` in `frontend/src/utils/forma
 (`1.60 mV/m`, keeping the sign) for display, and the heliosphere overlay surfaces both a coupling
 status row and the coupling field in its L1 DSCOVR panel, highlighting it when the IMF turns
 southward.
+
+The alternative merging-field bands (`quiet`, `moderate`, `strong`, `extreme`) are available in `frontend/src/utils/solarWindMerging.ts`; the existing geoeffective coupling bands remain in `solarWindCoupling.ts`.
