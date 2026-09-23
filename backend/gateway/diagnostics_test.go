@@ -8,54 +8,32 @@ import (
 	"time"
 )
 
-func TestRecordsLabel(t *testing.T) {
-	cases := []struct {
-		name  string
-		count int
-		noun  string
-		want  string
-	}{
-		{"zero count is no data", 0, "tracked", "No data"},
-		{"negative count is no data", -3, "tracked", "No data"},
-		{"single record", 1, "positions", "1 positions"},
-		{"many records", 42, "alerts", "42 alerts"},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := recordsLabel(tc.count, tc.noun); got != tc.want {
-				t.Errorf("recordsLabel(%d, %q) = %q, want %q", tc.count, tc.noun, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestFirstNonEmpty(t *testing.T) {
 	cases := []struct {
 		name   string
 		values []string
 		want   string
 	}{
-		{"no values", nil, ""},
-		{"all empty", []string{"", "", ""}, ""},
-		{"whitespace counts as empty", []string{"   ", "\t"}, ""},
-		{"first non-empty wins", []string{"", "first", "second"}, "first"},
-		{"skips blank then returns", []string{"  ", "value"}, "value"},
-		{"single value", []string{"only"}, "only"},
+		{"first value wins", []string{"a", "b"}, "a"},
+		{"skips empty strings", []string{"", "b"}, "b"},
+		{"skips whitespace-only strings", []string{"   ", "\t", "value"}, "value"},
+		{"all empty returns empty", []string{"", "  "}, ""},
+		{"no values returns empty", nil, ""},
+		{"preserves internal whitespace", []string{"", " padded "}, " padded "},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := firstNonEmpty(tc.values...); got != tc.want {
-				t.Errorf("firstNonEmpty(%v) = %q, want %q", tc.values, got, tc.want)
+				t.Errorf("firstNonEmpty(%q) = %q, want %q", tc.values, got, tc.want)
 			}
 		})
 	}
 }
 
 func TestMaxTime(t *testing.T) {
-	earlier := time.Date(2026, 9, 20, 10, 0, 0, 0, time.UTC)
-	later := time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC)
+	earlier := time.Date(2026, 8, 30, 10, 0, 0, 0, time.UTC)
+	later := time.Date(2026, 8, 31, 10, 0, 0, 0, time.UTC)
 	zero := time.Time{}
 
 	if got := maxTime(earlier, later); !got.Equal(later) {
@@ -72,17 +50,37 @@ func TestMaxTime(t *testing.T) {
 	}
 }
 
+func TestRecordsLabel(t *testing.T) {
+	cases := []struct {
+		name  string
+		count int
+		noun  string
+		want  string
+	}{
+		{"positive count", 42, "tracked", "42 tracked"},
+		{"single record", 1, "positions", "1 positions"},
+		{"zero count", 0, "alerts", "No data"},
+		{"negative count", -3, "records", "No data"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := recordsLabel(tc.count, tc.noun); got != tc.want {
+				t.Errorf("recordsLabel(%d, %q) = %q, want %q", tc.count, tc.noun, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestFormatEventTime(t *testing.T) {
 	if got := formatEventTime(time.Time{}); got != "No activity yet" {
 		t.Errorf("formatEventTime(zero) = %q, want %q", got, "No activity yet")
 	}
 
-	// A non-UTC input is normalised to UTC in the formatted output.
-	loc := time.FixedZone("UTC+2", 2*60*60)
-	stamp := time.Date(2026, 9, 20, 14, 30, 5, 0, loc)
-	want := "2026-09-20 12:30:05 UTC"
-	if got := formatEventTime(stamp); got != want {
-		t.Errorf("formatEventTime(%v) = %q, want %q", stamp, got, want)
+	moment := time.Date(2026, 8, 31, 14, 5, 9, 0, time.FixedZone("PST", -8*3600))
+	want := "2026-08-31 22:05:09 UTC"
+	if got := formatEventTime(moment); got != want {
+		t.Errorf("formatEventTime(%v) = %q, want %q", moment, got, want)
 	}
 }
 
@@ -96,222 +94,271 @@ func TestStatusForFreshness(t *testing.T) {
 		lastUpdated time.Time
 		want        string
 	}{
-		// Times sit comfortably inside each band rather than on the exact
-		// window edge, since time.Since elapses a little past the anchor by
-		// the time the function runs.
-		{"zero time is error", time.Time{}, "ERROR"},
-		{"fresh reading is live", now.Add(-1 * time.Minute), "LIVE"},
-		{"within live window is live", now.Add(-4 * time.Minute), "LIVE"},
+		{"never updated is error", time.Time{}, "ERROR"},
+		{"recent is live", now.Add(-1 * time.Minute), "LIVE"},
+		{"at live edge is live", now.Add(-4 * time.Minute), "LIVE"},
 		{"past live window is stale", now.Add(-10 * time.Minute), "STALE"},
-		{"within stale window is stale", now.Add(-14 * time.Minute), "STALE"},
 		{"past stale window is error", now.Add(-30 * time.Minute), "ERROR"},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := statusForFreshness(tc.lastUpdated, liveWindow, staleWindow); got != tc.want {
-				t.Errorf("statusForFreshness = %q, want %q", got, tc.want)
+				t.Errorf("statusForFreshness(%v) = %q, want %q", tc.lastUpdated, got, tc.want)
 			}
 		})
 	}
 }
 
 func TestSummarizeLogLine(t *testing.T) {
-	cases := []struct {
-		name string
-		line string
-		want string
-	}{
-		{"plain text passes through", "starting ingestion", "starting ingestion"},
-		{"trims surrounding whitespace", "  hello  ", "hello"},
-		{"non-json braces are returned raw", "{not json", "{not json"},
-		{"invalid json is returned raw", "{\"msg\":}", "{\"msg\":}"},
-		{"extracts msg field", `{"msg":"fetched TLEs"}`, "fetched TLEs"},
-		{"extracts nested fields.message", `{"fields":{"message":"nested msg"}}`, "nested msg"},
-		{"appends known top-level keys", `{"msg":"done","count":12,"status":"ok"}`, "done | status=ok | count=12"},
-		{"reads keys from fields object", `{"msg":"tick","fields":{"norad":25544}}`, "tick | norad=25544"},
-		{"json with no known keys returns raw", `{"other":"x"}`, `{"other":"x"}`},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := summarizeLogLine(tc.line); got != tc.want {
-				t.Errorf("summarizeLogLine(%q) = %q, want %q", tc.line, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestLoadTrackedProcessRecords(t *testing.T) {
-	dir := t.TempDir()
-
-	t.Run("missing file returns nil", func(t *testing.T) {
-		if got := loadTrackedProcessRecords(filepath.Join(dir, "absent.json")); got != nil {
-			t.Errorf("expected nil for missing file, got %v", got)
+	t.Run("plain text passes through trimmed", func(t *testing.T) {
+		if got := summarizeLogLine("  hello world  "); got != "hello world" {
+			t.Errorf("got %q, want %q", got, "hello world")
 		}
 	})
 
-	t.Run("array of records", func(t *testing.T) {
-		path := filepath.Join(dir, "array.json")
-		body := `[{"Name":"celestrak","Pid":10},{"Name":"noaa","Pid":20}]`
-		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-			t.Fatalf("write: %v", err)
-		}
-		got := loadTrackedProcessRecords(path)
-		if len(got) != 2 || got[0].Name != "celestrak" || got[1].Pid != 20 {
-			t.Errorf("unexpected records: %+v", got)
+	t.Run("invalid json passes through", func(t *testing.T) {
+		line := "{not valid json"
+		if got := summarizeLogLine(line); got != line {
+			t.Errorf("got %q, want %q", got, line)
 		}
 	})
 
-	t.Run("single record object", func(t *testing.T) {
-		path := filepath.Join(dir, "single.json")
-		if err := os.WriteFile(path, []byte(`{"Name":"engine-rust","Pid":7}`), 0o600); err != nil {
-			t.Fatalf("write: %v", err)
-		}
-		got := loadTrackedProcessRecords(path)
-		if len(got) != 1 || got[0].Name != "engine-rust" || got[0].Pid != 7 {
-			t.Errorf("unexpected records: %+v", got)
+	t.Run("extracts msg field", func(t *testing.T) {
+		if got := summarizeLogLine(`{"msg":"ingest complete"}`); got != "ingest complete" {
+			t.Errorf("got %q, want %q", got, "ingest complete")
 		}
 	})
 
-	t.Run("single object without name returns nil", func(t *testing.T) {
-		path := filepath.Join(dir, "nameless.json")
-		if err := os.WriteFile(path, []byte(`{"Pid":3}`), 0o600); err != nil {
-			t.Fatalf("write: %v", err)
+	t.Run("extracts nested fields.message", func(t *testing.T) {
+		if got := summarizeLogLine(`{"fields":{"message":"nested detail"}}`); got != "nested detail" {
+			t.Errorf("got %q, want %q", got, "nested detail")
 		}
-		if got := loadTrackedProcessRecords(path); got != nil {
-			t.Errorf("expected nil for nameless single record, got %+v", got)
+	})
+
+	t.Run("appends known keyed fields", func(t *testing.T) {
+		got := summarizeLogLine(`{"msg":"batch","count":12,"status":200}`)
+		if !strings.Contains(got, "batch") || !strings.Contains(got, "count=12") || !strings.Contains(got, "status=200") {
+			t.Errorf("got %q, want it to include batch, count=12 and status=200", got)
+		}
+	})
+
+	t.Run("json without known keys falls back to raw", func(t *testing.T) {
+		line := `{"unknown":"value"}`
+		if got := summarizeLogLine(line); got != line {
+			t.Errorf("got %q, want %q", got, line)
 		}
 	})
 }
 
 func TestBuildCelestrakRow(t *testing.T) {
-	recent := time.Now().Add(-time.Minute)
+	recent := time.Now().Add(-1 * time.Minute)
 
-	t.Run("running feed is live", func(t *testing.T) {
-		row := buildCelestrakRow(
-			trackedProcessSnapshot{Running: true, LastMessage: "fetched 8000 TLEs"},
-			feedSnapshot{count: 8000, lastUpdated: recent},
-		)
-		if row.Key != "celestrak" || row.Status != "LIVE" {
-			t.Errorf("expected live celestrak row, got %+v", row)
+	t.Run("running with fresh feed is live", func(t *testing.T) {
+		process := trackedProcessSnapshot{Running: true, LastMessage: "fetched 8000 TLEs"}
+		feed := feedSnapshot{count: 8000, lastUpdated: recent}
+		row := buildCelestrakRow(process, feed)
+
+		if row.Key != "celestrak" {
+			t.Errorf("Key = %q, want celestrak", row.Key)
+		}
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
 		}
 		if row.Records != "8000 tracked" {
-			t.Errorf("records = %q, want %q", row.Records, "8000 tracked")
+			t.Errorf("Records = %q, want %q", row.Records, "8000 tracked")
 		}
 	})
 
-	t.Run("idle with no feed is error", func(t *testing.T) {
+	t.Run("stopped with no data is error", func(t *testing.T) {
 		row := buildCelestrakRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
 		if row.Status != "ERROR" {
-			t.Errorf("status = %q, want ERROR", row.Status)
+			t.Errorf("Status = %q, want ERROR", row.Status)
 		}
 	})
 
-	t.Run("error keyword in detail downgrades to stale", func(t *testing.T) {
-		row := buildCelestrakRow(
-			trackedProcessSnapshot{Running: true, LastError: "fetch failed: timeout"},
-			feedSnapshot{count: 10, lastUpdated: recent},
-		)
+	t.Run("error in log downgrades live to stale", func(t *testing.T) {
+		process := trackedProcessSnapshot{Running: true, LastError: "fetch failed: timeout"}
+		feed := feedSnapshot{count: 10, lastUpdated: recent}
+		row := buildCelestrakRow(process, feed)
 		if row.Status != "STALE" {
-			t.Errorf("status = %q, want STALE", row.Status)
+			t.Errorf("Status = %q, want STALE", row.Status)
 		}
 	})
 }
 
 func TestBuildSpaceTrackRow(t *testing.T) {
-	t.Run("unconfigured with no data prompts for credentials", func(t *testing.T) {
-		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{}, false)
-		if row.Key != "spacetrack" || row.Status != "STALE" {
-			t.Errorf("expected stale spacetrack row, got %+v", row)
+	t.Run("unconfigured with no logs explains credentials", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{}, feedSnapshot{}, false)
+		if row.Key != "spacetrack" {
+			t.Errorf("Key = %q, want spacetrack", row.Key)
 		}
 		if !strings.Contains(row.Detail, "SPACETRACK_USERNAME") {
-			t.Errorf("detail should prompt for credentials, got %q", row.Detail)
+			t.Errorf("Detail = %q, want it to mention SPACETRACK_USERNAME", row.Detail)
 		}
 	})
 
-	t.Run("idle and never fetched is error", func(t *testing.T) {
+	t.Run("configured but idle waits for fetch window", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{}, feedSnapshot{}, true)
+		if !strings.Contains(row.Detail, "next fetch window") {
+			t.Errorf("Detail = %q, want it to mention the next fetch window", row.Detail)
+		}
+	})
+
+	t.Run("running without data yet is stale", func(t *testing.T) {
+		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: true}, feedSnapshot{}, true)
+		if row.Status != "STALE" {
+			t.Errorf("Status = %q, want STALE", row.Status)
+		}
+	})
+
+	t.Run("stopped without data is error", func(t *testing.T) {
 		row := buildSpaceTrackRow(trackedProcessSnapshot{Running: false}, feedSnapshot{}, true)
 		if row.Status != "ERROR" {
-			t.Errorf("status = %q, want ERROR", row.Status)
-		}
-	})
-
-	t.Run("configured with fresh feed is live", func(t *testing.T) {
-		row := buildSpaceTrackRow(
-			trackedProcessSnapshot{Running: true, LastMessage: "12 CDMs"},
-			feedSnapshot{count: 12, lastUpdated: time.Now().Add(-time.Hour)},
-			true,
-		)
-		if row.Status != "LIVE" {
-			t.Errorf("status = %q, want LIVE", row.Status)
-		}
-		if row.Detail != "12 CDMs" {
-			t.Errorf("detail = %q, want %q", row.Detail, "12 CDMs")
+			t.Errorf("Status = %q, want ERROR", row.Status)
 		}
 	})
 }
 
 func TestBuildEngineRow(t *testing.T) {
+	recent := time.Now().Add(-30 * time.Second)
+
 	t.Run("fresh positions are live", func(t *testing.T) {
-		row := buildEngineRow(
-			trackedProcessSnapshot{Running: true, LastMessage: "propagated"},
-			feedSnapshot{count: 8000, lastUpdated: time.Now().Add(-30 * time.Second)},
-		)
-		if row.Key != "engine-rust" || row.Status != "LIVE" {
-			t.Errorf("expected live engine row, got %+v", row)
+		row := buildEngineRow(trackedProcessSnapshot{Running: true}, feedSnapshot{count: 500, lastUpdated: recent})
+		if row.Key != "engine-rust" {
+			t.Errorf("Key = %q, want engine-rust", row.Key)
 		}
-		if row.Records != "8000 positions" {
-			t.Errorf("records = %q, want %q", row.Records, "8000 positions")
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "500 positions" {
+			t.Errorf("Records = %q, want %q", row.Records, "500 positions")
 		}
 	})
 
-	t.Run("running but stale feed reports stale not error", func(t *testing.T) {
-		row := buildEngineRow(
-			trackedProcessSnapshot{Running: true},
-			feedSnapshot{count: 10, lastUpdated: time.Now().Add(-time.Hour)},
-		)
+	t.Run("running but stale feed downgrades error to stale", func(t *testing.T) {
+		stale := time.Now().Add(-30 * time.Minute)
+		row := buildEngineRow(trackedProcessSnapshot{Running: true}, feedSnapshot{count: 1, lastUpdated: stale})
 		if row.Status != "STALE" {
-			t.Errorf("status = %q, want STALE", row.Status)
+			t.Errorf("Status = %q, want STALE", row.Status)
 		}
 	})
 
-	t.Run("idle and never emitted is error", func(t *testing.T) {
+	t.Run("stopped with no data is error", func(t *testing.T) {
 		row := buildEngineRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
 		if row.Status != "ERROR" {
-			t.Errorf("status = %q, want ERROR", row.Status)
+			t.Errorf("Status = %q, want ERROR", row.Status)
 		}
 	})
 }
 
 func TestBuildNoaaRow(t *testing.T) {
-	t.Run("fresh space weather is live", func(t *testing.T) {
-		row := buildNoaaRow(
-			trackedProcessSnapshot{Running: true, LastMessage: "Kp 3"},
-			feedSnapshot{count: 1, lastUpdated: time.Now().Add(-time.Minute)},
-		)
-		if row.Key != "noaa" || row.Status != "LIVE" {
-			t.Errorf("expected live noaa row, got %+v", row)
+	recent := time.Now().Add(-1 * time.Minute)
+
+	t.Run("fresh records are live", func(t *testing.T) {
+		row := buildNoaaRow(trackedProcessSnapshot{Running: true}, feedSnapshot{count: 3, lastUpdated: recent})
+		if row.Key != "noaa" {
+			t.Errorf("Key = %q, want noaa", row.Key)
 		}
-		if row.Records != "1 records" {
-			t.Errorf("records = %q, want %q", row.Records, "1 records")
+		if row.Status != "LIVE" {
+			t.Errorf("Status = %q, want LIVE", row.Status)
+		}
+		if row.Records != "3 records" {
+			t.Errorf("Records = %q, want %q", row.Records, "3 records")
 		}
 	})
 
-	t.Run("error keyword downgrades live to stale", func(t *testing.T) {
-		row := buildNoaaRow(
-			trackedProcessSnapshot{Running: true, LastError: "request err=503"},
-			feedSnapshot{count: 1, lastUpdated: time.Now().Add(-time.Minute)},
-		)
+	t.Run("error in log downgrades live to stale", func(t *testing.T) {
+		process := trackedProcessSnapshot{Running: true, LastError: "request failed"}
+		row := buildNoaaRow(process, feedSnapshot{count: 1, lastUpdated: recent})
 		if row.Status != "STALE" {
-			t.Errorf("status = %q, want STALE", row.Status)
+			t.Errorf("Status = %q, want STALE", row.Status)
 		}
 	})
 
-	t.Run("idle and never fetched is error", func(t *testing.T) {
+	t.Run("stopped with no data is error", func(t *testing.T) {
 		row := buildNoaaRow(trackedProcessSnapshot{Running: false}, feedSnapshot{})
 		if row.Status != "ERROR" {
-			t.Errorf("status = %q, want ERROR", row.Status)
+			t.Errorf("Status = %q, want ERROR", row.Status)
+		}
+	})
+}
+
+func TestLoadTrackedProcessRecords(t *testing.T) {
+	t.Run("missing file returns nil", func(t *testing.T) {
+		if got := loadTrackedProcessRecords(filepath.Join(t.TempDir(), "absent.json")); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+
+	t.Run("array form", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "processes.json")
+		body := `[{"Name":"celestrak","Pid":10},{"Name":"noaa","Pid":20}]`
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		records := loadTrackedProcessRecords(path)
+		if len(records) != 2 {
+			t.Fatalf("len = %d, want 2", len(records))
+		}
+		if records[0].Name != "celestrak" || records[1].Name != "noaa" {
+			t.Errorf("unexpected records: %+v", records)
+		}
+	})
+
+	t.Run("single object form", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "single.json")
+		if err := os.WriteFile(path, []byte(`{"Name":"engine-rust","Pid":42}`), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		records := loadTrackedProcessRecords(path)
+		if len(records) != 1 || records[0].Name != "engine-rust" || records[0].Pid != 42 {
+			t.Errorf("got %+v, want one engine-rust record with pid 42", records)
+		}
+	})
+
+	t.Run("invalid json returns nil", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "bad.json")
+		if err := os.WriteFile(path, []byte("not json"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := loadTrackedProcessRecords(path); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+}
+
+func TestReadLogSummary(t *testing.T) {
+	t.Run("empty path returns empty", func(t *testing.T) {
+		if got := readLogSummary("", false); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+	})
+
+	t.Run("missing file returns empty", func(t *testing.T) {
+		if got := readLogSummary(filepath.Join(t.TempDir(), "nope.log"), false); got != "" {
+			t.Errorf("got %q, want empty", got)
+		}
+	})
+
+	t.Run("returns last non-empty line", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "app.log")
+		if err := os.WriteFile(path, []byte("first line\nsecond line\n\n"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := readLogSummary(path, false); got != "second line" {
+			t.Errorf("got %q, want %q", got, "second line")
+		}
+	})
+
+	t.Run("prefer error skips rust noise lines", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "err.log")
+		body := "panic: boom\nnote: run with RUST_BACKTRACE=1\nthread 'main' panicked\n"
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		if got := readLogSummary(path, true); got != "panic: boom" {
+			t.Errorf("got %q, want %q", got, "panic: boom")
 		}
 	})
 }

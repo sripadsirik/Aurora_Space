@@ -1,7 +1,12 @@
 import { Math as CesiumMath } from "cesium";
 import { describe, expect, it } from "vitest";
 import type { SatelliteOrbitAnim } from "../satelliteOrbitAnim";
-import { getSatellitePositionAtOffset, getSatelliteThetaAtElapsed } from "../satelliteOrbitAnim";
+import {
+  CONJUNCTION_ARC_POINT_COUNT,
+  createConjunctionOrbitArcPositions,
+  getSatellitePositionAtOffset,
+  getSatelliteThetaAtElapsed
+} from "../satelliteOrbitAnim";
 
 const baseState: SatelliteOrbitAnim = {
   radius: 7_000_000,
@@ -60,5 +65,42 @@ describe("getSatellitePositionAtOffset", () => {
     const equivalent = getSatellitePositionAtOffset(baseState, baseState.period / 4, 0);
     expect(combined.x).toBeCloseTo(equivalent.x, 6);
     expect(combined.y).toBeCloseTo(equivalent.y, 6);
+  });
+});
+
+describe("createConjunctionOrbitArcPositions", () => {
+  it("returns the default number of samples", () => {
+    const arc = createConjunctionOrbitArcPositions(baseState, 0, 600);
+    expect(arc).toHaveLength(CONJUNCTION_ARC_POINT_COUNT);
+  });
+
+  it("honours a custom point count", () => {
+    const arc = createConjunctionOrbitArcPositions(baseState, 0, 600, 5);
+    expect(arc).toHaveLength(5);
+  });
+
+  it("keeps every sample on the orbital radius", () => {
+    const arc = createConjunctionOrbitArcPositions(baseState, 0, 600);
+    for (const point of arc) {
+      const magnitude = Math.hypot(point.x, point.y, point.z);
+      expect(magnitude).toBeCloseTo(baseState.radius, 3);
+    }
+  });
+
+  it("places a single-point arc just behind the current position", () => {
+    const [only] = createConjunctionOrbitArcPositions(baseState, 0, 0, 1);
+    // The trailing edge looks slightly behind (-y) the +x initial position.
+    expect(only.x).toBeGreaterThan(baseState.radius * 0.99);
+    expect(only.y).toBeLessThan(0);
+  });
+
+  it("clamps the look-ahead span to a fraction of the period for a distant TCA", () => {
+    const arc = createConjunctionOrbitArcPositions(baseState, 0, 1e9);
+    const leadingEdge = getSatellitePositionAtOffset(baseState, 0, baseState.period * 0.32);
+    const trailingEdge = getSatellitePositionAtOffset(baseState, 0, -baseState.period * 0.05);
+    expect(arc[arc.length - 1].x).toBeCloseTo(leadingEdge.x, 3);
+    expect(arc[arc.length - 1].y).toBeCloseTo(leadingEdge.y, 3);
+    expect(arc[0].x).toBeCloseTo(trailingEdge.x, 3);
+    expect(arc[0].y).toBeCloseTo(trailingEdge.y, 3);
   });
 });

@@ -1,14 +1,14 @@
 import { useUtcClock } from "../hooks/useUtcClock";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
-import { bzComponentTextClass, getKpColor } from "../utils/colors";
+import { bzComponentTextClass, conjunctionAlertDotClass, getKpColor } from "../utils/colors";
 import { formatConjunctionPairLabel } from "../utils/conjunctionLabels";
 import { resolveDisplayedWeather } from "../utils/displayedWeather";
 import { describeFeedFreshness, freshnessStatusDotClass } from "../utils/feedFreshness";
 import { formatDurationToTca, formatProbability, formatProtonFlux, formatUtcTime, isCriticalConjunction } from "../utils/format";
 import { buildHudDataLayers } from "../utils/hudDataLayers";
 import { deriveHudTheme } from "../utils/hudTheme";
-import { formatKpIndex, formatMagneticFieldNt } from "../utils/measurements";
+import { formatKpIndex, formatMagneticFieldNt, formatSolarWindDensity } from "../utils/measurements";
 import { kpToPercent } from "../utils/kpScale";
 
 interface HUDProps {
@@ -88,7 +88,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             </div>
             <div className="flex justify-between">
               <span>Solar Wind Density</span>
-              <span>{spaceWeather.solarWindDensity.toFixed(1)} p/cm</span>
+              <span>{formatSolarWindDensity(spaceWeather.solarWindDensity)}</span>
             </div>
             <div className="flex justify-between">
               <span>Bz Component</span>
@@ -130,7 +130,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
                         : "border-white/10 hover:border-cyan-400/50"
                     }`}
                   >
-                    <span className={`h-2 w-2 rounded-full ${isCritical ? "animate-pulse bg-[#ff0000]" : "bg-[#ff6600]"}`} />
+                    <span className={`h-2 w-2 rounded-full ${conjunctionAlertDotClass(isCritical)}`} />
                     <span className="truncate">
                       {formatConjunctionPairLabel(conjunction, "-")} | TCA {formatDurationToTca(conjunction.tca)} | Pc{" "}
                       {formatProbability(conjunction.probability)}
