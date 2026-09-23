@@ -257,3 +257,6 @@ export const formatSignedElectricField = (fieldMvM: number): string => {
 
 /** Formats the nonnegative merging field in mV/m. */
 export const formatMergingField = formatElectricField;
+
+/** Formats a nonnegative electric field in mV/m. */
+export const formatElectricFieldMvM = formatElectricField;

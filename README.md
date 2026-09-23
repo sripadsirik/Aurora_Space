@@ -822,3 +822,23 @@ status row and the coupling field in its L1 DSCOVR panel, highlighting it when t
 southward.
 
 The alternative merging-field bands (`quiet`, `moderate`, `strong`, `extreme`) are available in `frontend/src/utils/solarWindMerging.ts`; the existing geoeffective coupling bands remain in `solarWindCoupling.ts`.
+
+## Dawn-Dusk Coupling Bands
+
+How hard the solar wind couples into the magnetosphere comes from the pure helpers in
+`frontend/src/utils/dawnDuskCoupling.ts`, combining the bulk speed and the interplanetary Bz the
+same feeds report into the dawn-dusk (merging) electric field:
+
+| Helper | Returns |
+| --- | --- |
+| `dawnDuskElectricField` | Total motional field in mV/m (`E = k · V · B`) |
+| `geoeffectiveElectricField` | The southward-only part that actually drives dayside reconnection (0 when Bz points northward) |
+| `couplingLevel` | Qualitative band (`quiet` / `elevated` / `high` / `extreme`) |
+| `solarWindCouplingProfile` | All of the above bundled into one `SolarWindCouplingProfile` for a `SpaceWeather` snapshot |
+
+Only a southward Bz reconnects efficiently with Earth's northward dayside field, so a northward
+field couples weakly no matter how fast the wind. The bands are anchored on the Burton et al.
+(1975) ring-current injection threshold (~0.5 mV/m), below which the ring current decays faster
+than the wind can feed it. `formatElectricFieldMvM` in `frontend/src/utils/format.ts` renders the
+field (`5.58 mV/m`) for display, and the heliosphere overlay's L1 DSCOVR panel surfaces the
+geoeffective field, colour-coded by coupling band.

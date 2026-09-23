@@ -1,3 +1,4 @@
+import { couplingLevelColor, solarWindCouplingProfile as dawnDuskCouplingProfile } from "../../utils/dawnDuskCoupling";
 import { electricFieldProfile } from "../../utils/interplanetaryElectricField";
 import { formatSignedElectricField } from "../../utils/format";
 import { type ChangeEvent, useEffect, useState } from "react";
@@ -213,7 +214,7 @@ export const HelioOverlay = (): JSX.Element | null => {
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Coupling E-field</span>
               <span
-                className={rectifiedFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}
+                style={{ color: couplingLevelColor(dawnDuskCouplingProfile(spaceWeather).level) }}
                 title={`${rectifiedFieldProfile.levelLabel} coupling`}
               >
                 {formatElectricField(rectifiedFieldProfile.geoeffectiveMvM)}
