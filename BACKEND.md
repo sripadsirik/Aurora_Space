@@ -74,17 +74,16 @@ $env:SPACETRACK_PASSWORD="xxx"
 
 ## Testing
 
-Unit tests cover the pure helper logic in the `shared` and `gateway` packages
-(orbit/risk/storm classification, `.env` parsing, and the diagnostics row
-builders). Run them from the repository root or the `backend` directory:
+Unit tests cover the shared domain helpers (orbit/risk/storm classification,
+dotenv parsing) and the gateway's state cache and diagnostics logic. Run them
+with:
 
 ```bash
-# From the repository root
+# From the repo root
 make test-go
 
 # Or directly
-cd backend
-go test ./...
+cd backend && go test ./...
 ```
 
 ## Environment Variables

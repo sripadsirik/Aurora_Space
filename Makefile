@@ -1,6 +1,6 @@
 # ── Aurora SSA — Build & Run ─────────────────────────────────────────────────
 
-.PHONY: all build build-go test test-go infra infra-down run run-gateway run-celestrak run-noaa run-spacetrack run-engine run-frontend stop clean
+.PHONY: all build build-go test test-go test-frontend infra infra-down run run-gateway run-celestrak run-noaa run-spacetrack run-engine run-frontend stop clean
 
 # ── One-command launcher (macOS/Linux) ───────────────────────────────────────
 
@@ -23,10 +23,13 @@ build-go:
 
 # ── Test ─────────────────────────────────────────────────────────────────────
 
-test: test-go
+test: test-go test-frontend
 
 test-go:
 	cd backend && go test ./...
+
+test-frontend:
+	cd frontend && npm test
 
 # ── Infrastructure ───────────────────────────────────────────────────────────
 
