@@ -1,4 +1,5 @@
 import { Cartesian3, Math as CesiumMath, PolygonHierarchy } from "cesium";
+import { clamp } from "./clamp";
 import { zeroPad } from "./format";
 
 export const HELIO_AU_SCENE_UNITS = 30_000_000;
@@ -11,6 +12,13 @@ export const HELIO_SUN_RADIUS = 2_200_000;
 export const HELIO_SUN_GLOW_RADIUS = 5_600_000;
 export const HELIO_L1_OFFSET = HELIO_AU_SCENE_UNITS * 0.01;
 export const HELIO_CME_DURATION_SECONDS = 72 * 3600;
+/**
+ * Visual progress scalar the heliocentric CME cone spans over its run: the front
+ * starts already extended to `0.4` of Earth's orbital radius and pushes on to
+ * `1.2` (just past Earth) by the end of {@link HELIO_CME_DURATION_SECONDS}.
+ */
+export const HELIO_CME_PROGRESS_START = 0.4;
+export const HELIO_CME_PROGRESS_END = 1.2;
 export const HELIO_CME_SPEED = HELIO_ORBIT_RADII.earth / HELIO_CME_DURATION_SECONDS;
 export const HELIO_CME_MAX_RADIUS = HELIO_ORBIT_RADII.mars * 1.05;
 export const HELIO_CME_HALF_ANGLE = CesiumMath.toRadians(18);
@@ -113,6 +121,21 @@ export const createHelioBandHierarchy = (
     new Cartesian3(cos * startRadius - nx * halfWidth, sin * startRadius - ny * halfWidth, 0)
   ]);
 };
+
+/**
+ * Visual progress of the CME cone at `elapsedSeconds`, interpolated linearly
+ * from {@link HELIO_CME_PROGRESS_START} to {@link HELIO_CME_PROGRESS_END} across
+ * {@link HELIO_CME_DURATION_SECONDS} and clamped to that range. Unlike the
+ * physical radius from {@link getHelioCmeRadius}, this scalar never wraps — it
+ * drives the visible reach of the cone and its embers.
+ */
+export const getHelioCmeProgress = (elapsedSeconds: number): number =>
+  clamp(
+    HELIO_CME_PROGRESS_START +
+      (elapsedSeconds / HELIO_CME_DURATION_SECONDS) * (HELIO_CME_PROGRESS_END - HELIO_CME_PROGRESS_START),
+    HELIO_CME_PROGRESS_START,
+    HELIO_CME_PROGRESS_END
+  );
 
 /** Scene-space radius of the expanding CME front, wrapping at the outer bound. */
 export const getHelioCmeRadius = (elapsedSeconds: number): number =>

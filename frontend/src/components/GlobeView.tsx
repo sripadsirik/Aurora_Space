@@ -38,13 +38,17 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { getSolarWindColor, riskColorMap } from "../utils/colors";
-import { conjunctionArcColorBytes, conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
+import { conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
+import { getConjunctionColor } from "../utils/conjunctionVisual";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
   createOrbitRingPositions,
   formatHelioArrivalLabel,
+  getHelioCmeProgress,
   HELIO_CME_DURATION_SECONDS,
+  HELIO_CME_PROGRESS_END,
+  HELIO_CME_PROGRESS_START,
   getHelioOrbitAngle,
   HELIO_AU_SCENE_UNITS,
   HELIO_L1_OFFSET,
@@ -55,7 +59,11 @@ import {
 import { env } from "../utils/env";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
+import { createAuroraCapHierarchy } from "../utils/auroraCap";
+import { createFireConeFrontPositions } from "../utils/cmeFlameCone";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
+import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
+import { createConjunctionOrbitArcPositions, getSatellitePositionAtOffset } from "../utils/satelliteOrbitAnim";
 import { isStormModeActive } from "../utils/visualMode";
 
 interface GlobeViewProps {
@@ -69,15 +77,9 @@ interface SatellitePickPayload {
   satellite: Satellite;
 }
 
-interface SatelliteAnimState {
+interface SatelliteAnimState extends SatelliteOrbitAnim {
   point: PointPrimitive;
   satellite: Satellite;
-  radius: number;
-  inclination: number;
-  ascendingNode: number;
-  period: number;
-  initialTheta: number;
-  thetaEpochSeconds: number;
 }
 
 interface ConjunctionVisualState {
@@ -158,8 +160,6 @@ const EARTH_ONLY_ROTATION_DEGREES_PER_SECOND = 2.4;
 const EARTH_ONLY_IDLE_DELAY_MS = 1800;
 const HELIO_VISUAL_SUN_RADIUS = HELIO_SUN_RADIUS * 1.4;
 const HELIO_CME_VISUAL_HALF_ANGLE = CesiumMath.toRadians(25);
-const HELIO_CME_PROGRESS_START = 0.4;
-const HELIO_CME_PROGRESS_END = 1.2;
 const HELIO_ORBIT_TIME_SCALE_SECONDS = 12 * 3600;
 const HELIO_PLAYBACK_BASE_RATE = 1;
 const HELIO_ORBIT_DASH_PATTERN = Number.parseInt("1111111100000000", 2);
@@ -173,59 +173,10 @@ const HELIO_PLANET_RADII = {
 const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
-const CONJUNCTION_ARC_POINT_COUNT = 20;
 
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
 const setVisibility = (items: Showable[], show: boolean): void => items.forEach((item) => { item.show = show; });
 const toCallbackDate = (time?: JulianDate): Date => JulianDate.toDate(time ?? JulianDate.now());
-
-const getSatelliteThetaAtElapsed = (state: SatelliteAnimState, elapsedSeconds: number): number =>
-  orbitThetaAtElapsed(state.initialTheta, state.period, state.thetaEpochSeconds, elapsedSeconds);
-
-const getSatellitePositionAtOffset = (state: SatelliteAnimState, elapsedSeconds: number, offsetSeconds: number): Cartesian3 =>
-  orbitPoint(
-    getSatelliteThetaAtElapsed(state, elapsedSeconds) + (CesiumMath.TWO_PI / state.period) * offsetSeconds,
-    state.radius,
-    state.inclination,
-    state.ascendingNode
-  );
-
-const getConjunctionColor = (riskLevel: Satellite["riskLevel"]): Color => {
-  const bytes = conjunctionArcColorBytes(riskLevel);
-  return bytes ? Color.fromBytes(bytes[0], bytes[1], bytes[2], bytes[3]) : Color.TRANSPARENT.clone();
-};
-
-const createConjunctionOrbitArcPositions = (
-  state: SatelliteAnimState,
-  elapsedSeconds: number,
-  timeUntilTcaSeconds: number,
-  pointCount = CONJUNCTION_ARC_POINT_COUNT
-): Cartesian3[] => {
-  const angularVelocity = CesiumMath.TWO_PI / state.period;
-  const lookAheadSeconds = Math.min(
-    Math.max(timeUntilTcaSeconds, state.period * 0.04),
-    state.period * 0.32
-  );
-  const startOffsetSeconds = -Math.min(lookAheadSeconds * 0.2, state.period * 0.05);
-  const endOffsetSeconds = Math.max(lookAheadSeconds, state.period * 0.08);
-  const currentTheta = getSatelliteThetaAtElapsed(state, elapsedSeconds);
-  const positions: Cartesian3[] = [];
-
-  for (let index = 0; index < pointCount; index += 1) {
-    const t = pointCount === 1 ? 0 : index / (pointCount - 1);
-    const offsetSeconds = CesiumMath.lerp(startOffsetSeconds, endOffsetSeconds, t);
-    positions.push(
-      orbitPoint(
-        currentTheta + angularVelocity * offsetSeconds,
-        state.radius,
-        state.inclination,
-        state.ascendingNode
-      )
-    );
-  }
-
-  return positions;
-};
 
 const computeSolarWindFrame = (time: JulianDate, earthR: number): SolarWindFrame => {
   const sunPos = Simon1994PlanetaryPositions.computeSunPositionInEarthInertialFrame(time);
@@ -253,17 +204,6 @@ const isSatellitePickPayload = (value: unknown): value is SatellitePickPayload =
   return record.type === "satellite" && typeof record.satellite === "object" && record.satellite !== null;
 };
 
-const createAuroraCapHierarchy = (isNorth: boolean, radiusDeg: number, pointCount = 96): PolygonHierarchy => {
-  const positions: Cartesian3[] = [];
-  const poleSign = isNorth ? 1 : -1;
-  for (let index = 0; index <= pointCount; index += 1) {
-    const theta = (index / pointCount) * CesiumMath.TWO_PI;
-    const wobble = 1 + 0.12 * Math.sin(theta * 3);
-    positions.push(Cartesian3.fromDegrees(CesiumMath.toDegrees(theta) - 180, poleSign * (90 - radiusDeg * wobble)));
-  }
-  return new PolygonHierarchy(positions);
-};
-
 const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { current: string }): ColorMaterialProperty =>
   new ColorMaterialProperty(new CallbackProperty(() => {
     const isStorm = modeRef.current === "STORM";
@@ -272,41 +212,6 @@ const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { cur
     const baseMax = isStorm ? Math.min(maxAlpha * 2.5, 0.8) : maxAlpha;
     return AURORA_COLOR.withAlpha(baseMin + (baseMax - baseMin) * phase);
   }, false));
-
-const createFireConeFrontPositions = (
-  sunToEarth: Cartesian3,
-  right: Cartesian3,
-  up: Cartesian3,
-  length: number,
-  halfAngle: number,
-  timeSeconds: number,
-  flareScale: number,
-  liftScale: number,
-  segments = 18
-): Cartesian3[] => {
-  const positions: Cartesian3[] = [];
-  const spread = Math.tan(halfAngle);
-
-  for (let index = 0; index <= segments; index += 1) {
-    const t = index / segments;
-    const lateralFactor = CesiumMath.lerp(-1, 1, t);
-    const centerBias = 1 - Math.pow(Math.abs(lateralFactor), 1.45);
-    const tongue = Math.max(0, Math.sin(timeSeconds * 4.4 + t * 19)) * centerBias;
-    const flutter = Math.sin(timeSeconds * 10.5 + t * 31) * 0.035;
-    const forwardScale = clamp(0.8 + centerBias * 0.14 + tongue * (0.22 * flareScale) + flutter, 0.62, 1.28);
-    const verticalFactor = Math.sin(timeSeconds * 3.8 + t * 13) * centerBias * liftScale;
-    const direction = new Cartesian3(
-      sunToEarth.x + lateralFactor * spread * right.x + verticalFactor * up.x,
-      sunToEarth.y + lateralFactor * spread * right.y + verticalFactor * up.y,
-      sunToEarth.z + lateralFactor * spread * right.z + verticalFactor * up.z
-    );
-
-    Cartesian3.normalize(direction, direction);
-    positions.push(Cartesian3.multiplyByScalar(direction, length * forwardScale, new Cartesian3()));
-  }
-
-  return positions;
-};
 
 const createMutableFlameFront = (count: number): Cartesian3[] => Array.from({ length: count }, () => new Cartesian3());
 
@@ -1064,12 +969,6 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       getHelioOrbitAngle(getHelioSimulationDate(), orbitalPeriodDays, phase);
     const getHelioEarthAngle = (): number => getHelioPlanetAngle(365.25, HELIO_PHASES.earth);
     const getHelioElapsedSeconds = (): number => helioSimulationSecondsRef.current;
-    const getHelioCmeProgress = (): number =>
-      clamp(
-        HELIO_CME_PROGRESS_START + (helioSimulationSecondsRef.current / HELIO_CME_DURATION_SECONDS) * (HELIO_CME_PROGRESS_END - HELIO_CME_PROGRESS_START),
-        HELIO_CME_PROGRESS_START,
-        HELIO_CME_PROGRESS_END
-      );
     const createHelioCoronaPrimitive = (radius: number, color: Color): Primitive =>
       viewer.scene.primitives.add(new Primitive({
         geometryInstances: new GeometryInstance({
@@ -1417,7 +1316,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     registerHelio(viewer.entities.add({
       position: new CallbackPositionProperty((_time, result) => {
         const earthDistance = Cartesian3.distance(Cartesian3.ZERO, positionOnHelioOrbit(HELIO_ORBIT_RADII.earth, getHelioEarthAngle()));
-        const coneLength = earthDistance * getHelioCmeProgress() + HELIO_AU_SCENE_UNITS * 0.07;
+        const coneLength = earthDistance * getHelioCmeProgress(getHelioElapsedSeconds()) + HELIO_AU_SCENE_UNITS * 0.07;
         return Cartesian3.multiplyByScalar(helioCurrentCmeDirection, coneLength, result ?? new Cartesian3());
       }, false),
       label: {
@@ -1468,7 +1367,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         Cartesian3.subtract(helioEarthPosition, Cartesian3.ZERO, helioSunToEarthScratch),
         helioSunToEarthScratch
       );
-      const cmeProgress = getHelioCmeProgress();
+      const cmeProgress = getHelioCmeProgress(getHelioElapsedSeconds());
       helioCurrentCmeDirection = Cartesian3.normalize(new Cartesian3(
         helioCmeLaunchDirection.x + helioCmeLaunchRight.x * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.x * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI)),
         helioCmeLaunchDirection.y + helioCmeLaunchRight.y * (helioCmeCurveRight * curveScale * cmeProgress) + helioCmeLaunchUp.y * (helioCmeCurveUp * curveScale * Math.sin(cmeProgress * Math.PI)),
@@ -1554,7 +1453,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       });
 
       helioCmeEmberStates.forEach((ember, index) => {
-        const emberProgress = (getHelioCmeProgress() * 0.52 + ember.progressOffset + flameTime * 0.038 * ember.speedScale) % 1.16;
+        const emberProgress = (getHelioCmeProgress(getHelioElapsedSeconds()) * 0.52 + ember.progressOffset + flameTime * 0.038 * ember.speedScale) % 1.16;
         const progressAlongCone = clamp(0.08 + emberProgress * 0.92, 0.08, 1.08);
         const lateralScale = ember.lateralBias * spread * (0.2 + progressAlongCone * 0.7);
         const liftScale = ember.liftBias * (0.14 + progressAlongCone * 0.06);
