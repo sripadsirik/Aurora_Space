@@ -1,0 +1,175 @@
+import { describe, expect, it } from "vitest";
+import {
+  MOONLIGHT_INTERFERENCE_LABELS,
+  MOONLIGHT_INTERFERENCE_THRESHOLDS,
+  adjustAuroraChanceForMoonlight,
+  drownsOutFaintAurora,
+  classifyMoonlightInterference,
+  moonIlluminationFraction,
+  moonlightSeverity,
+  summarizeMoonlight
+} from "../auroraMoonlight";
+
+describe("moonIlluminationFraction", () => {
+  it("passes through values already within [0, 1]", () => {
+    expect(moonIlluminationFraction(0)).toBe(0);
+    expect(moonIlluminationFraction(0.5)).toBe(0.5);
+    expect(moonIlluminationFraction(1)).toBe(1);
+  });
+
+  it("clamps values above a full Moon to 1", () => {
+    expect(moonIlluminationFraction(1.2)).toBe(1);
+    expect(moonIlluminationFraction(42)).toBe(1);
+  });
+
+  it("clamps values below a new Moon to 0", () => {
+    expect(moonIlluminationFraction(-0.3)).toBe(0);
+    expect(moonIlluminationFraction(-10)).toBe(0);
+  });
+
+  it("treats non-finite readings as a new Moon", () => {
+    expect(moonIlluminationFraction(Number.NaN)).toBe(0);
+    expect(moonIlluminationFraction(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(moonIlluminationFraction(Number.NEGATIVE_INFINITY)).toBe(0);
+  });
+});
+
+describe("classifyMoonlightInterference", () => {
+  it("keeps a new Moon and thin crescent in the dark tier", () => {
+    expect(classifyMoonlightInterference(0)).toBe("dark");
+    expect(classifyMoonlightInterference(0.05)).toBe("dark");
+  });
+
+  it("classifies a broad crescent through first quarter as dim", () => {
+    expect(classifyMoonlightInterference(0.1)).toBe("dim");
+    expect(classifyMoonlightInterference(0.3)).toBe("dim");
+    expect(classifyMoonlightInterference(0.49)).toBe("dim");
+  });
+
+  it("classifies a gibbous Moon as bright", () => {
+    expect(classifyMoonlightInterference(0.5)).toBe("bright");
+    expect(classifyMoonlightInterference(0.8)).toBe("bright");
+  });
+
+  it("classifies a near-full Moon as washed-out", () => {
+    expect(classifyMoonlightInterference(0.85)).toBe("washed-out");
+    expect(classifyMoonlightInterference(1)).toBe("washed-out");
+  });
+
+  it("is monotonic across each threshold boundary", () => {
+    expect(classifyMoonlightInterference(MOONLIGHT_INTERFERENCE_THRESHOLDS.dim)).toBe("dim");
+    expect(classifyMoonlightInterference(MOONLIGHT_INTERFERENCE_THRESHOLDS.bright)).toBe("bright");
+    expect(classifyMoonlightInterference(MOONLIGHT_INTERFERENCE_THRESHOLDS.washedOut)).toBe(
+      "washed-out"
+    );
+  });
+
+  it("normalises out-of-range readings before classifying", () => {
+    expect(classifyMoonlightInterference(-1)).toBe("dark");
+    expect(classifyMoonlightInterference(2)).toBe("washed-out");
+    expect(classifyMoonlightInterference(Number.NaN)).toBe("dark");
+  });
+});
+
+describe("MOONLIGHT_INTERFERENCE_LABELS", () => {
+  it("has a non-empty label for every tier", () => {
+    for (const tier of ["dark", "dim", "bright", "washed-out"] as const) {
+      expect(MOONLIGHT_INTERFERENCE_LABELS[tier].length).toBeGreaterThan(0);
+    }
+  });
+
+  it("gives each tier a distinct label", () => {
+    const labels = Object.values(MOONLIGHT_INTERFERENCE_LABELS);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+});
+
+describe("moonlightSeverity", () => {
+  it("is zero at new Moon and one at full Moon", () => {
+    expect(moonlightSeverity(0)).toBe(0);
+    expect(moonlightSeverity(1)).toBe(1);
+  });
+
+  it("weights a half-lit Moon well below half severity", () => {
+    expect(moonlightSeverity(0.5)).toBeCloseTo(0.25);
+  });
+
+  it("increases monotonically with illumination", () => {
+    let previous = -1;
+    for (let fraction = 0; fraction <= 1; fraction += 0.1) {
+      const severity = moonlightSeverity(fraction);
+      expect(severity).toBeGreaterThanOrEqual(previous);
+      previous = severity;
+    }
+  });
+
+  it("stays within [0, 1] for out-of-range readings", () => {
+    expect(moonlightSeverity(-5)).toBe(0);
+    expect(moonlightSeverity(5)).toBe(1);
+    expect(moonlightSeverity(Number.NaN)).toBe(0);
+  });
+});
+
+describe("adjustAuroraChanceForMoonlight", () => {
+  it("never demotes an overhead aurora, whatever the Moon", () => {
+    expect(adjustAuroraChanceForMoonlight("overhead", 0)).toBe("overhead");
+    expect(adjustAuroraChanceForMoonlight("overhead", 1)).toBe("overhead");
+  });
+
+  it("keeps a horizon glow under dark and dim skies", () => {
+    expect(adjustAuroraChanceForMoonlight("horizon", 0)).toBe("horizon");
+    expect(adjustAuroraChanceForMoonlight("horizon", 0.3)).toBe("horizon");
+  });
+
+  it("drowns out a horizon glow under a bright or full Moon", () => {
+    expect(adjustAuroraChanceForMoonlight("horizon", 0.6)).toBe("none");
+    expect(adjustAuroraChanceForMoonlight("horizon", 1)).toBe("none");
+  });
+
+  it("leaves a none chance unchanged", () => {
+    expect(adjustAuroraChanceForMoonlight("none", 0)).toBe("none");
+    expect(adjustAuroraChanceForMoonlight("none", 1)).toBe("none");
+  });
+});
+
+describe("summarizeMoonlight", () => {
+  it("bundles fields consistent with the individual helpers", () => {
+    const summary = summarizeMoonlight(0.6);
+    expect(summary.fraction).toBe(moonIlluminationFraction(0.6));
+    expect(summary.interference).toBe(classifyMoonlightInterference(0.6));
+    expect(summary.interferenceLabel).toBe(MOONLIGHT_INTERFERENCE_LABELS[summary.interference]);
+    expect(summary.severity).toBe(moonlightSeverity(0.6));
+  });
+
+  it("summarises a new Moon as dark with zero severity", () => {
+    const summary = summarizeMoonlight(0);
+    expect(summary.interference).toBe("dark");
+    expect(summary.severity).toBe(0);
+  });
+
+  it("normalises out-of-range readings", () => {
+    const summary = summarizeMoonlight(2);
+    expect(summary.fraction).toBe(1);
+    expect(summary.interference).toBe("washed-out");
+    expect(summary.severity).toBe(1);
+  });
+});
+
+describe("drownsOutFaintAurora", () => {
+  it("is false under dark and dim skies", () => {
+    expect(drownsOutFaintAurora(0)).toBe(false);
+    expect(drownsOutFaintAurora(0.3)).toBe(false);
+  });
+
+  it("is true under a bright or washed-out Moon", () => {
+    expect(drownsOutFaintAurora(0.6)).toBe(true);
+    expect(drownsOutFaintAurora(1)).toBe(true);
+  });
+
+  it("agrees with the horizon-glow demotion in adjustAuroraChanceForMoonlight", () => {
+    for (let fraction = 0; fraction <= 1; fraction += 0.05) {
+      const demoted = adjustAuroraChanceForMoonlight("horizon", fraction) === "none";
+      expect(demoted).toBe(drownsOutFaintAurora(fraction));
+    }
+  });
+});

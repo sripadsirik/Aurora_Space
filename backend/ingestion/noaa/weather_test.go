@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-func TestClassifyXrayFlux(t *testing.T) {
+func TestClassifyXrayFluxPR52(t *testing.T) {
 	cases := []struct {
 		name string
 		flux float64

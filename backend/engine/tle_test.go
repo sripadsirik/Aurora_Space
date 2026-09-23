@@ -3,7 +3,7 @@ package main
 import "testing"
 
 // A valid ISS (ZARYA) element set: both lines are the canonical 69 characters.
-func validISSRecord() gpRecord {
+func validISSRecordPR52() gpRecord {
 	return gpRecord{
 		NoradCatID:   25544,
 		TLELine1:     "1 25544U 98067A   08264.51782528 -.00002182  00000-0 -11606-4 0  2927",
@@ -13,13 +13,13 @@ func validISSRecord() gpRecord {
 	}
 }
 
-func TestIsTLEValid(t *testing.T) {
-	if !isTLEValid(validISSRecord()) {
+func TestIsTLEValidPR52(t *testing.T) {
+	if !isTLEValid(validISSRecordPR52()) {
 		t.Error("a canonical ISS record should be valid")
 	}
 
 	t.Run("rejects lines shorter than 69 characters", func(t *testing.T) {
-		rec := validISSRecord()
+		rec := validISSRecordPR52()
 		rec.TLELine1 = "1 25544U 98067A"
 		if isTLEValid(rec) {
 			t.Error("expected a short line 1 to be rejected")
@@ -27,7 +27,7 @@ func TestIsTLEValid(t *testing.T) {
 	})
 
 	t.Run("rejects lines with the wrong leading token", func(t *testing.T) {
-		rec := validISSRecord()
+		rec := validISSRecordPR52()
 		rec.TLELine2 = "X" + rec.TLELine2[1:]
 		if isTLEValid(rec) {
 			t.Error("expected a line 2 without the '2 ' prefix to be rejected")
@@ -35,7 +35,7 @@ func TestIsTLEValid(t *testing.T) {
 	})
 
 	t.Run("rejects hyperbolic or invalid eccentricity", func(t *testing.T) {
-		rec := validISSRecord()
+		rec := validISSRecordPR52()
 		rec.Eccentricity = 1.0
 		if isTLEValid(rec) {
 			t.Error("expected eccentricity >= 1.0 to be rejected")
@@ -47,7 +47,7 @@ func TestIsTLEValid(t *testing.T) {
 	})
 
 	t.Run("rejects near-parabolic eccentricity that SGP4 cannot handle", func(t *testing.T) {
-		rec := validISSRecord()
+		rec := validISSRecordPR52()
 		rec.Eccentricity = 0.95
 		if isTLEValid(rec) {
 			t.Error("expected eccentricity > 0.9 to be rejected")
@@ -55,7 +55,7 @@ func TestIsTLEValid(t *testing.T) {
 	})
 
 	t.Run("rejects a non-positive mean motion", func(t *testing.T) {
-		rec := validISSRecord()
+		rec := validISSRecordPR52()
 		rec.MeanMotion = 0
 		if isTLEValid(rec) {
 			t.Error("expected a zero mean motion to be rejected")
@@ -63,7 +63,7 @@ func TestIsTLEValid(t *testing.T) {
 	})
 }
 
-func TestTLECacheSetSnapshotCount(t *testing.T) {
+func TestTLECacheSetSnapshotCountPR52(t *testing.T) {
 	cache := &tleCache{records: make(map[string]gpRecord)}
 
 	if cache.count() != 0 {
@@ -73,14 +73,14 @@ func TestTLECacheSetSnapshotCount(t *testing.T) {
 		t.Fatalf("new cache snapshot length = %d, want 0", len(snap))
 	}
 
-	cache.set("25544", validISSRecord())
+	cache.set("25544", validISSRecordPR52())
 	cache.set("48274", gpRecord{NoradCatID: 48274})
 	if cache.count() != 2 {
 		t.Errorf("count after two inserts = %d, want 2", cache.count())
 	}
 
 	// Re-setting an existing key updates in place rather than growing the cache.
-	updated := validISSRecord()
+	updated := validISSRecordPR52()
 	updated.MeanMotion = 15.9
 	cache.set("25544", updated)
 	if cache.count() != 2 {

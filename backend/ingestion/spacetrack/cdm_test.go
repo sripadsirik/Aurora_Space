@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-func TestParseCDMs(t *testing.T) {
+func TestParseCDMsPR52(t *testing.T) {
 	body := []byte(`[
 		{
 			"CDM_ID": "12345",
@@ -47,7 +47,7 @@ func TestParseCDMs(t *testing.T) {
 	}
 }
 
-func TestParseCDMsHandlesMissingAndInvalidFields(t *testing.T) {
+func TestParseCDMsHandlesMissingAndInvalidFieldsPR52(t *testing.T) {
 	// Empty MIN_RNG/PC and non-numeric ids should degrade gracefully to zeroes
 	// rather than erroring out the whole batch.
 	body := []byte(`[{"CDM_ID":"1","TCA":"2026-01-01T00:00:00Z","MIN_RNG":"","PC":"","SAT_1_ID":"","SAT_2_ID":"abc"}]`)
@@ -72,7 +72,7 @@ func TestParseCDMsHandlesMissingAndInvalidFields(t *testing.T) {
 	}
 }
 
-func TestParseCDMsRejectsInvalidJSON(t *testing.T) {
+func TestParseCDMsRejectsInvalidJSONPR52(t *testing.T) {
 	if _, err := parseCDMs([]byte(`{not an array}`)); err == nil {
 		t.Error("expected an error for malformed JSON")
 	}

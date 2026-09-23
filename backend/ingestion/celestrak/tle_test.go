@@ -4,15 +4,15 @@ import "testing"
 
 // Real ISS (ZARYA) two-line element set, used across the TLE parsing tests.
 const (
-	issLine1 = "1 25544U 98067A   08264.51782528 -.00002182  00000-0 -11606-4 0  2927"
-	issLine2 = "2 25544  51.6416 247.4627 0006703 130.5360 325.0288 15.72125391563537"
+	issLine1PR52 = "1 25544U 98067A   08264.51782528 -.00002182  00000-0 -11606-4 0  2927"
+	issLine2PR52 = "2 25544  51.6416 247.4627 0006703 130.5360 325.0288 15.72125391563537"
 )
 
-func TestParseNoradCatID(t *testing.T) {
+func TestParseNoradCatIDPR52(t *testing.T) {
 	t.Run("extracts the catalogue number from line 1", func(t *testing.T) {
-		id, ok := parseNoradCatID(issLine1)
+		id, ok := parseNoradCatID(issLine1PR52)
 		if !ok || id != 25544 {
-			t.Errorf("parseNoradCatID(issLine1) = (%d, %v), want (25544, true)", id, ok)
+			t.Errorf("parseNoradCatID(issLine1PR52) = (%d, %v), want (25544, true)", id, ok)
 		}
 	})
 
@@ -29,11 +29,11 @@ func TestParseNoradCatID(t *testing.T) {
 	})
 }
 
-func TestParseEccentricity(t *testing.T) {
+func TestParseEccentricityPR52(t *testing.T) {
 	t.Run("reads the assumed-leading-decimal eccentricity", func(t *testing.T) {
-		got := parseEccentricity(issLine2)
+		got := parseEccentricity(issLine2PR52)
 		if got != 0.0006703 {
-			t.Errorf("parseEccentricity(issLine2) = %v, want 0.0006703", got)
+			t.Errorf("parseEccentricity(issLine2PR52) = %v, want 0.0006703", got)
 		}
 	})
 
@@ -44,11 +44,11 @@ func TestParseEccentricity(t *testing.T) {
 	})
 }
 
-func TestParseMeanMotion(t *testing.T) {
+func TestParseMeanMotionPR52(t *testing.T) {
 	t.Run("reads revolutions per day", func(t *testing.T) {
-		got := parseMeanMotion(issLine2)
+		got := parseMeanMotion(issLine2PR52)
 		if got != 15.72125391 {
-			t.Errorf("parseMeanMotion(issLine2) = %v, want 15.72125391", got)
+			t.Errorf("parseMeanMotion(issLine2PR52) = %v, want 15.72125391", got)
 		}
 	})
 
@@ -59,9 +59,9 @@ func TestParseMeanMotion(t *testing.T) {
 	})
 }
 
-func TestParseThreeLineElements(t *testing.T) {
+func TestParseThreeLineElementsPR52(t *testing.T) {
 	t.Run("parses a named three-line block", func(t *testing.T) {
-		body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\n")
+		body := []byte("ISS (ZARYA)\n" + issLine1PR52 + "\n" + issLine2PR52 + "\n")
 		records := parseThreeLineElements(body)
 		if len(records) != 1 {
 			t.Fatalf("expected 1 record, got %d", len(records))
@@ -73,13 +73,13 @@ func TestParseThreeLineElements(t *testing.T) {
 		if rec.MeanMotion != 15.72125391 || rec.Eccentricity != 0.0006703 {
 			t.Errorf("unexpected orbit fields: mm=%v ecc=%v", rec.MeanMotion, rec.Eccentricity)
 		}
-		if rec.TLELine1 != issLine1 || rec.TLELine2 != issLine2 {
+		if rec.TLELine1 != issLine1PR52 || rec.TLELine2 != issLine2PR52 {
 			t.Error("raw TLE lines were not preserved")
 		}
 	})
 
 	t.Run("parses a bare two-line block with no name", func(t *testing.T) {
-		body := []byte(issLine1 + "\n" + issLine2 + "\n")
+		body := []byte(issLine1PR52 + "\n" + issLine2PR52 + "\n")
 		records := parseThreeLineElements(body)
 		if len(records) != 1 {
 			t.Fatalf("expected 1 record, got %d", len(records))
@@ -93,7 +93,7 @@ func TestParseThreeLineElements(t *testing.T) {
 		// A well-formed block followed by a stray trailing line must not send the
 		// position-based scanner into an infinite loop; the trailing line is simply
 		// dropped once fewer than a full block remains.
-		body := []byte("ISS (ZARYA)\n" + issLine1 + "\n" + issLine2 + "\ndangling trailing line\n")
+		body := []byte("ISS (ZARYA)\n" + issLine1PR52 + "\n" + issLine2PR52 + "\ndangling trailing line\n")
 		records := parseThreeLineElements(body)
 		if len(records) != 1 {
 			t.Fatalf("expected 1 record, got %d", len(records))
