@@ -23,3 +23,24 @@ export const conjunctionPeerName = (
   conjunction: Pick<ConjunctionWarning, "object1" | "object2">
 ): string =>
   conjunction.object1.noradId === satellite.noradId ? conjunction.object2.name : conjunction.object1.name;
+
+/**
+ * True when the given satellite is one of the two objects in a conjunction,
+ * matched by NORAD id. Used to decide whether a conjunction is relevant to a
+ * selected satellite.
+ */
+export const involvesSatellite = (
+  satellite: Pick<Satellite, "noradId">,
+  conjunction: Pick<ConjunctionWarning, "object1" | "object2">
+): boolean =>
+  conjunction.object1.noradId === satellite.noradId ||
+  conjunction.object2.noradId === satellite.noradId;
+
+/**
+ * Filters a list of conjunctions down to those involving the given satellite,
+ * preserving input order. Returns a new array; the input is not mutated.
+ */
+export const conjunctionsForSatellite = <T extends Pick<ConjunctionWarning, "object1" | "object2">>(
+  satellite: Pick<Satellite, "noradId">,
+  conjunctions: readonly T[]
+): T[] => conjunctions.filter((conjunction) => involvesSatellite(satellite, conjunction));

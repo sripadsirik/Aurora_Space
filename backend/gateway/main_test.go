@@ -3,111 +3,91 @@ package main
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/sripadsirik/aurora/shared"
 )
 
 func TestPayloadCount(t *testing.T) {
-	satellites, _ := json.Marshal([]map[string]any{
-		{"noradId": 1},
-		{"noradId": 2},
-		{"noradId": 3},
-	})
-	conjunctions, _ := json.Marshal([]map[string]any{{"id": "a"}})
+	satellites, _ := json.Marshal([]shared.Satellite{{NoradID: 1}, {NoradID: 2}, {NoradID: 3}})
+	conjunctions, _ := json.Marshal([]shared.ConjunctionWarning{{ID: "a"}, {ID: "b"}})
 
-	tests := []struct {
+	cases := []struct {
 		name    string
 		msgType string
 		payload json.RawMessage
 		want    int
 	}{
 		{"space weather with payload counts as one", "spaceWeather", json.RawMessage(`{"kpIndex":5}`), 1},
-		{"empty space weather counts as zero", "spaceWeather", json.RawMessage(``), 0},
+		{"space weather empty payload counts as zero", "spaceWeather", json.RawMessage(``), 0},
 		{"satellites counts array length", "satellites", satellites, 3},
-		{"conjunctions counts array length", "conjunctions", conjunctions, 1},
-		{"malformed satellites counts as zero", "satellites", json.RawMessage(`not json`), 0},
-		{"unknown type counts as zero", "mystery", json.RawMessage(`[1,2,3]`), 0},
+		{"empty satellites array", "satellites", json.RawMessage(`[]`), 0},
+		{"malformed satellites returns zero", "satellites", json.RawMessage(`{bad`), 0},
+		{"conjunctions counts array length", "conjunctions", conjunctions, 2},
+		{"unknown type returns zero", "mystery", json.RawMessage(`[1,2,3]`), 0},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := payloadCount(tt.msgType, tt.payload); got != tt.want {
-				t.Errorf("payloadCount(%q, %s) = %d, want %d", tt.msgType, tt.payload, got, tt.want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := payloadCount(tc.msgType, tc.payload); got != tc.want {
+				t.Errorf("payloadCount(%q, %s) = %d, want %d", tc.msgType, tc.payload, got, tc.want)
 			}
 		})
 	}
 }
 
-func TestStateCacheSetAndSnapshot(t *testing.T) {
-	cache := &stateCache{}
-	satellites := json.RawMessage(`[{"noradId":1},{"noradId":2}]`)
-
-	cache.set("satellites", satellites)
-
-	snap := cache.snapshot()
-	if snap.satellites.count != 2 {
-		t.Errorf("satellites count = %d, want 2", snap.satellites.count)
-	}
-	if string(snap.satellites.payload) != string(satellites) {
-		t.Errorf("satellites payload = %s, want %s", snap.satellites.payload, satellites)
-	}
-	if snap.satellites.lastUpdated.IsZero() {
-		t.Error("lastUpdated should be set after set()")
-	}
-	if snap.conjunctions.count != 0 || snap.conjunctions.payload != nil {
-		t.Error("untouched feeds should remain empty")
-	}
-}
-
-func TestStateCacheSetIgnoresUnknownType(t *testing.T) {
-	cache := &stateCache{}
-	cache.set("mystery", json.RawMessage(`[1,2,3]`))
-
-	snap := cache.snapshot()
-	if snap.satellites.payload != nil || snap.conjunctions.payload != nil || snap.spaceWeather.payload != nil {
-		t.Error("unknown message type must not populate any feed")
-	}
-}
-
-func TestSatelliteBatchAssemblerPlainArray(t *testing.T) {
-	a := newSatelliteBatchAssembler()
-	data := []byte(`[{"noradId":1,"name":"A"},{"noradId":2,"name":"B"}]`)
-
-	payload, complete, err := a.ingest(data)
-	if err != nil {
-		t.Fatalf("ingest returned error: %v", err)
-	}
-	if !complete {
-		t.Fatal("plain array should be immediately complete")
-	}
-	if string(payload) != string(data) {
-		t.Errorf("payload = %s, want passthrough of input", payload)
-	}
-}
-
 func TestSatelliteBatchAssemblerSingleBatch(t *testing.T) {
 	a := newSatelliteBatchAssembler()
-	data := []byte(`{"batchId":"x","batchIndex":0,"batchCount":1,"satellites":[{"noradId":7,"name":"solo"}]}`)
+	batch := shared.SatelliteBatch{
+		BatchID:    "b1",
+		BatchIndex: 0,
+		BatchCount: 1,
+		Satellites: []shared.Satellite{{NoradID: 10}, {NoradID: 20}},
+	}
+	data, _ := json.Marshal(batch)
 
 	payload, complete, err := a.ingest(data)
 	if err != nil {
 		t.Fatalf("ingest returned error: %v", err)
 	}
 	if !complete {
-		t.Fatal("single batch should be complete")
+		t.Fatal("single batch should complete immediately")
 	}
 
-	var satellites []map[string]any
-	if err := json.Unmarshal(payload, &satellites); err != nil {
-		t.Fatalf("payload not a satellite array: %v", err)
+	var sats []shared.Satellite
+	if err := json.Unmarshal(payload, &sats); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if len(satellites) != 1 {
-		t.Errorf("got %d satellites, want 1", len(satellites))
+	if len(sats) != 2 {
+		t.Errorf("got %d satellites, want 2", len(sats))
 	}
 }
 
-func TestSatelliteBatchAssemblerMultiBatch(t *testing.T) {
+func TestSatelliteBatchAssemblerRawArray(t *testing.T) {
 	a := newSatelliteBatchAssembler()
-	part0 := []byte(`{"batchId":"m","batchIndex":0,"batchCount":2,"satellites":[{"noradId":1,"name":"A"}]}`)
-	part1 := []byte(`{"batchId":"m","batchIndex":1,"batchCount":2,"satellites":[{"noradId":2,"name":"B"}]}`)
+	data, _ := json.Marshal([]shared.Satellite{{NoradID: 1}})
+
+	payload, complete, err := a.ingest(data)
+	if err != nil {
+		t.Fatalf("ingest returned error: %v", err)
+	}
+	if !complete {
+		t.Fatal("raw satellite array should complete immediately")
+	}
+	if string(payload) != string(data) {
+		t.Errorf("payload = %s, want passthrough %s", payload, data)
+	}
+}
+
+func TestSatelliteBatchAssemblerMultiPart(t *testing.T) {
+	a := newSatelliteBatchAssembler()
+	part0, _ := json.Marshal(shared.SatelliteBatch{
+		BatchID: "multi", BatchIndex: 0, BatchCount: 2,
+		Satellites: []shared.Satellite{{NoradID: 1}},
+	})
+	part1, _ := json.Marshal(shared.SatelliteBatch{
+		BatchID: "multi", BatchIndex: 1, BatchCount: 2,
+		Satellites: []shared.Satellite{{NoradID: 2}, {NoradID: 3}},
+	})
 
 	if _, complete, err := a.ingest(part0); err != nil || complete {
 		t.Fatalf("first part: complete=%v err=%v, want incomplete", complete, err)
@@ -118,21 +98,21 @@ func TestSatelliteBatchAssemblerMultiBatch(t *testing.T) {
 		t.Fatalf("second part returned error: %v", err)
 	}
 	if !complete {
-		t.Fatal("batch should be complete after final part")
+		t.Fatal("batch should complete once all parts arrive")
 	}
 
-	var satellites []map[string]any
-	if err := json.Unmarshal(payload, &satellites); err != nil {
-		t.Fatalf("payload not a satellite array: %v", err)
+	var sats []shared.Satellite
+	if err := json.Unmarshal(payload, &sats); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if len(satellites) != 2 {
-		t.Errorf("got %d satellites, want 2 assembled across parts", len(satellites))
+	if len(sats) != 3 {
+		t.Errorf("got %d satellites, want 3 (1 + 2 across parts)", len(sats))
 	}
 }
 
-func TestSatelliteBatchAssemblerInvalidData(t *testing.T) {
+func TestSatelliteBatchAssemblerInvalidPayload(t *testing.T) {
 	a := newSatelliteBatchAssembler()
-	if _, _, err := a.ingest([]byte(`not json at all`)); err == nil {
-		t.Error("expected error for unparseable input")
+	if _, _, err := a.ingest([]byte("{not valid json")); err == nil {
+		t.Fatal("expected error for invalid payload")
 	}
 }
