@@ -226,3 +226,6 @@ export const formatElectricField = (fieldMvM: number): string => {
  */
 export const isCriticalConjunction = (conjunction: ConjunctionWarning): boolean =>
   conjunction.probability >= 0.005 || conjunction.missDistanceM <= 250;
+
+/** Formats the nonnegative coupling field in mV/m. */
+export const formatGeoeffectiveField = formatElectricField;
