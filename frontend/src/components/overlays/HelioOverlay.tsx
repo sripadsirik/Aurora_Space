@@ -1,10 +1,15 @@
+import { electricFieldProfile } from "../../utils/interplanetaryElectricField";
+import { formatSignedElectricField } from "../../utils/format";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { formatDynamicPressure, formatElectricField, formatMagnetopauseStandoff } from "../../utils/format";
-import { couplingLabel, electricFieldProfile } from "../../utils/interplanetaryElectricField";
+import {
+  formatDynamicPressure,
+  formatElectricField,
+  formatMagnetopauseStandoff
+} from "../../utils/format";
 import { formatHelioArrivalLabel, isHelioCmeImminent } from "../../utils/helio";
 import {
   burstIntensityToPercent,
@@ -12,6 +17,8 @@ import {
   percentToBurstIntensity
 } from "../../utils/helioControls";
 import { formatKpIndex, formatMagneticFieldNt } from "../../utils/measurements";
+import { couplingLevelLabel, solarWindCouplingProfile } from "../../utils/solarWindCoupling";
+import { solarWindElectricFieldProfile } from "../../utils/solarWindElectricField";
 import { solarWindPressureProfile } from "../../utils/solarWindPressure";
 
 interface HelioRowProps {
@@ -74,9 +81,11 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   // Ram pressure and magnetopause standoff derived from the L1 wind readings.
   const pressureProfile = solarWindPressureProfile(spaceWeather);
+  // Interplanetary coupling electric field derived from the wind speed and Bz.
+  const rectifiedFieldProfile = solarWindElectricFieldProfile(spaceWeather);
 
-  // Dawn-dusk coupling electric field from the L1 speed and Bz readings.
-  const efieldProfile = electricFieldProfile(spaceWeather);
+  // Geoeffective dawn-dusk electric field driving reconnection, from V and Bz.
+  const couplingProfile = solarWindCouplingProfile(spaceWeather);
 
   const handleSpeedChange = (event: ChangeEvent<HTMLInputElement>): void => {
     setHelioSelectedPlaybackRate(Number(event.currentTarget.value));
@@ -95,14 +104,16 @@ export const HelioOverlay = (): JSX.Element | null => {
         <div className="mt-2 h-px w-full bg-[repeating-linear-gradient(90deg,rgba(0,212,255,0.4)_0_10px,rgba(0,212,255,0.08)_10px_18px)]" />
         <div className="mt-3 space-y-2">
           <HelioRow color="#00d4ff" label="SOLAR WIND @ L1" value={`${spaceWeather.solarWindSpeed} km/s`} />
+          <HelioRow color={bzColor} label="SIGNED IMF FIELD" value={formatSignedElectricField(electricFieldProfile(spaceWeather).fieldMvM)} />
           <HelioRow color={bzColor} label="BZ COMPONENT" value={formatMagneticFieldNt(spaceWeather.bzComponent)} />
           <HelioRow color={kpColor} label="KP INDEX" value={formatKpIndex(spaceWeather.kpIndex)} />
           <HelioRow color="#ff9a32" label="CME ARRIVAL" value={formatHelioArrivalLabel(helioSimulationSeconds)} pulse={isCmeImminent} />
+          <HelioRow color={bzColor} label="SIGNED IMF FIELD" value={formatSignedElectricField(electricFieldProfile(spaceWeather).fieldMvM)} />
           <HelioRow color={bzColor} label="MAGNETOSPHERE" value={bzShieldLabel} />
           <HelioRow
-            color={efieldProfile.southward ? "#ff8f6e" : "#7dff6a"}
+            color={couplingProfile.strong ? "#ff8f6e" : bzColor}
             label="COUPLING"
-            value={couplingLabel(efieldProfile.level)}
+            value={couplingLevelLabel(couplingProfile.level)}
           />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-cyan-500/10 pt-2 text-[10px] tracking-[0.18em] text-[#6d8ea9]">
@@ -201,8 +212,11 @@ export const HelioOverlay = (): JSX.Element | null => {
             </div>
             <div className="flex justify-between">
               <span className="text-[#6d8ea9]">Coupling E-field</span>
-              <span className={efieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}>
-                {formatElectricField(efieldProfile.fieldMvM)}
+              <span
+                className={rectifiedFieldProfile.southward ? "text-[#ff8f6e]" : "text-[#e7f5ff]"}
+                title={`${rectifiedFieldProfile.levelLabel} coupling`}
+              >
+                {formatElectricField(rectifiedFieldProfile.geoeffectiveMvM)}
               </span>
             </div>
           </div>
