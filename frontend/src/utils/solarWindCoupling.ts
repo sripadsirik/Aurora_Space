@@ -1,123 +1,115 @@
 /**
- * Solar-wind–magnetosphere coupling via the dawn-dusk merging electric field.
+ * Solar-wind coupling: the geoeffective (dawn-dusk) electric field the wind
+ * imposes on the magnetosphere.
  *
- * When the interplanetary magnetic field turns southward it reconnects with
- * Earth's northward dipole at the dayside magnetopause, opening flux that the
- * solar wind then drags into the tail — the engine that drives geomagnetic
- * storms. The strength of that coupling is captured by the dawn-dusk merging
- * (motional) electric field `VBs = v * Bs`, where `Bs` is the southward part of
- * the IMF: only a southward field is geoeffective, so the northward half is
- * rectified away. These helpers turn the solar-wind speed and Bz the feeds
- * already report into that coupling field and a qualitative band, keeping the
- * derived figures in one place alongside the ram-pressure profile.
+ * When the interplanetary magnetic field turns southward, the solar wind sweeps
+ * a motional electric field `E = V × B` across the dayside magnetosphere that
+ * drives reconnection, feeds the ring current, and sets how hard a stream
+ * couples into geomagnetic activity. Only the southward part of the field is
+ * geoeffective, so the driver is the rectified dawn-dusk field `Ey = V · Bs`,
+ * where `Bs` is the southward IMF magnitude (`Bs = max(0, -Bz)`). A northward
+ * field leaves the magnetosphere comparatively closed and drives no coupling.
+ *
+ * These helpers turn the bulk speed and Bz the feeds already report into that
+ * single coupling figure in mV/m, keeping the derived quantity in one place.
  */
 
 import type { SpaceWeather } from "../types/space";
+import { isBzSouthward } from "./bzComponent";
 
 /**
- * Southward IMF magnitude `Bs` in nanotesla: the half-wave rectified southward
- * component of Bz. A southward field (Bz < 0) is geoeffective and returns its
- * magnitude `|Bz|`; a northward or zero field returns `0`. Non-finite readings
- * are treated as not southward, matching the "closed magnetosphere" branch, so
- * a bad feed value yields `0` rather than `NaN`.
+ * Geoeffective dawn-dusk solar-wind electric field in millivolts per metre for
+ * the given bulk speed (km/s) and IMF Bz component (nT), from the rectified
+ * field `Ey = V · Bs`, where `Bs = max(0, -Bz)` is the southward field
+ * magnitude. Only a southward field couples, so a northward or zero Bz yields
+ * `0`. The `km/s · nT -> mV/m` unit conversion works out to a factor of `1e-3`
+ * (`1e3 m/s · 1e-9 T · 1e3 mV/V`). Non-finite inputs are treated as zero so a
+ * bad feed value yields `0` rather than a `NaN` field.
  */
-export const southwardBz = (bz: number): number => {
-  if (!Number.isFinite(bz) || bz >= 0) return 0;
-  return -bz;
-};
-
-/**
- * Coefficient that converts a solar-wind speed (km/s) and southward field
- * (nT) into a merging electric field in millivolts per metre via
- * `E = k * v * Bs`. It folds the km/s -> m/s (`1e3`), nT -> T (`1e-9`), and
- * V/m -> mV/m (`1e3`) unit conversions into a single factor, so a 400 km/s wind
- * with a 5 nT southward field gives `1e-3 * 400 * 5 = 2 mV/m`.
- */
-export const MERGING_FIELD_COEFFICIENT = 1e-3;
-
-/**
- * Dawn-dusk merging (motional) electric field `VBs` in millivolts per metre for
- * the given solar-wind speed (km/s) and IMF Bz (nT), from `E = k * v * Bs`.
- * Only the southward part of Bz contributes (see {@link southwardBz}), so a
- * northward field yields `0`. Non-finite or negative speeds are treated as
- * zero, so a bad feed value yields `0` rather than a `NaN` field.
- */
-export const mergingElectricFieldMvM = (speedKms: number, bz: number): number => {
-  if (!Number.isFinite(speedKms)) return 0;
+export const geoeffectiveElectricField = (speedKms: number, bz: number): number => {
+  if (!Number.isFinite(speedKms) || !Number.isFinite(bz)) return 0;
+  if (!isBzSouthward(bz)) return 0;
   const speed = Math.max(0, speedKms);
-  return MERGING_FIELD_COEFFICIENT * speed * southwardBz(bz);
+  const southwardField = -bz;
+  return speed * southwardField * 1e-3;
 };
 
-/** Qualitative bands for the merging-field coupling, from quiet to storm-level. */
-export type CouplingLevel = "quiet" | "moderate" | "strong" | "extreme";
+/** Qualitative bands for the geoeffective electric field, from closed to storm-driving. */
+export type CouplingLevel = "closed" | "weak" | "moderate" | "strong";
 
 /**
- * Buckets a merging electric field (mV/m) into a qualitative coupling band for
- * the readouts. Below 0.5 mV/m the field is `quiet` — a northward or weak IMF
- * feeds little energy in; 0.5-3 mV/m is `moderate`, sustained coupling that can
- * seed a storm; 3-8 mV/m is `strong`, the driving seen in intense storms; and
- * 8 mV/m or more is `extreme`, the coupling that accompanies a major
- * CME-driven storm. The thresholds are approximate operational bands. Negative
- * or non-finite inputs fall back to `quiet`.
+ * Buckets a geoeffective electric field (mV/m) into a qualitative coupling band
+ * for the readouts: a field of `0` (a northward or zero IMF) reads as `closed`,
+ * below 2 mV/m is `weak` background coupling, 2-5 mV/m is `moderate` (a
+ * geoeffective southward stream), and 5 mV/m or more is `strong` — the sustained
+ * driving that builds major storms. Negative or non-finite inputs fall back to
+ * `closed`.
  */
 export const couplingLevel = (fieldMvM: number): CouplingLevel => {
-  if (!Number.isFinite(fieldMvM) || fieldMvM < 0.5) return "quiet";
-  if (fieldMvM < 3) return "moderate";
-  if (fieldMvM < 8) return "strong";
-  return "extreme";
+  if (!Number.isFinite(fieldMvM) || fieldMvM <= 0) return "closed";
+  if (fieldMvM < 2) return "weak";
+  if (fieldMvM < 5) return "moderate";
+  return "strong";
 };
 
 /**
- * Short status label for a coupling band, for a magnetosphere readout that
- * mirrors the Bz shield label: a `quiet` field reads as `DECOUPLED` (the wind
- * slides past a closed magnetosphere), `moderate` as `COUPLING`, `strong` as
- * `STRONG COUPLING`, and `extreme` as `EXTREME COUPLING`.
+ * Geoeffective electric field (mV/m) at or above which coupling reads as strong
+ * enough to drive a major geomagnetic storm. Marks the lower edge of the
+ * `strong` {@link couplingLevel} band.
+ */
+export const STRONG_COUPLING_FIELD_MVM = 5;
+
+/**
+ * True when the geoeffective electric field is at or above the strong-coupling
+ * threshold, the sustained dawn-dusk driving associated with major storms.
+ * Non-finite inputs read as not strongly coupled.
+ */
+export const isStrongGeomagneticCoupling = (fieldMvM: number): boolean =>
+  Number.isFinite(fieldMvM) && fieldMvM >= STRONG_COUPLING_FIELD_MVM;
+
+/**
+ * Maps a coupling band to the short uppercase label the readouts show: `CLOSED`,
+ * `WEAK`, `MODERATE`, or `STRONG`. Keeps the display wording for each band in one
+ * place so panels and overlays label the coupling the same way.
  */
 export const couplingLevelLabel = (level: CouplingLevel): string => {
   switch (level) {
-    case "quiet":
-      return "DECOUPLED";
+    case "closed":
+      return "CLOSED";
+    case "weak":
+      return "WEAK";
     case "moderate":
-      return "COUPLING";
+      return "MODERATE";
     case "strong":
-      return "STRONG COUPLING";
-    case "extreme":
-      return "EXTREME COUPLING";
+      return "STRONG";
   }
 };
 
 /** Derived solar-wind coupling figures for the current space-weather state. */
 export interface SolarWindCouplingProfile {
-  /** Southward IMF magnitude `Bs` driving the coupling, in nanotesla. */
-  southwardBzNt: number;
-  /** Dawn-dusk merging electric field `VBs`, in millivolts per metre. */
-  mergingFieldMvM: number;
-  /** Qualitative band the merging field falls in. */
+  /** Geoeffective dawn-dusk electric field, in millivolts per metre. */
+  electricFieldMvM: number;
+  /** Qualitative band the coupling field falls in. */
   level: CouplingLevel;
-  /** True when the IMF is southward and therefore actively coupling. */
-  coupling: boolean;
+  /** True when the field is at or above the strong-coupling threshold. */
+  strong: boolean;
 }
 
 /**
  * Bundles the coupling figures derived from a space-weather snapshot: the
- * southward IMF magnitude, the dawn-dusk merging electric field its speed and
- * Bz imply, the qualitative coupling band, and whether the field is southward
- * at all. All values come from the same rectified Bz, so they stay mutually
- * consistent — a northward field yields a zero field, a `quiet` band, and
- * `coupling: false`.
+ * geoeffective electric field from its solar-wind speed and Bz, the qualitative
+ * coupling band, and whether the field has reached the strong-coupling
+ * threshold. All values come from the same computed field, so they stay
+ * mutually consistent.
  */
-export const solarWindCouplingProfile = (
-  weather: SpaceWeather
-): SolarWindCouplingProfile => {
-  const southwardBzNt = southwardBz(weather.bzComponent);
-  const mergingFieldMvM = mergingElectricFieldMvM(
+export const solarWindCouplingProfile = (weather: SpaceWeather): SolarWindCouplingProfile => {
+  const electricFieldMvM = geoeffectiveElectricField(
     weather.solarWindSpeed,
     weather.bzComponent
   );
   return {
-    southwardBzNt,
-    mergingFieldMvM,
-    level: couplingLevel(mergingFieldMvM),
-    coupling: southwardBzNt > 0
+    electricFieldMvM,
+    level: couplingLevel(electricFieldMvM),
+    strong: isStrongGeomagneticCoupling(electricFieldMvM)
   };
 };

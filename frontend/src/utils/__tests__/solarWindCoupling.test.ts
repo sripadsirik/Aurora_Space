@@ -1,132 +1,146 @@
 import { describe, expect, it } from "vitest";
-
 import type { SpaceWeather } from "../../types/space";
 import {
   couplingLevel,
   couplingLevelLabel,
-  MERGING_FIELD_COEFFICIENT,
-  mergingElectricFieldMvM,
+  geoeffectiveElectricField,
+  isStrongGeomagneticCoupling,
   solarWindCouplingProfile,
-  southwardBz
+  STRONG_COUPLING_FIELD_MVM
 } from "../solarWindCoupling";
 
-const baseWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
+const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
   kpIndex: 3,
   solarWindSpeed: 400,
   solarWindDensity: 5,
-  bzComponent: -5,
+  bzComponent: -2,
   xrayFlux: "B1.0",
   stormLevel: "none",
   auroraKp: 3,
-  lastUpdated: new Date("2026-09-17T00:00:00Z"),
+  lastUpdated: new Date("2026-01-01T00:00:00Z"),
   ...overrides
 });
 
-describe("southwardBz", () => {
-  it("returns the magnitude of a southward (negative) Bz", () => {
-    expect(southwardBz(-5)).toBe(5);
-    expect(southwardBz(-12.4)).toBeCloseTo(12.4);
+describe("geoeffectiveElectricField", () => {
+  it("rectifies a southward field to E = V · Bs in mV/m", () => {
+    // 500 km/s and Bz -10 nT -> 500 * 10 * 1e-3 = 5 mV/m.
+    expect(geoeffectiveElectricField(500, -10)).toBeCloseTo(5, 9);
   });
 
-  it("rectifies a northward or zero field to zero", () => {
-    expect(southwardBz(8)).toBe(0);
-    expect(southwardBz(0)).toBe(0);
+  it("is zero for a northward field, which does not couple", () => {
+    expect(geoeffectiveElectricField(500, 10)).toBe(0);
   });
 
-  it("treats non-finite readings as not southward", () => {
-    expect(southwardBz(Number.NaN)).toBe(0);
-    expect(southwardBz(Number.POSITIVE_INFINITY)).toBe(0);
-    expect(southwardBz(Number.NEGATIVE_INFINITY)).toBe(0);
-  });
-});
-
-describe("mergingElectricFieldMvM", () => {
-  it("computes VBs = k * v * Bs for a southward field", () => {
-    // 400 km/s with a -5 nT field -> 1e-3 * 400 * 5 = 2 mV/m.
-    expect(mergingElectricFieldMvM(400, -5)).toBeCloseTo(2);
-    expect(mergingElectricFieldMvM(600, -10)).toBeCloseTo(6);
+  it("treats a zero Bz as not geoeffective", () => {
+    expect(geoeffectiveElectricField(500, 0)).toBe(0);
   });
 
-  it("is zero for a northward or zero field regardless of speed", () => {
-    expect(mergingElectricFieldMvM(800, 6)).toBe(0);
-    expect(mergingElectricFieldMvM(800, 0)).toBe(0);
+  it("grows with both the wind speed and the southward field magnitude", () => {
+    const base = geoeffectiveElectricField(400, -5);
+    expect(geoeffectiveElectricField(800, -5)).toBeCloseTo(base * 2, 9);
+    expect(geoeffectiveElectricField(400, -10)).toBeCloseTo(base * 2, 9);
   });
 
-  it("scales linearly with the merging-field coefficient", () => {
-    expect(mergingElectricFieldMvM(500, -4)).toBeCloseTo(
-      MERGING_FIELD_COEFFICIENT * 500 * 4
-    );
+  it("returns zero for non-finite inputs", () => {
+    expect(geoeffectiveElectricField(Number.NaN, -10)).toBe(0);
+    expect(geoeffectiveElectricField(500, Number.NaN)).toBe(0);
+    expect(geoeffectiveElectricField(Number.POSITIVE_INFINITY, -10)).toBe(0);
   });
 
-  it("treats non-finite or negative speeds as zero", () => {
-    expect(mergingElectricFieldMvM(Number.NaN, -5)).toBe(0);
-    expect(mergingElectricFieldMvM(Number.POSITIVE_INFINITY, -5)).toBe(0);
-    expect(mergingElectricFieldMvM(-400, -5)).toBe(0);
+  it("clamps a negative wind speed to zero", () => {
+    expect(geoeffectiveElectricField(-500, -10)).toBe(0);
   });
 });
 
 describe("couplingLevel", () => {
-  it("classifies a weak field as quiet", () => {
-    expect(couplingLevel(0)).toBe("quiet");
-    expect(couplingLevel(0.49)).toBe("quiet");
+  it("reads a zero field as a closed magnetosphere", () => {
+    expect(couplingLevel(0)).toBe("closed");
   });
 
-  it("classifies sustained coupling as moderate", () => {
-    expect(couplingLevel(0.5)).toBe("moderate");
-    expect(couplingLevel(2.9)).toBe("moderate");
+  it("classifies a low field as weak background coupling", () => {
+    expect(couplingLevel(1)).toBe("weak");
   });
 
-  it("classifies intense-storm driving as strong", () => {
-    expect(couplingLevel(3)).toBe("strong");
-    expect(couplingLevel(7.9)).toBe("strong");
+  it("classifies a mid-range field as moderate", () => {
+    expect(couplingLevel(3)).toBe("moderate");
   });
 
-  it("classifies major-storm coupling as extreme", () => {
-    expect(couplingLevel(8)).toBe("extreme");
-    expect(couplingLevel(25)).toBe("extreme");
+  it("classifies a high field as strong storm-driving coupling", () => {
+    expect(couplingLevel(8)).toBe("strong");
   });
 
-  it("falls back to quiet for negative or non-finite input", () => {
-    expect(couplingLevel(-1)).toBe("quiet");
-    expect(couplingLevel(Number.NaN)).toBe("quiet");
-  });
-});
-
-describe("solarWindCouplingProfile", () => {
-  it("derives mutually consistent figures from a southward field", () => {
-    const profile = solarWindCouplingProfile(
-      baseWeather({ solarWindSpeed: 600, bzComponent: -10 })
-    );
-    expect(profile.southwardBzNt).toBe(10);
-    expect(profile.mergingFieldMvM).toBeCloseTo(6);
-    expect(profile.level).toBe("strong");
-    expect(profile.coupling).toBe(true);
+  it("places each band boundary in the higher band", () => {
+    expect(couplingLevel(2)).toBe("moderate");
+    expect(couplingLevel(5)).toBe("strong");
   });
 
-  it("reports no coupling for a northward field", () => {
-    const profile = solarWindCouplingProfile(
-      baseWeather({ solarWindSpeed: 800, bzComponent: 6 })
-    );
-    expect(profile.southwardBzNt).toBe(0);
-    expect(profile.mergingFieldMvM).toBe(0);
-    expect(profile.level).toBe("quiet");
-    expect(profile.coupling).toBe(false);
-  });
-
-  it("keeps the field consistent with the standalone helper", () => {
-    const weather = baseWeather({ solarWindSpeed: 520, bzComponent: -3.5 });
-    const profile = solarWindCouplingProfile(weather);
-    expect(profile.mergingFieldMvM).toBeCloseTo(
-      mergingElectricFieldMvM(520, -3.5)
-    );
+  it("falls back to closed for negative or non-finite inputs", () => {
+    expect(couplingLevel(-3)).toBe("closed");
+    expect(couplingLevel(Number.NaN)).toBe("closed");
   });
 });
 
 describe("couplingLevelLabel", () => {
-  it("maps each coupling band to its readout label", () => {
-    expect(couplingLevelLabel("quiet")).toBe("DECOUPLED");
-    expect(couplingLevelLabel("moderate")).toBe("COUPLING");
-    expect(couplingLevelLabel("strong")).toBe("STRONG COUPLING");
-    expect(couplingLevelLabel("extreme")).toBe("EXTREME COUPLING");
+  it("maps each band to its uppercase display label", () => {
+    expect(couplingLevelLabel("closed")).toBe("CLOSED");
+    expect(couplingLevelLabel("weak")).toBe("WEAK");
+    expect(couplingLevelLabel("moderate")).toBe("MODERATE");
+    expect(couplingLevelLabel("strong")).toBe("STRONG");
+  });
+
+  it("labels the band a computed field falls in", () => {
+    expect(couplingLevelLabel(couplingLevel(geoeffectiveElectricField(900, -20)))).toBe("STRONG");
+    expect(couplingLevelLabel(couplingLevel(geoeffectiveElectricField(400, 5)))).toBe("CLOSED");
+  });
+});
+
+describe("isStrongGeomagneticCoupling", () => {
+  it("is false for a field below the threshold", () => {
+    expect(isStrongGeomagneticCoupling(4)).toBe(false);
+  });
+
+  it("is true at exactly the threshold", () => {
+    expect(isStrongGeomagneticCoupling(STRONG_COUPLING_FIELD_MVM)).toBe(true);
+  });
+
+  it("is true well above the threshold", () => {
+    expect(isStrongGeomagneticCoupling(12)).toBe(true);
+  });
+
+  it("is false just below the threshold", () => {
+    expect(isStrongGeomagneticCoupling(STRONG_COUPLING_FIELD_MVM - 0.01)).toBe(false);
+  });
+
+  it("is false for non-finite inputs, including infinity", () => {
+    expect(isStrongGeomagneticCoupling(Number.NaN)).toBe(false);
+    expect(isStrongGeomagneticCoupling(Number.POSITIVE_INFINITY)).toBe(false);
+  });
+});
+
+describe("solarWindCouplingProfile", () => {
+  it("derives every figure from the same computed electric field", () => {
+    const weather = makeWeather({ solarWindSpeed: 700, bzComponent: -12 });
+    const profile = solarWindCouplingProfile(weather);
+    const field = geoeffectiveElectricField(700, -12);
+    expect(profile.electricFieldMvM).toBeCloseTo(field, 9);
+    expect(profile.level).toBe(couplingLevel(field));
+    expect(profile.strong).toBe(isStrongGeomagneticCoupling(field));
+  });
+
+  it("reports a closed, uncoupled magnetosphere for a northward field", () => {
+    const profile = solarWindCouplingProfile(makeWeather({ bzComponent: 6 }));
+    expect(profile.electricFieldMvM).toBe(0);
+    expect(profile.level).toBe("closed");
+    expect(profile.strong).toBe(false);
+  });
+
+  it("flags strong coupling as a fast, strongly southward stream arrives", () => {
+    const quiet = solarWindCouplingProfile(makeWeather());
+    const shock = solarWindCouplingProfile(
+      makeWeather({ solarWindSpeed: 900, bzComponent: -20 })
+    );
+    expect(shock.electricFieldMvM).toBeGreaterThan(quiet.electricFieldMvM);
+    expect(shock.level).toBe("strong");
+    expect(shock.strong).toBe(true);
   });
 });
