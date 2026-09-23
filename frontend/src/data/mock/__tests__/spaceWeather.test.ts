@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseXrayFlux, protonFluxToSScale } from "../../../utils/spaceWeatherScales";
-import { mockSpaceWeather } from "../spaceWeather";
+import { mockKp24hHistory, mockSpaceWeather } from "../spaceWeather";
 
 describe("mockSpaceWeather snapshot", () => {
   it("keeps both Kp readings within the 0-9 planetary range", () => {
@@ -30,5 +30,22 @@ describe("mockSpaceWeather snapshot", () => {
     const flux = mockSpaceWeather.protonFlux ?? 0;
     expect(flux).toBeGreaterThanOrEqual(0);
     expect(protonFluxToSScale(flux)).toMatch(/^S[0-5]$/);
+  });
+});
+
+describe("mockKp24hHistory", () => {
+  it("holds 24 three-hourly readings", () => {
+    expect(mockKp24hHistory).toHaveLength(24);
+  });
+
+  it("keeps every reading within the 0-9 planetary range", () => {
+    for (const kp of mockKp24hHistory) {
+      expect(kp).toBeGreaterThanOrEqual(0);
+      expect(kp).toBeLessThanOrEqual(9);
+    }
+  });
+
+  it("ends at the snapshot's current Kp reading", () => {
+    expect(mockKp24hHistory[mockKp24hHistory.length - 1]).toBe(mockSpaceWeather.kpIndex);
   });
 });

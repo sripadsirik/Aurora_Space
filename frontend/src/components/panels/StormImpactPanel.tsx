@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 
+import { mockKp24hHistory } from "../../data/mock/spaceWeather";
 import { useAuroraStore } from "../../store/auroraStore";
 import { getKpColor } from "../../utils/colors";
 import { resolveDisplayedWeather } from "../../utils/displayedWeather";
@@ -8,12 +9,6 @@ import { gScaleColor, kpSparklineColor, kpToGScale } from "../../utils/spaceWeat
 import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
 import { countStormExposedAssets } from "../../utils/stormExposure";
 import { buildSparkline, sparklineThresholdY } from "../../utils/sparkline";
-
-const mockKpHistory = [
-  2.3, 2.1, 2.5, 2.8, 3.0, 3.2, 3.1, 2.9,
-  3.4, 3.8, 4.1, 4.5, 4.8, 5.2, 5.6, 5.9,
-  6.2, 6.8, 7.1, 6.5, 5.8, 5.2, 4.8, 4.3
-];
 
 export const StormImpactPanel = (): JSX.Element | null => {
   const currentMode = useAuroraStore((s) => s.currentMode);
@@ -42,7 +37,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
   const sparklineWidth = 240;
   const sparklineHeight = 40;
   const sparklineScale = { width: sparklineWidth, height: sparklineHeight, min: 0, max: 9 };
-  const { points, path: pathD } = buildSparkline(mockKpHistory, sparklineScale);
+  const { points, path: pathD } = buildSparkline(mockKp24hHistory, sparklineScale);
   const activeThresholdY = sparklineThresholdY(5, sparklineScale);
   const severeThresholdY = sparklineThresholdY(7, sparklineScale);
 
@@ -152,7 +147,7 @@ export const StormImpactPanel = (): JSX.Element | null => {
               cx={points[points.length - 1].x}
               cy={points[points.length - 1].y}
               r="4"
-              fill={getKpColor(mockKpHistory[mockKpHistory.length - 1])}
+              fill={getKpColor(mockKp24hHistory[mockKp24hHistory.length - 1])}
               stroke="white"
               strokeWidth="1"
             />

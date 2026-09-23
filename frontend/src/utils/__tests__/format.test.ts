@@ -6,7 +6,7 @@ import {
   formatDurationToTca,
   formatDynamicPressure,
   formatEclipseFraction,
-  formatElectricFieldMvM,
+  formatElectricField,
   formatMagnetopauseStandoff,
   formatManeuverDeltaV,
   formatMissDistance,
@@ -17,7 +17,9 @@ import {
   formatProtonFlux,
   formatSpecificEnergy,
   formatUtcTime,
-  isCriticalConjunction
+  formatUtcTimestamp,
+  isCriticalConjunction,
+  zeroPad
 } from "../format";
 
 const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): ConjunctionWarning => ({
@@ -34,6 +36,18 @@ const makeConjunction = (overrides: Partial<ConjunctionWarning> = {}): Conjuncti
   ...overrides
 });
 
+describe("zeroPad", () => {
+  it("pads single-digit numbers to two digits", () => {
+    expect(zeroPad(7)).toBe("07");
+    expect(zeroPad(0)).toBe("00");
+  });
+
+  it("leaves two-or-more-digit numbers unchanged", () => {
+    expect(zeroPad(12)).toBe("12");
+    expect(zeroPad(100)).toBe("100");
+  });
+});
+
 describe("formatUtcTime", () => {
   it("zero-pads hours, minutes and seconds and appends UTC", () => {
     expect(formatUtcTime(new Date("2026-07-21T04:05:09Z"))).toBe("04:05:09 UTC");
@@ -44,6 +58,20 @@ describe("formatUtcTime", () => {
   });
 });
 
+describe("formatUtcTimestamp", () => {
+  it("renders a full zero-padded date and time in UTC", () => {
+    expect(formatUtcTimestamp(new Date("2026-03-09T04:05:09Z"))).toBe("2026-03-09 04:05:09 UTC");
+  });
+
+  it("drops sub-second precision even when milliseconds are non-zero", () => {
+    expect(formatUtcTimestamp(new Date("2026-03-09T04:05:09.123Z"))).toBe("2026-03-09 04:05:09 UTC");
+  });
+
+  it("accepts an ISO string", () => {
+    expect(formatUtcTimestamp("2026-12-31T23:59:59Z")).toBe("2026-12-31 23:59:59 UTC");
+  });
+});
+
 describe("formatProbability", () => {
   it("renders in exponential notation with one fraction digit", () => {
     expect(formatProbability(0.0012)).toBe("1.2e-3");
@@ -51,6 +79,12 @@ describe("formatProbability", () => {
 
   it("handles zero", () => {
     expect(formatProbability(0)).toBe("0.0e+0");
+  });
+
+  it("renders an em dash for non-finite or negative inputs", () => {
+    expect(formatProbability(Number.NaN)).toBe("—");
+    expect(formatProbability(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(formatProbability(-0.001)).toBe("—");
   });
 });
 
@@ -107,6 +141,11 @@ describe("formatManeuverDeltaV", () => {
 
   it("renders a zero probability as zero delta-V", () => {
     expect(formatManeuverDeltaV(0)).toBe("~0.0 m/s");
+  });
+
+  it("renders an em dash for non-finite or negative inputs", () => {
+    expect(formatManeuverDeltaV(Number.NaN)).toBe("—");
+    expect(formatManeuverDeltaV(-0.001)).toBe("—");
   });
 });
 
@@ -235,22 +274,18 @@ describe("formatMagnetopauseStandoff", () => {
   });
 });
 
-describe("formatElectricFieldMvM", () => {
-  it("renders a coupling field with two fraction digits and a mV/m suffix", () => {
-    expect(formatElectricFieldMvM(5.58)).toBe("5.58 mV/m");
+describe("formatElectricField", () => {
+  it("renders a field with two fraction digits and a mV/m suffix", () => {
+    expect(formatElectricField(2.104)).toBe("2.10 mV/m");
   });
 
-  it("rounds to two fraction digits", () => {
-    expect(formatElectricFieldMvM(3.126)).toBe("3.13 mV/m");
-  });
-
-  it("renders a plain zero field rather than an em dash", () => {
-    expect(formatElectricFieldMvM(0)).toBe("0.00 mV/m");
+  it("keeps two fraction digits for a whole-number field", () => {
+    expect(formatElectricField(3)).toBe("3.00 mV/m");
   });
 
   it("renders an em dash for negative or non-finite inputs", () => {
-    expect(formatElectricFieldMvM(-1)).toBe("—");
-    expect(formatElectricFieldMvM(Number.NaN)).toBe("—");
+    expect(formatElectricField(-1)).toBe("—");
+    expect(formatElectricField(Number.NaN)).toBe("—");
   });
 });
 
@@ -294,6 +329,11 @@ describe("formatEclipseFraction", () => {
     expect(formatEclipseFraction(0)).toBe("0%");
     expect(formatEclipseFraction(1)).toBe("100%");
   });
+
+  it("renders an em dash for non-finite input", () => {
+    expect(formatEclipseFraction(Number.NaN)).toBe("—");
+    expect(formatEclipseFraction(Number.POSITIVE_INFINITY)).toBe("—");
+  });
 });
 
 describe("formatDurationToTca", () => {
@@ -321,6 +361,10 @@ describe("formatDurationToTca", () => {
   it("reports a long-passed TCA in days and hours", () => {
     expect(formatDurationToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 3h ago");
   });
+
+  it("renders an em dash for an unparseable date string", () => {
+    expect(formatDurationToTca("not-a-date")).toBe("—");
+  });
 });
 
 describe("formatCountdownToTca", () => {
@@ -347,5 +391,9 @@ describe("formatCountdownToTca", () => {
 
   it("switches to days and hours once a passed TCA is over a day old", () => {
     expect(formatCountdownToTca(new Date("2026-07-18T21:00:00Z"))).toBe("PASSED 2d 03h ago");
+  });
+
+  it("renders an em dash for an unparseable date string", () => {
+    expect(formatCountdownToTca("not-a-date")).toBe("—");
   });
 });

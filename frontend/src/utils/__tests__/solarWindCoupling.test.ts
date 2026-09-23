@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { SpaceWeather } from "../../types/space";
 import {
-  COUPLING_LEVEL_LABELS,
-  MERGING_FIELD_COEFFICIENT,
-  RING_CURRENT_INJECTION_THRESHOLD_MV_M,
   couplingLevel,
-  couplingLevelColor,
-  dawnDuskElectricField,
+  couplingLevelLabel,
   geoeffectiveElectricField,
-  solarWindCouplingProfile
+  isStrongGeomagneticCoupling,
+  solarWindCouplingProfile,
+  STRONG_COUPLING_FIELD_MVM
 } from "../solarWindCoupling";
 
 const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
@@ -23,140 +21,126 @@ const makeWeather = (overrides: Partial<SpaceWeather> = {}): SpaceWeather => ({
   ...overrides
 });
 
-describe("dawnDuskElectricField", () => {
-  it("follows E = k * V * B for a southward field", () => {
-    const expected = MERGING_FIELD_COEFFICIENT * 450 * 12.4;
-    expect(dawnDuskElectricField(450, -12.4)).toBeCloseTo(expected, 9);
+describe("geoeffectiveElectricField", () => {
+  it("rectifies a southward field to E = V · Bs in mV/m", () => {
+    // 500 km/s and Bz -10 nT -> 500 * 10 * 1e-3 = 5 mV/m.
+    expect(geoeffectiveElectricField(500, -10)).toBeCloseTo(5, 9);
   });
 
-  it("uses the field magnitude, so sign does not change the result", () => {
-    expect(dawnDuskElectricField(400, -6)).toBeCloseTo(dawnDuskElectricField(400, 6), 12);
+  it("is zero for a northward field, which does not couple", () => {
+    expect(geoeffectiveElectricField(500, 10)).toBe(0);
   });
 
-  it("scales linearly with the bulk speed", () => {
-    const slow = dawnDuskElectricField(400, -5);
-    const fast = dawnDuskElectricField(800, -5);
-    expect(fast).toBeCloseTo(slow * 2, 12);
+  it("treats a zero Bz as not geoeffective", () => {
+    expect(geoeffectiveElectricField(500, 0)).toBe(0);
   });
 
-  it("is zero when the wind is at rest or the field vanishes", () => {
-    expect(dawnDuskElectricField(0, -10)).toBe(0);
-    expect(dawnDuskElectricField(500, 0)).toBe(0);
-  });
-
-  it("clamps a negative speed to zero rather than flipping the sign", () => {
-    expect(dawnDuskElectricField(-400, -5)).toBe(0);
+  it("grows with both the wind speed and the southward field magnitude", () => {
+    const base = geoeffectiveElectricField(400, -5);
+    expect(geoeffectiveElectricField(800, -5)).toBeCloseTo(base * 2, 9);
+    expect(geoeffectiveElectricField(400, -10)).toBeCloseTo(base * 2, 9);
   });
 
   it("returns zero for non-finite inputs", () => {
-    expect(dawnDuskElectricField(Number.NaN, -5)).toBe(0);
-    expect(dawnDuskElectricField(400, Number.POSITIVE_INFINITY)).toBe(0);
-  });
-});
-
-describe("geoeffectiveElectricField", () => {
-  it("equals the full field when Bz points southward", () => {
-    expect(geoeffectiveElectricField(450, -12.4)).toBeCloseTo(
-      dawnDuskElectricField(450, -12.4),
-      12
-    );
+    expect(geoeffectiveElectricField(Number.NaN, -10)).toBe(0);
+    expect(geoeffectiveElectricField(500, Number.NaN)).toBe(0);
+    expect(geoeffectiveElectricField(Number.POSITIVE_INFINITY, -10)).toBe(0);
   });
 
-  it("is zero for a northward field, which does not reconnect", () => {
-    expect(geoeffectiveElectricField(450, 12.4)).toBe(0);
-  });
-
-  it("is zero when Bz is exactly zero", () => {
-    expect(geoeffectiveElectricField(450, 0)).toBe(0);
-  });
-
-  it("returns zero for a non-finite Bz", () => {
-    expect(geoeffectiveElectricField(450, Number.NaN)).toBe(0);
+  it("clamps a negative wind speed to zero", () => {
+    expect(geoeffectiveElectricField(-500, -10)).toBe(0);
   });
 });
 
 describe("couplingLevel", () => {
-  it("treats a field below the injection threshold as quiet", () => {
-    expect(couplingLevel(RING_CURRENT_INJECTION_THRESHOLD_MV_M - 0.01)).toBe("quiet");
-    expect(couplingLevel(0)).toBe("quiet");
+  it("reads a zero field as a closed magnetosphere", () => {
+    expect(couplingLevel(0)).toBe("closed");
   });
 
-  it("becomes elevated at the injection threshold", () => {
-    expect(couplingLevel(RING_CURRENT_INJECTION_THRESHOLD_MV_M)).toBe("elevated");
-    expect(couplingLevel(2)).toBe("elevated");
+  it("classifies a low field as weak background coupling", () => {
+    expect(couplingLevel(1)).toBe("weak");
   });
 
-  it("is high through the 3-8 mV/m band", () => {
-    expect(couplingLevel(3)).toBe("high");
-    expect(couplingLevel(7.99)).toBe("high");
+  it("classifies a mid-range field as moderate", () => {
+    expect(couplingLevel(3)).toBe("moderate");
   });
 
-  it("is extreme at 8 mV/m and above", () => {
-    expect(couplingLevel(8)).toBe("extreme");
-    expect(couplingLevel(20)).toBe("extreme");
+  it("classifies a high field as strong storm-driving coupling", () => {
+    expect(couplingLevel(8)).toBe("strong");
   });
 
-  it("falls back to quiet for negative or non-finite fields", () => {
-    expect(couplingLevel(-5)).toBe("quiet");
-    expect(couplingLevel(Number.NaN)).toBe("quiet");
-  });
-});
-
-describe("couplingLevelColor", () => {
-  it("returns a distinct hex colour for each band", () => {
-    const colors = [
-      couplingLevelColor("quiet"),
-      couplingLevelColor("elevated"),
-      couplingLevelColor("high"),
-      couplingLevelColor("extreme")
-    ];
-    colors.forEach((color) => expect(color).toMatch(/^#[0-9a-f]{6}$/i));
-    expect(new Set(colors).size).toBe(4);
+  it("places each band boundary in the higher band", () => {
+    expect(couplingLevel(2)).toBe("moderate");
+    expect(couplingLevel(5)).toBe("strong");
   });
 
-  it("falls back to the quiet colour for an unknown band", () => {
-    expect(couplingLevelColor("None")).toBe(couplingLevelColor("quiet"));
+  it("falls back to closed for negative or non-finite inputs", () => {
+    expect(couplingLevel(-3)).toBe("closed");
+    expect(couplingLevel(Number.NaN)).toBe("closed");
   });
 });
 
-describe("COUPLING_LEVEL_LABELS", () => {
-  it("labels every band with distinct, non-empty text", () => {
-    const labels = Object.values(COUPLING_LEVEL_LABELS);
-    labels.forEach((label) => expect(label.length).toBeGreaterThan(0));
-    expect(new Set(labels).size).toBe(labels.length);
+describe("couplingLevelLabel", () => {
+  it("maps each band to its uppercase display label", () => {
+    expect(couplingLevelLabel("closed")).toBe("CLOSED");
+    expect(couplingLevelLabel("weak")).toBe("WEAK");
+    expect(couplingLevelLabel("moderate")).toBe("MODERATE");
+    expect(couplingLevelLabel("strong")).toBe("STRONG");
   });
 
-  it("has a label for the band each field maps to", () => {
-    expect(COUPLING_LEVEL_LABELS[couplingLevel(0)]).toBe("Weak coupling");
-    expect(COUPLING_LEVEL_LABELS[couplingLevel(10)]).toBe("Extreme coupling");
+  it("labels the band a computed field falls in", () => {
+    expect(couplingLevelLabel(couplingLevel(geoeffectiveElectricField(900, -20)))).toBe("STRONG");
+    expect(couplingLevelLabel(couplingLevel(geoeffectiveElectricField(400, 5)))).toBe("CLOSED");
+  });
+});
+
+describe("isStrongGeomagneticCoupling", () => {
+  it("is false for a field below the threshold", () => {
+    expect(isStrongGeomagneticCoupling(4)).toBe(false);
+  });
+
+  it("is true at exactly the threshold", () => {
+    expect(isStrongGeomagneticCoupling(STRONG_COUPLING_FIELD_MVM)).toBe(true);
+  });
+
+  it("is true well above the threshold", () => {
+    expect(isStrongGeomagneticCoupling(12)).toBe(true);
+  });
+
+  it("is false just below the threshold", () => {
+    expect(isStrongGeomagneticCoupling(STRONG_COUPLING_FIELD_MVM - 0.01)).toBe(false);
+  });
+
+  it("is false for non-finite inputs, including infinity", () => {
+    expect(isStrongGeomagneticCoupling(Number.NaN)).toBe(false);
+    expect(isStrongGeomagneticCoupling(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });
 
 describe("solarWindCouplingProfile", () => {
-  it("derives all figures from the snapshot's speed and Bz", () => {
-    const weather = makeWeather({ solarWindSpeed: 450, bzComponent: -12.4 });
+  it("derives every figure from the same computed electric field", () => {
+    const weather = makeWeather({ solarWindSpeed: 700, bzComponent: -12 });
     const profile = solarWindCouplingProfile(weather);
-    expect(profile.dawnDuskFieldMvM).toBeCloseTo(dawnDuskElectricField(450, -12.4), 12);
-    expect(profile.geoeffectiveFieldMvM).toBeCloseTo(
-      geoeffectiveElectricField(450, -12.4),
-      12
-    );
-    expect(profile.southward).toBe(true);
-    expect(profile.level).toBe(couplingLevel(profile.geoeffectiveFieldMvM));
+    const field = geoeffectiveElectricField(700, -12);
+    expect(profile.electricFieldMvM).toBeCloseTo(field, 9);
+    expect(profile.level).toBe(couplingLevel(field));
+    expect(profile.strong).toBe(isStrongGeomagneticCoupling(field));
   });
 
-  it("reports no geoeffective coupling under a northward field", () => {
-    const profile = solarWindCouplingProfile(makeWeather({ bzComponent: 8 }));
-    expect(profile.southward).toBe(false);
-    expect(profile.geoeffectiveFieldMvM).toBe(0);
-    expect(profile.level).toBe("quiet");
-    expect(profile.dawnDuskFieldMvM).toBeGreaterThan(0);
+  it("reports a closed, uncoupled magnetosphere for a northward field", () => {
+    const profile = solarWindCouplingProfile(makeWeather({ bzComponent: 6 }));
+    expect(profile.electricFieldMvM).toBe(0);
+    expect(profile.level).toBe("closed");
+    expect(profile.strong).toBe(false);
   });
 
-  it("classifies a strong southward CME field as high or extreme coupling", () => {
-    const profile = solarWindCouplingProfile(
-      makeWeather({ solarWindSpeed: 800, bzComponent: -20 })
+  it("flags strong coupling as a fast, strongly southward stream arrives", () => {
+    const quiet = solarWindCouplingProfile(makeWeather());
+    const shock = solarWindCouplingProfile(
+      makeWeather({ solarWindSpeed: 900, bzComponent: -20 })
     );
-    expect(["high", "extreme"]).toContain(profile.level);
+    expect(shock.electricFieldMvM).toBeGreaterThan(quiet.electricFieldMvM);
+    expect(shock.level).toBe("strong");
+    expect(shock.strong).toBe(true);
   });
 });
