@@ -53,6 +53,15 @@ export const conjunctionFleetSeverityColor = (severity: ConjunctionFleetSeverity
 };
 
 /**
+ * Tailwind utility classes for a conjunction alert's status dot in the HUD alert
+ * list: a pulsing red for a critical conjunction and a steady orange otherwise.
+ * Centralises the class string that was inlined in the HUD so the alert dot and
+ * other risk indicators stay in step.
+ */
+export const conjunctionAlertDotClass = (isCritical: boolean): string =>
+  isCritical ? "animate-pulse bg-[#ff0000]" : "bg-[#ff6600]";
+
+/**
  * Tailwind text-colour utility class for the interplanetary magnetic field Bz
  * component. A southward (negative) Bz couples the solar wind to Earth's
  * magnetosphere and drives geomagnetic activity, so it reads as an alert red; a
