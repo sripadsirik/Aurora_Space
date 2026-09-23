@@ -88,6 +88,17 @@ Copy `backend/.env.example` to `backend/.env`.
 | `SPACETRACK_USERNAME` | — | Space-Track.org login |
 | `SPACETRACK_PASSWORD` | — | Space-Track.org password |
 
+## Testing
+
+Unit tests cover the pure helper logic in the `shared` package (orbit/risk/storm
+classification, `.env` parsing) and the `gateway` diagnostics helpers (status
+derivation, log summarisation, source-row builders). Run them from `backend/`:
+
+```bash
+make test   # go test ./...
+make vet    # go vet ./...
+```
+
 ## Monitoring
 
 - **Prometheus**: http://localhost:9090
