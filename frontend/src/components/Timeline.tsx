@@ -63,6 +63,7 @@ export const Timeline = (): JSX.Element | null => {
       const nearest = findNearestEvent(historicalEvents, fraction, (event) => dateToFraction(event.date));
 
       setTimelineEvent(nearest);
+      // Auto-switch mode based on the snapped event (or lack of one).
       setMode(modeForTimelineEvent(nearest));
     },
     [setTimelinePosition, setTimelineEvent, setMode]

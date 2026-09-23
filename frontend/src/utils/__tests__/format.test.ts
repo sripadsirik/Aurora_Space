@@ -17,6 +17,7 @@ import {
   formatProtonFlux,
   formatSpecificEnergy,
   formatUtcTime,
+  formatUtcTimestamp,
   isCriticalConjunction,
   zeroPad
 } from "../format";
@@ -54,6 +55,20 @@ describe("formatUtcTime", () => {
 
   it("renders midday times without padding loss", () => {
     expect(formatUtcTime(new Date("2026-07-21T23:59:59Z"))).toBe("23:59:59 UTC");
+  });
+});
+
+describe("formatUtcTimestamp", () => {
+  it("renders a full zero-padded date and time in UTC", () => {
+    expect(formatUtcTimestamp(new Date("2026-03-09T04:05:09Z"))).toBe("2026-03-09 04:05:09 UTC");
+  });
+
+  it("drops sub-second precision even when milliseconds are non-zero", () => {
+    expect(formatUtcTimestamp(new Date("2026-03-09T04:05:09.123Z"))).toBe("2026-03-09 04:05:09 UTC");
+  });
+
+  it("accepts an ISO string", () => {
+    expect(formatUtcTimestamp("2026-12-31T23:59:59Z")).toBe("2026-12-31 23:59:59 UTC");
   });
 });
 

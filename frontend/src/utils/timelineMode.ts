@@ -24,3 +24,5 @@ export const modeForTimelineEvent = (event: HistoricalEvent | null): VisualMode 
   }
   return "OPS";
 };
+
+export { STORM_KP_THRESHOLD as TIMELINE_STORM_KP_THRESHOLD } from "./visualMode";

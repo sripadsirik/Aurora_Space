@@ -8,6 +8,19 @@ export const formatUtcTime = (date: Date): string =>
   `${zeroPad(date.getUTCHours())}:${zeroPad(date.getUTCMinutes())}:${zeroPad(date.getUTCSeconds())} UTC`;
 
 /**
+ * Formats a date as a full `YYYY-MM-DD HH:MM:SS UTC` timestamp for "last
+ * updated" and time-of-closest-approach readouts. Built from UTC components so
+ * sub-second precision is always dropped — unlike the previous inline
+ * `toISOString().replace(".000Z", …)`, which only stripped milliseconds when
+ * they happened to be exactly `.000`. Accepts a `Date` or an ISO string.
+ */
+export const formatUtcTimestamp = (value: Date | string): string => {
+  const date = value instanceof Date ? value : new Date(value);
+  const dateParts = `${date.getUTCFullYear()}-${zeroPad(date.getUTCMonth() + 1)}-${zeroPad(date.getUTCDate())}`;
+  return `${dateParts} ${formatUtcTime(date)}`;
+};
+
+/**
  * Renders the time until (or since) a time of closest approach. Future TCAs
  * count down as `Hh Mm`; past TCAs read as `PASSED …ago`, switching to days and
  * hours once more than a day has elapsed. Accepts a `Date` or ISO string; an
