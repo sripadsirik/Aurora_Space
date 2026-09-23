@@ -451,6 +451,29 @@ still be glimpsed low on the poleward horizon. Observer latitude is compared by 
 the helpers work for either hemisphere, and non-finite inputs fall back to a safe result
 (`none`/`null`) rather than throwing.
 
+## Moonlight
+
+Knowing the aurora reaches your latitude still leaves out a decisive factor: a bright sky
+washes out faint aurora, and the Moon is the dominant natural source of that glare on a clear
+night. The pure helpers in `frontend/src/utils/moonlight.ts` turn a date into the Moon's phase
+and how much its light is likely to interfere, tracking the synodic (new-Moon-to-new-Moon)
+cycle from a known new-Moon epoch:
+
+| Helper | Returns |
+| --- | --- |
+| `moonAgeDays` | Days since the most recent new Moon, in `[0, 29.53)` |
+| `moonPhaseFraction` | Position in the synodic cycle, `0` (new) → `0.5` (full) → `1` |
+| `moonIlluminatedFraction` | Fraction of the disk sunlit, `0` (new) to `1` (full) |
+| `moonPhaseName` | The named phase (`New Moon`, `Waxing Crescent`, … `Waning Crescent`) |
+| `classifyMoonlight` | The `dark`/`moderate`/`bright` interference tier for an illuminated fraction |
+| `summarizeMoonlight` | All of the above bundled into one `MoonlightSummary` |
+
+`MOONLIGHT_DARK_MAX_ILLUMINATION` and `MOONLIGHT_BRIGHT_MIN_ILLUMINATION` set the tier
+boundaries, and `MOONLIGHT_LEVEL_LABELS` gives each tier its observer-facing copy. The phase
+model ignores libration and orbital-eccentricity effects that shift each phase by a few hours —
+well within the precision needed to plan a night out — and invalid dates fall back to a safe
+result (`NaN`/`null`/`dark`) rather than throwing.
+
 ## Repo Layout
 
 ```text
@@ -680,7 +703,7 @@ The frontend uses [Vitest](https://vitest.dev/) for unit tests, currently coveri
 pure utility modules (`format`, `env`, `colors`, `orbit`, `orbitSummary`, `catalogStats`,
 `catalogFilters`, `coverageFootprint`, `eclipse`, `helio`, `spaceWeatherScales`, `conjunctionRisk`,
 `conjunctionStats`, `historicalEventStats`, `stormExposure`, `sparkline`, `cmeDisplay`, `cmeStats`,
-`conjunctionLeadTime`, `auroraVisibility`, `solarWindPressure`), the Zustand store, and the mock datasets under `src/data/mock/`
+`conjunctionLeadTime`, `auroraVisibility`, `moonlight`, `solarWindPressure`), the Zustand store, and the mock datasets under `src/data/mock/`
 (satellite catalog, conjunctions, CME library, historical events, and the space weather
 snapshot).
 
