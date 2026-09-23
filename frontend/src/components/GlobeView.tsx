@@ -61,9 +61,10 @@ import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
 import { createAuroraCapHierarchy } from "../utils/auroraCap";
 import { createFireConeFrontPositions } from "../utils/cmeFlameCone";
-import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint } from "../utils/orbit";
+import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
 import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
 import { createConjunctionOrbitArcPositions, getSatellitePositionAtOffset } from "../utils/satelliteOrbitAnim";
+import { isStormModeActive } from "../utils/visualMode";
 
 interface GlobeViewProps {
   satellites: Satellite[];
@@ -1634,7 +1635,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       });
 
       const latestSpaceWeather = spaceWeatherRef.current;
-      const isStormMode = currentModeRef.current === "STORM" || latestSpaceWeather.kpIndex > 5;
+      const isStormMode = isStormModeActive(currentModeRef.current, latestSpaceWeather.kpIndex);
       const flowSpeed = latestSpaceWeather.solarWindSpeed * 18_000 * (isStormMode ? 2 : 1);
       particles.forEach((particle) => {
         particle.primitive.color = (isStormMode ? RED_COLOR : solarWindColor).withAlpha(randomInRange(isStormMode ? 0.5 : 0.35, isStormMode ? 0.9 : 0.8));
