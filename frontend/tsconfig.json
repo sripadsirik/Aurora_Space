@@ -12,7 +12,7 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["vite/client", "cesium"]
+    "types": ["vite/client", "cesium", "node"]
   },
   "include": ["src", "vite.config.ts"]
 }

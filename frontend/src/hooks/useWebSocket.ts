@@ -1,36 +1,9 @@
 import { useEffect, useRef } from "react";
 
 import { useAuroraStore } from "../store/auroraStore";
-import type { Conjunction, Satellite, SourceDiagnostic, SpaceWeather } from "../types/space";
+import type { SourceDiagnostic } from "../types/space";
 import { env } from "../utils/env";
-
-// ── Typed inbound messages ──────────────────────────────────────────────────
-
-interface SatelliteUpdateMessage {
-  type: "satellites";
-  payload: Satellite[];
-}
-
-interface ConjunctionUpdateMessage {
-  type: "conjunctions";
-  payload: Conjunction[];
-}
-
-interface SpaceWeatherUpdateMessage {
-  type: "spaceWeather";
-  payload: SpaceWeather;
-}
-
-interface ConnectedMessage {
-  type: "connected";
-  payload: { serverTime: string };
-}
-
-export type WebSocketMessage =
-  | SatelliteUpdateMessage
-  | ConjunctionUpdateMessage
-  | SpaceWeatherUpdateMessage
-  | ConnectedMessage;
+import { parseFeedMessage } from "../utils/parseFeedMessage";
 
 interface DiagnosticsResponse {
   generatedAt: string;
@@ -65,6 +38,7 @@ export const useWebSocket = (): void => {
     const diagnosticsUrl = getDiagnosticsUrl(wsUrl);
     let diagnosticsTimer: ReturnType<typeof setInterval> | null = null;
     let diagnosticsAbort: AbortController | null = null;
+    let disposed = false;
 
     const fetchDiagnostics = async (): Promise<void> => {
       if (!diagnosticsUrl) return;
@@ -81,7 +55,9 @@ export const useWebSocket = (): void => {
         }
 
         const payload = (await response.json()) as DiagnosticsResponse;
-        useAuroraStore.getState().setSourceDiagnostics(payload.rows);
+        if (Array.isArray(payload?.rows)) {
+          useAuroraStore.getState().setSourceDiagnostics(payload.rows);
+        }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -90,11 +66,18 @@ export const useWebSocket = (): void => {
     };
 
     const connect = (): void => {
+      if (disposed) return;
       if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
         return;
       }
 
-      const ws = new WebSocket(wsUrl);
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch {
+        reconnectTimerRef.current = setTimeout(connect, RECONNECT_INTERVAL_MS);
+        return;
+      }
       wsRef.current = ws;
 
       ws.addEventListener("open", () => {
@@ -104,7 +87,8 @@ export const useWebSocket = (): void => {
 
       ws.addEventListener("message", (event) => {
         try {
-          const message = JSON.parse(event.data as string) as WebSocketMessage;
+          const message = parseFeedMessage(JSON.parse(event.data as string));
+          if (!message) return;
 
           switch (message.type) {
             case "satellites":
@@ -113,24 +97,15 @@ export const useWebSocket = (): void => {
               break;
             case "conjunctions":
               useAuroraStore.setState({
-                conjunctions: message.payload.map((c) => ({
-                  ...c,
-                  tca: new Date(c.tca)
-                }))
+                conjunctions: message.payload
               });
               useAuroraStore.getState().recordFeedUpdate("conjunctions");
               break;
             case "spaceWeather":
               useAuroraStore.setState({
-                spaceWeather: {
-                  ...message.payload,
-                  lastUpdated: new Date(message.payload.lastUpdated)
-                }
+                spaceWeather: message.payload
               });
               useAuroraStore.getState().recordFeedUpdate("spaceWeather");
-              break;
-            case "connected":
-              // Server acknowledged connection — no action needed
               break;
           }
         } catch {
@@ -141,7 +116,7 @@ export const useWebSocket = (): void => {
       ws.addEventListener("close", () => {
         useAuroraStore.setState({ isConnectedToBackend: false });
         wsRef.current = null;
-        reconnectTimerRef.current = setTimeout(connect, RECONNECT_INTERVAL_MS);
+        if (!disposed) reconnectTimerRef.current = setTimeout(connect, RECONNECT_INTERVAL_MS);
       });
 
       ws.addEventListener("error", () => {
@@ -156,6 +131,7 @@ export const useWebSocket = (): void => {
     }, DIAGNOSTICS_POLL_INTERVAL_MS);
 
     return () => {
+      disposed = true;
       diagnosticsAbort?.abort();
       if (diagnosticsTimer) clearInterval(diagnosticsTimer);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);

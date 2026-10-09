@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ReactNode } from "react";
 
 import { useUtcClock } from "../../hooks/useUtcClock";
+import { env } from "../../utils/env";
 import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { isBzSouthward } from "../../utils/bzComponent";
@@ -504,6 +505,8 @@ const DataLayerStatusPanel = (): JSX.Element => {
           <p className="text-[10px] tracking-[0.12em] text-[var(--aurora-accent)]">BACKEND CONNECTION</p>
           {isConnectedToBackend ? (
             <p className="mt-1 text-[11px] text-[#7df0b2]">WebSocket connected</p>
+          ) : !env.VITE_WS_URL ? (
+            <p className="mt-1 text-[11px] text-[#ffcd73]">Backend not configured. Sample data is displayed.</p>
           ) : (
             <div className="mt-1 flex items-center gap-2 text-[11px] text-[#ffcd73]">
               <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[#ffcd73] border-t-transparent" />

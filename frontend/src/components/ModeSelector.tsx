@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { VisualMode } from "../types/space";
 import { MODE_SHORTCUT_ORDER, modeForShortcutKey } from "../utils/modeShortcuts";
+import { SatelliteSearch } from "./SatelliteSearch";
 
 const MODE_SUBTITLES: Record<VisualMode, string> = {
   OPS: "Operator Dashboard",
@@ -77,8 +78,8 @@ export const ModeSelector = (): JSX.Element => {
         <div className="pointer-events-none fixed inset-0 z-[200] bg-white/10" />
       )}
 
-      <div className="pointer-events-auto fixed bottom-6 left-1/2 z-[100] -translate-x-1/2">
-        <div className="relative flex gap-1 rounded border border-cyan-500/20 bg-[rgba(5,15,30,0.9)] px-1 py-1 backdrop-blur-md">
+      <div className="pointer-events-auto fixed bottom-6 left-1/2 z-[100] -translate-x-1/2 max-sm:bottom-3 max-sm:w-[calc(100vw-1.5rem)]">
+        <div className="relative flex gap-1 rounded border border-cyan-500/20 bg-[rgba(5,15,30,0.9)] px-1 py-1 backdrop-blur-md max-sm:w-full">
           {MODES.map((mode) => {
             const isActive = currentMode === mode.key;
             return (
@@ -89,7 +90,7 @@ export const ModeSelector = (): JSX.Element => {
                 }}
                 type="button"
                 onClick={() => handleSetMode(mode.key)}
-                className={`relative px-4 py-1.5 font-mono text-xs tracking-[0.18em] transition-all duration-300 ${
+                className={`relative px-4 py-1.5 font-mono text-xs tracking-[0.18em] transition-all duration-300 max-sm:min-w-0 max-sm:flex-1 max-sm:px-1 max-sm:tracking-[0.08em] ${
                   isActive
                     ? "text-[#00d4ff]"
                     : "text-[#6b8fa8] hover:text-[#a0c8e0]"
@@ -107,11 +108,12 @@ export const ModeSelector = (): JSX.Element => {
                     {mode.label}
                     <span className="text-[9px] opacity-40">{mode.shortcut}</span>
                   </span>
-                  <span className="text-[7px] opacity-50 tracking-[0.1em]">{mode.subtitle}</span>
+                  <span className="text-[7px] opacity-50 tracking-[0.1em] max-sm:hidden">{mode.subtitle}</span>
                 </span>
               </button>
             );
           })}
+          <SatelliteSearch />
           {/* Animated underline */}
           <div
             ref={underlineRef}

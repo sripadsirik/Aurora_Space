@@ -44,4 +44,16 @@ describe("buildHudDataLayers", () => {
     expect(rows[2]).toMatchObject({ count: 1, freshness: "20m ago", status: "error" });
     expect(rows[3]).toMatchObject({ count: 2, freshness: "20m ago", status: "error" });
   });
+
+  it("identifies sample layers instead of presenting them as live upstream data", () => {
+    const rows = buildHudDataLayers({
+      ...inputs,
+      satelliteFreshness: fresh("NO DATA", "error"),
+      weatherFreshness: fresh("NO DATA", "error")
+    });
+    expect(rows[0]).toMatchObject({ source: "DEMO", freshness: "SAMPLE", status: "stale" });
+    expect(rows[1].source).toBe("Space-Track");
+    expect(rows[2]).toMatchObject({ source: "DEMO", freshness: "SAMPLE", status: "stale" });
+    expect(rows[3].source).toBe("DEMO");
+  });
 });
