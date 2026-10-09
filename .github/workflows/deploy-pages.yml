@@ -44,6 +44,8 @@ jobs:
           VITE_CESIUM_ION_TOKEN: ${{ secrets.VITE_CESIUM_ION_TOKEN }}
           VITE_PUBLIC_BASE: /Aurora_Space/
           VITE_WS_URL: ""
+      - name: Verify Cesium assets
+        run: test -f frontend/dist/cesium/Cesium.js && test -f frontend/dist/cesium/Widgets/widgets.css
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
