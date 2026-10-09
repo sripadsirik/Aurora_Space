@@ -564,9 +564,6 @@ Copy [frontend/.env.example](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Spa
 
 ```env
 VITE_CESIUM_ION_TOKEN=your_real_cesium_ion_token
-VITE_NASA_API_KEY=
-VITE_SPACETRACK_USERNAME=
-VITE_SPACETRACK_PASSWORD=
 VITE_WS_URL=ws://localhost:8080/ws
 ```
 
@@ -574,7 +571,13 @@ Notes:
 
 - `VITE_CESIUM_ION_TOKEN` is required.
 - `VITE_WS_URL` is optional. If the backend is not running, the frontend still boots with mock data.
-- The frontend env currently includes Space-Track values, but the live conjunction ingestion is handled by the backend service.
+- Keep Space-Track credentials only in `backend/.env`; `VITE_` variables are exposed in the browser bundle.
+
+The dashboard labels sample data as **DEMO DATA** and marks each sample data layer as
+**DEMO / SAMPLE**. As backend feeds arrive, the status changes to **MIXED DATA**, then
+**LIVE DATA** once satellites, conjunctions, and space weather are all current. It also
+indicates stale feeds and a lost connection. Malformed WebSocket payloads are ignored
+instead of replacing displayed data.
 
 ### Backend
 
@@ -600,6 +603,20 @@ Notes:
 - The legacy Go engine reads `METRICS_PORT_ENGINE`.
 
 ## Quick Start
+
+### Free public demo
+
+The React frontend can be hosted on GitHub Pages at
+`https://sripadsirik.github.io/Aurora_Space/`. The workflow in
+`.github/workflows/deploy-pages.yml` builds the app for that subpath and publishes
+`frontend/dist` when frontend changes reach `main`. This deployment uses the
+sample feeds; the Go/Rust/Kafka pipeline is not hosted by GitHub Pages.
+
+To enable it, set the repository's Pages source to **GitHub Actions** and add a
+repository Actions secret named `VITE_CESIUM_ION_TOKEN`. Use a Cesium ion token
+restricted to reading only the assets this app uses and to the Pages URL above.
+The token is embedded in the public browser bundle, so do not use an unrestricted
+private token. Run the workflow manually once or push a frontend change to `main`.
 
 ### 1. Clone the repo
 

@@ -3,6 +3,7 @@ import { electricFieldProfile } from "../../utils/interplanetaryElectricField";
 import { formatSignedElectricField } from "../../utils/format";
 import { type ChangeEvent, useEffect, useState } from "react";
 
+import { DataStatusIndicator } from "../DataStatusIndicator";
 import { useAuroraStore } from "../../store/auroraStore";
 import { bzMagnetosphereLabel, isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
@@ -98,10 +99,11 @@ export const HelioOverlay = (): JSX.Element | null => {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[65]">
-      <div className="absolute left-4 top-4 min-w-[280px] rounded border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(7,18,34,0.9),rgba(3,10,20,0.82))] px-4 py-3 font-mono shadow-[0_0_30px_rgba(0,180,255,0.08)] backdrop-blur-md">
+      <div className="absolute left-4 top-4 min-w-[280px] rounded border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(7,18,34,0.9),rgba(3,10,20,0.82))] px-4 py-3 font-mono shadow-[0_0_30px_rgba(0,180,255,0.08)] backdrop-blur-md max-sm:max-h-[calc(100dvh-7rem)] max-sm:max-w-[calc(100vw-2rem)] max-sm:overflow-y-auto">
         <p className="text-xs tracking-[0.28em] text-[#00d4ff]" style={{ textShadow: "0 0 10px rgba(0,212,255,0.32)" }}>
           HELIOCENTRIC VIEW
         </p>
+        <div className="mt-2"><DataStatusIndicator /></div>
         <div className="mt-2 h-px w-full bg-[repeating-linear-gradient(90deg,rgba(0,212,255,0.4)_0_10px,rgba(0,212,255,0.08)_10px_18px)]" />
         <div className="mt-3 space-y-2">
           <HelioRow color="#00d4ff" label="SOLAR WIND @ L1" value={`${spaceWeather.solarWindSpeed} km/s`} />

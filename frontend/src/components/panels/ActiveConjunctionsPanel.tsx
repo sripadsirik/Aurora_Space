@@ -20,7 +20,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
   const sorted = sortConjunctionsByProbabilityDesc(conjunctions);
 
   return (
-    <div className="pointer-events-auto fixed left-1/2 top-16 z-[70] w-[520px] -translate-x-1/2 rounded border border-cyan-400/25 bg-[rgba(5,15,30,0.92)] font-mono text-[11px] shadow-[0_0_30px_rgba(0,180,255,0.08)] backdrop-blur-xl">
+    <div className="pointer-events-auto fixed left-1/2 top-16 z-[70] w-[520px] -translate-x-1/2 rounded border border-cyan-400/25 bg-[rgba(5,15,30,0.92)] font-mono text-[11px] shadow-[0_0_30px_rgba(0,180,255,0.08)] backdrop-blur-xl max-sm:top-14 max-sm:w-[calc(100vw-1.5rem)]">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <span className="text-xs tracking-[0.18em] text-[var(--aurora-accent)]">ACTIVE CONJUNCTIONS</span>
         <button
@@ -31,7 +31,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
           x
         </button>
       </div>
-      <div className="max-h-[300px] overflow-y-auto px-2 py-1">
+      <div className="max-h-[300px] overflow-auto px-2 py-1 max-sm:max-h-[45vh]">
         <table className="w-full text-[10px]">
           <thead>
             <tr className="text-[#6b8fa8]">

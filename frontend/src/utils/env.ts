@@ -1,17 +1,11 @@
 interface AuroraEnv {
   VITE_CESIUM_ION_TOKEN: string;
-  VITE_NASA_API_KEY: string;
-  VITE_SPACETRACK_USERNAME: string;
-  VITE_SPACETRACK_PASSWORD: string;
   VITE_WS_URL: string;
 }
 
 const readEnv = (): AuroraEnv => {
   const values: AuroraEnv = {
     VITE_CESIUM_ION_TOKEN: import.meta.env.VITE_CESIUM_ION_TOKEN ?? "",
-    VITE_NASA_API_KEY: import.meta.env.VITE_NASA_API_KEY ?? "",
-    VITE_SPACETRACK_USERNAME: import.meta.env.VITE_SPACETRACK_USERNAME ?? "",
-    VITE_SPACETRACK_PASSWORD: import.meta.env.VITE_SPACETRACK_PASSWORD ?? "",
     VITE_WS_URL: import.meta.env.VITE_WS_URL ?? ""
   };
 
@@ -22,7 +16,7 @@ const readEnv = (): AuroraEnv => {
     }
   }
 
-  const optional: (keyof AuroraEnv)[] = ["VITE_WS_URL", "VITE_NASA_API_KEY"];
+  const optional: (keyof AuroraEnv)[] = ["VITE_WS_URL"];
   for (const key of optional) {
     if (!values[key]) {
       console.warn(`[AURORA] Optional environment variable ${key} is not set.`);

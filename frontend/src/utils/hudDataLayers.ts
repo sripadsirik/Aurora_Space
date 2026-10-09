@@ -24,6 +24,11 @@ export interface HudDataLayerInputs {
   weatherFreshness: FeedFreshness;
 }
 
+const layerFreshness = (freshness: FeedFreshness): Pick<HudDataLayerRow, "freshness" | "status"> =>
+  freshness.label === "NO DATA"
+    ? { freshness: "SAMPLE", status: "stale" }
+    : { freshness: freshness.label, status: freshness.status };
+
 /** Number of derived products the aurora-forecast layer bundles (Kp + Ovation). */
 const AURORA_FORECAST_PRODUCTS = 2;
 
@@ -37,30 +42,26 @@ const AURORA_FORECAST_PRODUCTS = 2;
 export const buildHudDataLayers = (inputs: HudDataLayerInputs): HudDataLayerRow[] => [
   {
     name: "Satellites",
-    source: "CelesTrak",
-    freshness: inputs.satelliteFreshness.label,
+    source: inputs.satelliteFreshness.label === "NO DATA" ? "DEMO" : "CelesTrak",
+    ...layerFreshness(inputs.satelliteFreshness),
     count: inputs.satelliteCount,
-    status: inputs.satelliteFreshness.status
   },
   {
     name: "Conjunctions",
-    source: "Space-Track",
-    freshness: inputs.conjunctionFreshness.label,
+    source: inputs.conjunctionFreshness.label === "NO DATA" ? "DEMO" : "Space-Track",
+    ...layerFreshness(inputs.conjunctionFreshness),
     count: inputs.conjunctionCount,
-    status: inputs.conjunctionFreshness.status
   },
   {
     name: "Space Weather",
-    source: "NOAA SWPC",
-    freshness: inputs.weatherFreshness.label,
+    source: inputs.weatherFreshness.label === "NO DATA" ? "DEMO" : "NOAA SWPC",
+    ...layerFreshness(inputs.weatherFreshness),
     count: 1,
-    status: inputs.weatherFreshness.status
   },
   {
     name: "Aurora Forecast",
-    source: "NOAA Ovation",
-    freshness: inputs.weatherFreshness.label,
+    source: inputs.weatherFreshness.label === "NO DATA" ? "DEMO" : "NOAA Ovation",
+    ...layerFreshness(inputs.weatherFreshness),
     count: AURORA_FORECAST_PRODUCTS,
-    status: inputs.weatherFreshness.status
   }
 ];

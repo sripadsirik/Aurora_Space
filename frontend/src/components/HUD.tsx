@@ -1,4 +1,5 @@
 import { useUtcClock } from "../hooks/useUtcClock";
+import { DataStatusIndicator } from "./DataStatusIndicator";
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
 import { bzComponentTextClass, conjunctionAlertDotClass, getKpColor } from "../utils/colors";
@@ -56,9 +57,9 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
       className="pointer-events-none absolute inset-0 p-4 font-mono text-[13px] transition-colors duration-400"
       style={{ color: textColor }}
     >
-      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-4">
+      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-4 max-sm:flex max-sm:flex-col max-sm:gap-2">
         <div
-          className="hud-panel pointer-events-auto w-[330px] cursor-pointer self-start rounded p-3 transition-colors hover:border-cyan-400/50"
+          className="hud-panel pointer-events-auto w-[330px] cursor-pointer self-start rounded p-3 transition-colors hover:border-cyan-400/50 max-sm:max-h-[38vh] max-sm:w-full max-sm:overflow-y-auto"
           onClick={() => openPanel("space-weather")}
           role="button"
           tabIndex={0}
@@ -68,7 +69,10 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
             }
           }}
         >
-          <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>SPACE WEATHER</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>SPACE WEATHER</p>
+            <span className="sm:hidden"><DataStatusIndicator /></span>
+          </div>
           <div className="mt-2 flex items-end gap-3">
             <p className="text-2xl font-semibold" style={{ color: getKpColor(kpDisplay) }}>
               Kp {formatKpIndex(kpDisplay)}
@@ -111,9 +115,9 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
 
         {currentMode === "OPS" ? (
           /* In OPS mode, conjunctions are accessed via the top-center warning badge + ranked list panel — keep empty cell for grid layout */
-          <div />
+          <div className="max-sm:hidden" />
         ) : (
-          <div className="hud-panel pointer-events-auto ml-auto w-[430px] self-start rounded p-3">
+          <div className="hud-panel pointer-events-auto ml-auto w-[430px] self-start rounded p-3 max-sm:ml-0 max-sm:max-h-[22vh] max-sm:w-full max-sm:overflow-y-auto">
             <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>ACTIVE ALERTS</p>
             <div className="mt-2 space-y-1 text-xs" style={{ color: alertTextColor }}>
               {conjunctions.map((conjunction) => {
@@ -143,7 +147,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
         )}
 
         <div
-          className="hud-panel pointer-events-auto mt-auto w-[420px] cursor-pointer self-end rounded p-3 transition-colors hover:border-cyan-400/50"
+          className="hud-panel pointer-events-auto mt-auto w-[420px] cursor-pointer self-end rounded p-3 transition-colors hover:border-cyan-400/50 max-sm:mb-24 max-sm:max-h-[24vh] max-sm:w-full max-sm:overflow-y-auto"
           onClick={() => openPanel("data-layers")}
           role="button"
           tabIndex={0}
@@ -167,10 +171,11 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           </div>
         </div>
 
-        <div className="ml-auto mt-auto self-end text-right">
+        <div className="ml-auto mt-auto self-end text-right max-sm:hidden">
           <div className="hud-panel pointer-events-auto inline-block rounded px-4 py-2">
             <p className="text-lg tracking-[0.25em]" style={{ color: accentColor }}>AURORA</p>
             <p className="text-xs" style={{ color: clockColor }}>{formatUtcTime(now)}</p>
+            <div className="mt-1"><DataStatusIndicator /></div>
           </div>
         </div>
       </div>
