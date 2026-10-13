@@ -119,3 +119,92 @@ body {
 .duration-400 {
   transition-duration: 400ms;
 }
+
+/* Mission control surfaces keep the globe visible, with controls within reach. */
+:root {
+  --aurora-bg: #03080e;
+  --aurora-text: #dce9ed;
+  --aurora-accent: #72e5d5;
+}
+body { -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; }
+button:focus-visible, [role="button"]:focus-visible, input:focus-visible {
+  outline: 2px solid #72e5d5; outline-offset: 4px;
+}
+.hud-panel {
+  background: linear-gradient(125deg, rgba(10, 23, 32, .88), rgba(5, 14, 23, .72));
+  border: 1px solid rgba(175, 218, 230, .14);
+  border-left: 2px solid rgba(114, 229, 213, .55);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #0003;
+  backdrop-filter: blur(18px);
+}
+.aurora-slide-panel { border-radius: 14px; background: rgba(6, 18, 28, .94); border-color: #b9dbe425; }
+.mission-header {
+  position: absolute; top: 24px; left: 26px; right: 26px; z-index: 25;
+  display: flex; justify-content: space-between; align-items: center; pointer-events: none;
+}
+.mission-brand { display: flex; align-items: center; gap: 12px; }
+.mission-mark { width: 34px; height: 34px; border: 1px solid #72e5d570; border-radius: 50%; display: grid; place-items: center; color: #72e5d5; font-size: 24px; box-shadow: 0 0 28px #72e5d510; }
+.mission-brand h1 { margin: 0; color: #eff9fa; font-size: 17px; letter-spacing: .3em; font-weight: 500; }
+.mission-brand p { margin: 4px 0 0; color: #8ea8b5; font-size: 8px; letter-spacing: .18em; }
+.mission-status { text-align: right; display: flex; align-items: center; gap: 16px; font-size: 11px; color: #8fa9b5; }
+.scene-controls { position: absolute; z-index: 65; left: 50%; bottom: 100px; transform: translateX(-50%); font-size: 11px; }
+.scene-controls--immersive { bottom: 28px; }
+.scene-toolbar { display: flex; align-items: center; gap: 3px; padding: 5px; background: #07131de8; border: 1px solid #bedfe126; border-radius: 12px; backdrop-filter: blur(18px); box-shadow: 0 8px 32px #0006; }
+.scene-tool, .scene-icon-button { color: #bdd3dc; border: 0; background: transparent; border-radius: 7px; min-width: 34px; height: 34px; cursor: pointer; transition: background .18s, color .18s; }
+.scene-tool { font-size: 20px; }
+.scene-tool:hover, .scene-tool[aria-expanded="true"], .scene-tool[aria-pressed="true"], .scene-icon-button:hover { background: #72e5d515; color: #91f9e9; }
+.scene-view-button, .scene-immerse-button { font-size: 11px; padding: 0 12px; white-space: nowrap; }
+.scene-view-button span { margin-right: 6px; font-size: 16px; }
+.scene-divider { height: 17px; width: 1px; background: #bdd3dc22; margin: 0 3px; }
+.scene-settings { position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%); width: 330px; max-height: calc(100dvh - 225px); overflow-y: auto; border: 1px solid #bedfe12a; border-radius: 16px; padding: 20px; background: #07131df5; backdrop-filter: blur(24px); box-shadow: 0 20px 80px #0008; }
+.scene-settings-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.scene-eyebrow { display: block; color: #7896a4; font-size: 8px; letter-spacing: .15em; }
+.scene-settings h2 { color: #e6f5f6; font-size: 17px; font-weight: 400; margin: 7px 0 0; letter-spacing: -.02em; }
+.scene-field { color: #c5d9df; display: block; margin: 18px 0 10px; font-size: 11px; }
+.scene-segmented { display: flex; padding: 3px; gap: 3px; border: 1px solid #adcfd81c; border-radius: 8px; background: #0003; }
+.scene-segmented button { color: #91aab5; border: 0; background: transparent; border-radius: 5px; flex: 1; min-height: 32px; font-size: 10px; cursor: pointer; }
+.scene-segmented button:hover { color: #e4f8f4; background: #ffffff08; }
+.scene-segmented button[aria-pressed="true"] { background: #72e5d522; color: #94f6e5; box-shadow: inset 0 0 0 1px #72e5d523; }
+.scene-note { color: #7894a3; font-size: 10px; line-height: 1.7; margin: 10px 0; }
+.scene-toggles { margin: 17px 0; border-top: 1px solid #bedfe119; border-bottom: 1px solid #bedfe119; padding: 8px 0; }
+.scene-toggle { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; color: #b7ced7; cursor: pointer; }
+.scene-toggle input { position: absolute; right: 0; width: 32px; height: 20px; opacity: 0; cursor: pointer; }
+.scene-switch { width: 30px; height: 17px; border-radius: 12px; background: #2b3d47; padding: 3px; pointer-events: none; }
+.scene-switch::after { content: ''; display: block; width: 11px; height: 11px; border-radius: 50%; background: #99aeb8; transition: transform .2s; }
+.scene-toggle input:checked + .scene-switch { background: #438e81; }
+.scene-toggle input:checked + .scene-switch::after { transform: translateX(13px); background: #ccfff5; }
+.scene-toggle input:focus-visible + .scene-switch { outline: 2px solid #72e5d5; outline-offset: 3px; }
+.scene-toggle:has(input:disabled) { opacity: .45; cursor: default; }
+.scene-shortcuts { display: flex; flex-wrap: wrap; gap: 8px 12px; color: #7b939d; font-size: 9px; border-top: 1px solid #bedfe119; padding-top: 12px; margin-top: 16px; }
+.scene-shortcuts kbd { color: #aec9d0; }
+.scene-selection { position: fixed; bottom: 58px; left: 50%; transform: translateX(-50%); width: 330px; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-radius: 12px; padding: 14px; background: #07131deb; border: 1px solid #72e5d530; box-shadow: 0 12px 35px #0005; }
+.scene-controls:has(.scene-settings) .scene-selection { display: none; }
+.scene-selection strong { display: block; margin: 6px 0; color: #e6f4f3; font-size: 12px; max-width: 195px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scene-selection span:last-child { font-size: 10px; color: #8ba9b5; }
+.scene-follow { border: 1px solid #72e5d538; color: #9bf1de; border-radius: 7px; background: #72e5d510; padding: 9px; white-space: nowrap; cursor: pointer; font-size: 10px; }
+.scene-follow[aria-pressed="true"] { background: #72e5d528; }
+.cesium-viewer-bottom { left: 8px !important; bottom: 2px !important; max-width: calc(100% - 16px); }
+.cesium-credit-logoContainer img { height: 16px; }
+.cesium-credit-textContainer { font-size: 9px !important; }
+@media (max-width: 900px) {
+  .mission-status > span:first-child { display: none; }
+  .scene-controls { bottom: 89px; }
+}
+@media (max-width: 640px) {
+  .mission-header { top: 16px; left: 16px; right: 16px; }
+  .mission-brand h1 { font-size: 13px; }
+  .mission-brand p { font-size: 6px; }
+  .mission-mark { width: 28px; height: 28px; }
+  .scene-controls { bottom: 70px; }
+  .scene-controls--immersive { bottom: 24px; }
+  .scene-settings { width: min(330px, calc(100vw - 24px)); max-height: calc(100dvh - 165px); }
+  .scene-selection { width: min(330px, calc(100vw - 24px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+.scene-selection > div > span { display: block; line-height: 1.5; }
+.scene-selection > div > span:not(.scene-eyebrow) { font-size: 9px; color: #8ba9b5; }

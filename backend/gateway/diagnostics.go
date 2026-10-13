@@ -152,7 +152,7 @@ func buildSpaceTrackRow(process trackedProcessSnapshot, feed feedSnapshot, confi
 		Status:    status,
 		LastEvent: formatEventTime(maxTime(process.LastActivity, feed.lastUpdated)),
 		Records:   recordsLabel(feed.count, "alerts"),
-		Frequency: "6h",
+		Frequency: "8h",
 		Detail:    detail,
 	}
 }

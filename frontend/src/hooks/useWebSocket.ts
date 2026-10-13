@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useAuroraStore } from "../store/auroraStore";
 import type { SourceDiagnostic } from "../types/space";
 import { env } from "../utils/env";
+import { currentConjunctions } from "../utils/conjunctionFeed";
 import { parseFeedMessage } from "../utils/parseFeedMessage";
 
 interface DiagnosticsResponse {
@@ -97,9 +98,11 @@ export const useWebSocket = (): void => {
               break;
             case "conjunctions":
               useAuroraStore.setState({
-                conjunctions: message.payload
+                conjunctions: currentConjunctions(message.payload),
+                selectedConjunction: null,
+                feedLastUpdated: { ...useAuroraStore.getState().feedLastUpdated, conjunctions: message.fetchedAt ?? null }
               });
-              useAuroraStore.getState().recordFeedUpdate("conjunctions");
+
               break;
             case "spaceWeather":
               useAuroraStore.setState({
@@ -124,6 +127,14 @@ export const useWebSocket = (): void => {
       });
     };
 
+    const expiryTimer = setInterval(() => {
+      const state = useAuroraStore.getState();
+      const remaining = currentConjunctions(state.conjunctions);
+      if (remaining.length !== state.conjunctions.length) useAuroraStore.setState({
+        conjunctions: remaining,
+        selectedConjunction: remaining.find((event) => event.id === state.selectedConjunction?.id) ?? null
+      });
+    }, 30000);
     connect();
     void fetchDiagnostics();
     diagnosticsTimer = setInterval(() => {
@@ -132,6 +143,7 @@ export const useWebSocket = (): void => {
 
     return () => {
       disposed = true;
+      clearInterval(expiryTimer);
       diagnosticsAbort?.abort();
       if (diagnosticsTimer) clearInterval(diagnosticsTimer);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);

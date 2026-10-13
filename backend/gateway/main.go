@@ -211,6 +211,12 @@ func (sc *stateCache) set(msgType string, payload json.RawMessage) {
 	case "satellites":
 		sc.satellites = snapshot
 	case "conjunctions":
+		var feed shared.ConjunctionFeed
+		if json.Unmarshal(payload, &feed) == nil {
+			if fetched, err := time.Parse(time.RFC3339Nano, feed.FetchedAt); err == nil {
+				snapshot.lastUpdated = fetched
+			}
+		}
 		sc.conjunctions = snapshot
 	case "spaceWeather":
 		sc.spaceWeather = snapshot
@@ -265,6 +271,10 @@ func payloadCount(msgType string, payload json.RawMessage) int {
 			return len(satellites)
 		}
 	case "conjunctions":
+		var feed shared.ConjunctionFeed
+		if err := json.Unmarshal(payload, &feed); err == nil && feed.Events != nil {
+			return len(feed.Events)
+		}
 		var conjunctions []shared.ConjunctionWarning
 		if err := json.Unmarshal(payload, &conjunctions); err == nil {
 			return len(conjunctions)

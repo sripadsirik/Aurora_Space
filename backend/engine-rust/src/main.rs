@@ -52,6 +52,12 @@ impl GpRecord {
 
 #[derive(Debug, Clone, Serialize)]
 struct SatellitePosition {
+    #[serde(rename = "tleLine1")]
+    tle_line1: String,
+    #[serde(rename = "tleLine2")]
+    tle_line2: String,
+    #[serde(rename = "positionTimestamp")]
+    position_timestamp: String,
     #[serde(rename = "noradId")]
     norad_id: i64,
     name: String,
@@ -216,6 +222,9 @@ fn propagate_satellite(rec: &GpRecord) -> Option<SatellitePosition> {
     let velocity_kms = (vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]).sqrt();
 
     Some(SatellitePosition {
+        tle_line1: line1.to_string(),
+        tle_line2: line2.to_string(),
+        position_timestamp: now.to_rfc3339(),
         norad_id,
         name,
         lat,
@@ -485,7 +494,7 @@ async fn consume_tle_updates(
 
 // ── Propagation + publish ───────────────────────────────────────────────────
 
-const BATCH_SIZE: usize = 2000;
+const BATCH_SIZE: usize = 1000;
 
 async fn propagate_and_publish(cache: &TleCache, producer: &FutureProducer, metrics: &Metrics) {
     let records: Vec<GpRecord> = {

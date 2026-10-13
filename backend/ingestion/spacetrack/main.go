@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -154,108 +157,119 @@ func (s *session) fetch(ctx context.Context, dataURL string) ([]byte, error) {
 
 // ── CDM record from Space-Track API ─────────────────────────────────────────
 
+// Providers emit numeric fields as strings, numbers or null. Validate per row.
+type cdmNumber string
+
+func (n *cdmNumber) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*n = ""
+		return nil
+	}
+	var value string
+	if len(data) > 0 && data[0] == '"' {
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+	} else {
+		value = string(data)
+	}
+	*n = cdmNumber(value)
+	return nil
+}
+func (n cdmNumber) Float64() (float64, error) { return strconv.ParseFloat(string(n), 64) }
+
 type cdmRecord struct {
-	CDMID    string `json:"CDM_ID"`
-	TCA      string `json:"TCA"`
-	MinRng   string `json:"MIN_RNG"`
-	Pc       string `json:"PC"`
-	Sat1ID   string `json:"SAT_1_ID"`
-	Sat1Name string `json:"SAT_1_NAME"`
-	Sat2ID   string `json:"SAT_2_ID"`
-	Sat2Name string `json:"SAT_2_NAME"`
+	CDMID    string    `json:"CDM_ID"`
+	Created  string    `json:"CREATED"`
+	TCA      string    `json:"TCA"`
+	MinRng   cdmNumber `json:"MIN_RNG"`
+	Pc       cdmNumber `json:"PC"`
+	Sat1ID   cdmNumber `json:"SAT_1_ID"`
+	Sat1Name string    `json:"SAT_1_NAME"`
+	Sat2ID   cdmNumber `json:"SAT_2_ID"`
+	Sat2Name string    `json:"SAT_2_NAME"`
+}
+
+func cdmTime(value string) (time.Time, error) {
+	for _, layout := range []string{time.RFC3339Nano, "2006-01-02T15:04:05.999999999", "2006-01-02 15:04:05.999999999"} {
+		if stamp, err := time.Parse(layout, value); err == nil {
+			return stamp.UTC(), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid CDM timestamp")
 }
 
 func parseCDMs(body []byte) ([]shared.ConjunctionWarning, error) {
-	var rawJSON []json.RawMessage
-	if err := json.Unmarshal(body, &rawJSON); err != nil {
-		return nil, err
-	}
+	return parseCurrentCDMs(body, time.Now().UTC())
+}
 
-	if len(rawJSON) > 0 {
-		slog.Info("raw CDM sample", "first", string(rawJSON[0]))
-	}
-
+func parseCurrentCDMs(body []byte, now time.Time) ([]shared.ConjunctionWarning, error) {
 	var records []cdmRecord
 	if err := json.Unmarshal(body, &records); err != nil {
 		return nil, err
 	}
-
 	warnings := make([]shared.ConjunctionWarning, 0, len(records))
 	for _, rec := range records {
-		// MIN_RNG from Space-Track is in meters (string), may be empty
-		var missDistanceM float64
-		if rec.MinRng != "" {
-			if m, err := strconv.ParseFloat(rec.MinRng, 64); err == nil {
-				missDistanceM = m
-			} else {
-				slog.Warn("invalid CDM MIN_RNG", "id", rec.CDMID, "value", rec.MinRng, "err", err)
-			}
+		tca, e1 := cdmTime(rec.TCA)
+		created, e2 := cdmTime(rec.Created)
+		miss, e3 := rec.MinRng.Float64()
+		pc, e4 := rec.Pc.Float64()
+		id1, e5 := strconv.Atoi(string(rec.Sat1ID))
+		id2, e6 := strconv.Atoi(string(rec.Sat2ID))
+		// Missing probability/distance is unknown, never zero or "nominal".
+		if e1 != nil || e2 != nil || e3 != nil || e4 != nil || e5 != nil || e6 != nil || rec.CDMID == "" || id1 <= 0 || id2 <= 0 || id1 == id2 || math.IsNaN(pc) || math.IsInf(pc, 0) || math.IsNaN(miss) || math.IsInf(miss, 0) || pc < 0 || pc > 1 || miss < 0 {
+			continue
 		}
-		missDistanceKm := missDistanceM / 1000.0
-
-		// PC comes as a string like "1.23456e-05"
-		var pc float64
-		if rec.Pc != "" {
-			if p, err := strconv.ParseFloat(rec.Pc, 64); err == nil {
-				pc = p
-			} else {
-				slog.Warn("invalid CDM PC", "id", rec.CDMID, "value", rec.Pc, "err", err)
-			}
+		if !tca.After(now) || tca.After(now.Add(7*24*time.Hour)) || created.Before(now.Add(-72*time.Hour)) || created.After(now.Add(5*time.Minute)) {
+			continue
 		}
-
-		var norad1 int
-		if rec.Sat1ID != "" {
-			norad1, _ = strconv.Atoi(rec.Sat1ID)
-		}
-		var norad2 int
-		if rec.Sat2ID != "" {
-			norad2, _ = strconv.Atoi(rec.Sat2ID)
-		}
-
-		riskLevel := shared.ClassifyRisk(pc)
-
-		slog.Info(
-			"parsed CDM",
-			"id", rec.CDMID,
-			"pc_raw", rec.Pc,
-			"pc_parsed", pc,
-			"miss_distance_m", missDistanceM,
-			"miss_distance_km", missDistanceKm,
-			"riskLevel", riskLevel,
-			"sat1_id", norad1,
-			"sat1", rec.Sat1Name,
-			"sat2_id", norad2,
-			"sat2", rec.Sat2Name,
-		)
-
 		warnings = append(warnings, shared.ConjunctionWarning{
-			ID: rec.CDMID,
-			Object1: shared.ConjunctionObjectRef{
-				NoradID: norad1,
-				Name:    rec.Sat1Name,
-			},
-			Object2: shared.ConjunctionObjectRef{
-				NoradID: norad2,
-				Name:    rec.Sat2Name,
-			},
-			TCA:                 rec.TCA,
-			MissDistanceKm:      missDistanceKm,
-			MissDistanceM:       missDistanceM,
-			Pc:                  pc,
-			Probability:         pc,
-			RelativeVelocityKms: 0,
-			RiskLevel:           riskLevel,
+			ID: rec.CDMID, CreatedAt: created.Format(time.RFC3339Nano), Source: "Space-Track CDM public",
+			Object1: shared.ConjunctionObjectRef{NoradID: id1, Name: rec.Sat1Name},
+			Object2: shared.ConjunctionObjectRef{NoradID: id2, Name: rec.Sat2Name},
+			TCA:     tca.Format(time.RFC3339Nano), MissDistanceM: miss, MissDistanceKm: miss / 1000,
+			Pc: pc, Probability: pc, RiskLevel: shared.ClassifyRisk(pc),
 		})
 	}
-
-	return warnings, nil
+	// Successive reports (including reversed object pairs) describe one encounter.
+	sort.Slice(warnings, func(i, j int) bool {
+		a, _ := cdmTime(warnings[i].CreatedAt)
+		b, _ := cdmTime(warnings[j].CreatedAt)
+		return a.After(b)
+	})
+	unique := make([]shared.ConjunctionWarning, 0, len(warnings))
+	encounters := make(map[[2]int][]time.Time)
+	for _, w := range warnings {
+		a, b := w.Object1.NoradID, w.Object2.NoradID
+		if a > b {
+			a, b = b, a
+		}
+		key := [2]int{a, b}
+		tca, _ := cdmTime(w.TCA)
+		duplicate := false
+		for _, other := range encounters[key] {
+			if math.Abs(tca.Sub(other).Minutes()) < 30 {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			unique = append(unique, w)
+			encounters[key] = append(encounters[key], tca)
+		}
+	}
+	sort.Slice(unique, func(i, j int) bool {
+		a, _ := cdmTime(unique[i].TCA)
+		b, _ := cdmTime(unique[j].TCA)
+		return a.Before(b)
+	})
+	return unique, nil
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-// Use EMERGENCY_REPORTABLE filter — simpler and avoids 500s from Pc filter encoding issues.
-// Fallback: remove all filters and just use /class/cdm_public/limit/20/format/json
-const cdmURL = "https://www.space-track.org/basicspacedata/query/class/cdm_public/EMERGENCY_REPORTABLE/Y/orderby/TCA%20asc/limit/20/format/json"
+// Bound by report age and future TCA, never the oldest N historical records.
+const cdmURL = "https://www.space-track.org/basicspacedata/query/class/cdm_public/CREATED/%3Enow-3/TCA/%3Enow/orderby/CREATED%20desc/format/json"
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
@@ -293,22 +307,55 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
+	cachePath := envOr("SPACETRACK_CACHE_PATH", ".aurora/cdm-current-v1.json")
+	var nextFetch time.Time
 	fetchAndPublish := func() {
-		slog.Info("fetching Space-Track CDMs")
-		body, err := sess.fetch(ctx, cdmURL)
-		if err != nil {
-			fetchErrors.Inc()
-			slog.Error("CDM fetch failed", "err", err)
+		if time.Now().Before(nextFetch) {
 			return
+		}
+		var cached struct {
+			FetchedAt time.Time       `json:"fetchedAt"`
+			Body      json.RawMessage `json:"body"`
+		}
+		if data, err := os.ReadFile(cachePath); err == nil {
+			_ = json.Unmarshal(data, &cached)
+		}
+		body := []byte(cached.Body)
+		fetchedAt := cached.FetchedAt
+		fromCache := !fetchedAt.IsZero() && fetchedAt.Before(time.Now().Add(time.Minute)) && time.Since(fetchedAt) < 8*time.Hour && len(body) > 0
+		if !fromCache {
+			slog.Info("fetching current Space-Track CDMs")
+			var err error
+			body, err = sess.fetch(ctx, cdmURL)
+			if err != nil {
+				fetchErrors.Inc()
+				slog.Error("CDM fetch failed", "err", err)
+				nextFetch = time.Now().Add(15 * time.Minute)
+				return
+			}
+			fetchedAt = time.Now().UTC()
 		}
 
 		warnings, err := parseCDMs(body)
 		if err != nil {
 			fetchErrors.Inc()
 			slog.Error("CDM parse failed", "err", err)
+			nextFetch = time.Now().Add(15 * time.Minute)
 			return
 		}
 
+		nextFetch = fetchedAt.Add(8 * time.Hour)
+		if !fromCache {
+			cached.FetchedAt = fetchedAt
+			cached.Body = body
+			if data, err := json.Marshal(cached); err == nil {
+				if err := os.MkdirAll(filepath.Dir(cachePath), 0700); err == nil {
+					if err := os.WriteFile(cachePath+".tmp", data, 0600); err == nil {
+						_ = os.Rename(cachePath+".tmp", cachePath)
+					}
+				}
+			}
+		}
 		// Count active (warning + critical)
 		active := 0
 		for _, w := range warnings {
@@ -318,7 +365,7 @@ func main() {
 		}
 		activeConjunctions.Set(float64(active))
 
-		data, err := json.Marshal(warnings)
+		data, err := json.Marshal(shared.ConjunctionFeed{Events: warnings, FetchedAt: fetchedAt.Format(time.RFC3339Nano), Source: "Space-Track CDM public"})
 		if err != nil {
 			slog.Error("marshal warnings failed", "err", err)
 			return
@@ -334,11 +381,11 @@ func main() {
 	// Initial fetch
 	fetchAndPublish()
 
-	// Fetch every 6 hours
-	ticker := time.NewTicker(6 * time.Hour)
+	// Check schedule each minute; fetch at most once every 8 hours across restarts.
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
-	slog.Info("spacetrack ingestion running", "interval", "6h")
+	slog.Info("spacetrack ingestion running", "interval", "8h")
 
 	for {
 		select {

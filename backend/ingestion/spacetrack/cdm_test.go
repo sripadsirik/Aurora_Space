@@ -1,12 +1,16 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestParseCDMsPR52(t *testing.T) {
 	body := []byte(`[
 		{
 			"CDM_ID": "12345",
-			"TCA": "2026-09-11T00:00:00Z",
+			"CREATED": "2026-09-10T12:00:00Z",
+ "TCA": "2026-09-11T00:00:00Z",
 			"MIN_RNG": "1500",
 			"PC": "1.23456e-05",
 			"SAT_1_ID": "25544",
@@ -16,7 +20,8 @@ func TestParseCDMsPR52(t *testing.T) {
 		}
 	]`)
 
-	warnings, err := parseCDMs(body)
+	now, _ := time.Parse(time.RFC3339, "2026-09-10T12:00:00Z")
+	warnings, err := parseCurrentCDMs(body, now)
 	if err != nil {
 		t.Fatalf("parseCDMs returned error: %v", err)
 	}
@@ -48,27 +53,16 @@ func TestParseCDMsPR52(t *testing.T) {
 }
 
 func TestParseCDMsHandlesMissingAndInvalidFieldsPR52(t *testing.T) {
-	// Empty MIN_RNG/PC and non-numeric ids should degrade gracefully to zeroes
-	// rather than erroring out the whole batch.
+	// Incomplete records are excluded rather than displayed as nominal.
 	body := []byte(`[{"CDM_ID":"1","TCA":"2026-01-01T00:00:00Z","MIN_RNG":"","PC":"","SAT_1_ID":"","SAT_2_ID":"abc"}]`)
 
-	warnings, err := parseCDMs(body)
+	now, _ := time.Parse(time.RFC3339, "2026-09-10T12:00:00Z")
+	warnings, err := parseCurrentCDMs(body, now)
 	if err != nil {
 		t.Fatalf("parseCDMs returned error: %v", err)
 	}
-	if len(warnings) != 1 {
-		t.Fatalf("expected 1 warning, got %d", len(warnings))
-	}
-
-	w := warnings[0]
-	if w.MissDistanceM != 0 || w.MissDistanceKm != 0 || w.Pc != 0 {
-		t.Errorf("expected zeroed distances/pc, got %vm %vkm pc=%v", w.MissDistanceM, w.MissDistanceKm, w.Pc)
-	}
-	if w.Object1.NoradID != 0 || w.Object2.NoradID != 0 {
-		t.Errorf("expected zeroed norad ids, got %d/%d", w.Object1.NoradID, w.Object2.NoradID)
-	}
-	if w.RiskLevel != "nominal" {
-		t.Errorf("RiskLevel = %q, want %q", w.RiskLevel, "nominal")
+	if len(warnings) != 0 {
+		t.Fatalf("invalid records must not become zero-risk alerts: %+v", warnings)
 	}
 }
 

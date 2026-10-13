@@ -5,6 +5,9 @@ export type RiskLevel = "nominal" | "watch" | "warning" | "critical";
 export interface Satellite {
   noradId: number;
   name: string;
+  tleLine1?: string;
+  tleLine2?: string;
+  positionTimestamp?: string;
   lat: number;
   lon: number;
   altitudeKm: number;
@@ -38,6 +41,8 @@ export interface ConjunctionObjectRef {
 }
 
 export interface ConjunctionWarning {
+  createdAt?: string;
+  source?: string;
   id: string;
   object1: ConjunctionObjectRef;
   object2: ConjunctionObjectRef;

@@ -1,11 +1,14 @@
 # ── Aurora SSA — Build & Run ─────────────────────────────────────────────────
 
-.PHONY: all build build-go test test-go test-frontend infra infra-down run run-gateway run-celestrak run-noaa run-spacetrack run-engine run-frontend stop clean
+.PHONY: all start demo build build-go test test-go test-frontend infra infra-down run run-gateway run-celestrak run-noaa run-spacetrack run-engine run-frontend stop clean
 
 # ── One-command launcher (macOS/Linux) ───────────────────────────────────────
 
-run:
-	./aurora.sh start
+start run:
+	npm start
+
+demo:
+	npm run demo
 
 # ── Build ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +67,7 @@ run-frontend:
 # ── Stop ─────────────────────────────────────────────────────────────────────
 
 stop:
-	docker compose -f infra/docker-compose.yml down
+	npm stop
 
 # ── Clean ────────────────────────────────────────────────────────────────────
 

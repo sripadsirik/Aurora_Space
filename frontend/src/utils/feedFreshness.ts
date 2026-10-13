@@ -15,15 +15,15 @@ export interface FeedFreshness {
  * slightly ahead of `now` (clock skew between the feed source and the client)
  * is floored to a zero age so the label never reads as a negative `-3s ago`.
  */
-export const describeFeedFreshness = (lastUpdated: Date | null, now: Date): FeedFreshness => {
+export const describeFeedFreshness = (lastUpdated: Date | null, now: Date, liveMinutes = 5, errorMinutes = 15): FeedFreshness => {
   try {
     if (!lastUpdated) return { label: "NO DATA", status: "error" };
     const updated = lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated as unknown as string);
     if (isNaN(updated.getTime())) return { label: "unknown", status: "error" };
     const ageMs = Math.max(0, now.getTime() - updated.getTime());
     const ageMinutes = ageMs / 60_000;
-    if (ageMinutes > 15) return { label: `${Math.round(ageMinutes)}m ago`, status: "error" };
-    if (ageMinutes > 5) return { label: `${Math.round(ageMinutes)}m ago`, status: "stale" };
+    if (ageMinutes > errorMinutes) return { label: `${Math.round(ageMinutes)}m ago`, status: "error" };
+    if (ageMinutes > liveMinutes) return { label: `${Math.round(ageMinutes)}m ago`, status: "stale" };
     if (ageMs < 60_000) return { label: `${Math.round(ageMs / 1000)}s ago`, status: "live" };
     return { label: `${Math.round(ageMinutes)}m ago`, status: "live" };
   } catch {

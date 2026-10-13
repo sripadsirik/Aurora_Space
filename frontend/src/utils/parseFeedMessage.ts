@@ -2,7 +2,7 @@ import type { Conjunction, Satellite, SpaceWeather } from "../types/space";
 
 export type ParsedFeedMessage =
   | { type: "satellites"; payload: Satellite[] }
-  | { type: "conjunctions"; payload: Conjunction[] }
+  | { type: "conjunctions"; payload: Conjunction[]; fetchedAt?: Date }
   | { type: "spaceWeather"; payload: SpaceWeather };
 
 const record = (value: unknown): value is Record<string, unknown> =>
@@ -50,11 +50,13 @@ export const parseFeedMessage = (value: unknown): ParsedFeedMessage | null => {
       : null;
   }
   if (value.type === "conjunctions") {
-    return Array.isArray(value.payload) && value.payload.every(conjunction)
-      ? {
-          type: "conjunctions",
-          payload: value.payload.map((item) => ({ ...item, tca: date(item.tca)! })) as Conjunction[]
-        }
+    const envelope = record(value.payload) ? value.payload : null;
+    const events = envelope ? envelope.events : value.payload;
+    const fetchedAt = envelope ? date(envelope.fetchedAt) : null;
+    if (envelope && !fetchedAt) return null;
+    return Array.isArray(events) && events.every(conjunction)
+      ? { type: "conjunctions", fetchedAt: fetchedAt ?? undefined,
+          payload: events.map((item) => ({ ...item, tca: date(item.tca)! })) as Conjunction[] }
       : null;
   }
   if (value.type === "spaceWeather") {

@@ -1,92 +1,49 @@
 package main
 
 import (
-	"math"
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 )
 
-func TestParseCDMs(t *testing.T) {
-	body := []byte(`[
-		{
-			"CDM_ID": "cdm-1",
-			"TCA": "2026-09-03T12:00:00.000000",
-			"MIN_RNG": "1500",
-			"PC": "1.23e-05",
-			"SAT_1_ID": "25544",
-			"SAT_1_NAME": "ISS",
-			"SAT_2_ID": "48274",
-			"SAT_2_NAME": "DEBRIS"
-		}
-	]`)
-
-	warnings, err := parseCDMs(body)
+func TestCurrentCDMs(t *testing.T) {
+	now := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
+	row := func(id, created, tca, a, b, pc string) string {
+		return fmt.Sprintf(`{"CDM_ID":"%s","CREATED":"%s","TCA":"%s","MIN_RNG":"1500","PC":%s,"SAT_1_ID":"%s","SAT_1_NAME":"ONE","SAT_2_ID":"%s","SAT_2_NAME":"TWO"}`, id, created, tca, pc, a, b)
+	}
+	body := "[" + strings.Join([]string{
+		row("old", "2026-10-10 12:00:00", "2026-10-12T12:00:00", "1", "2", "0.001"),
+		row("new", "2026-10-11 10:00:00", "2026-10-12T12:01:00", "2", "1", `"0.0001"`),
+		row("past", "2026-10-11 10:00:00", "2026-10-11T11:00:00", "3", "4", "0.1"),
+		row("stale", "2026-09-11 10:00:00", "2026-10-12T12:00:00", "5", "6", "0.1"),
+		row("unknown", "2026-10-11 10:00:00", "2026-10-12T12:00:00", "7", "8", "null"),
+		row("future", "2026-10-11 13:00:00", "2026-10-12T12:00:00", "9", "10", "0.1"),
+		row("next orbit", "2026-10-11 10:00:00", "2026-10-12T13:40:00", "1", "2", "0.01"),
+	}, ",") + "]"
+	warnings, err := parseCurrentCDMs([]byte(body), now)
 	if err != nil {
-		t.Fatalf("parseCDMs returned error: %v", err)
+		t.Fatal(err)
 	}
-	if len(warnings) != 1 {
-		t.Fatalf("got %d warnings, want 1", len(warnings))
+	if len(warnings) != 2 {
+		t.Fatalf("expected two upcoming encounters, got %+v", warnings)
 	}
-
 	w := warnings[0]
-	if w.ID != "cdm-1" {
-		t.Errorf("ID = %q, want cdm-1", w.ID)
-	}
-	if w.Object1.NoradID != 25544 || w.Object1.Name != "ISS" {
-		t.Errorf("Object1 = %+v, want {25544 ISS}", w.Object1)
-	}
-	if w.Object2.NoradID != 48274 || w.Object2.Name != "DEBRIS" {
-		t.Errorf("Object2 = %+v, want {48274 DEBRIS}", w.Object2)
-	}
-	if w.MissDistanceM != 1500 || math.Abs(w.MissDistanceKm-1.5) > 1e-9 {
-		t.Errorf("miss distance = %vm / %vkm, want 1500m / 1.5km", w.MissDistanceM, w.MissDistanceKm)
-	}
-	if math.Abs(w.Pc-1.23e-05) > 1e-12 || w.Probability != w.Pc {
-		t.Errorf("Pc = %v, Probability = %v, want 1.23e-05 for both", w.Pc, w.Probability)
-	}
-	// Pc = 1.23e-05 lands in the "watch" band (> 1e-6, <= 1e-4).
-	if w.RiskLevel != "watch" {
-		t.Errorf("RiskLevel = %q, want watch", w.RiskLevel)
+	if w.ID != "new" || w.MissDistanceM != 1500 || w.MissDistanceKm != 1.5 || w.Pc != 0.0001 || w.TCA != "2026-10-12T12:01:00Z" || w.CreatedAt != "2026-10-11T10:00:00Z" {
+		t.Fatalf("incorrect latest report: %+v", w)
 	}
 }
-
-func TestParseCDMsEdgeCases(t *testing.T) {
-	t.Run("empty array", func(t *testing.T) {
-		warnings, err := parseCDMs([]byte(`[]`))
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if len(warnings) != 0 {
-			t.Errorf("got %d warnings, want 0", len(warnings))
-		}
-	})
-
-	t.Run("malformed json", func(t *testing.T) {
-		if _, err := parseCDMs([]byte(`{not an array`)); err == nil {
-			t.Error("expected error for malformed JSON")
-		}
-	})
-
-	t.Run("empty and invalid numeric fields default to zero", func(t *testing.T) {
-		body := []byte(`[{"CDM_ID":"x","MIN_RNG":"","PC":"not-a-number","SAT_1_ID":"","SAT_2_ID":"abc"}]`)
-		warnings, err := parseCDMs(body)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if len(warnings) != 1 {
-			t.Fatalf("got %d warnings, want 1", len(warnings))
-		}
-		w := warnings[0]
-		if w.MissDistanceM != 0 || w.MissDistanceKm != 0 {
-			t.Errorf("miss distance = %v/%v, want 0/0 for empty MIN_RNG", w.MissDistanceM, w.MissDistanceKm)
-		}
-		if w.Pc != 0 {
-			t.Errorf("Pc = %v, want 0 for invalid PC", w.Pc)
-		}
-		if w.Object1.NoradID != 0 || w.Object2.NoradID != 0 {
-			t.Errorf("norad ids = %d/%d, want 0/0 for empty and non-numeric SAT ids", w.Object1.NoradID, w.Object2.NoradID)
-		}
-		if w.RiskLevel != "nominal" {
-			t.Errorf("RiskLevel = %q, want nominal for zero Pc", w.RiskLevel)
-		}
-	})
+func TestCDMEmptyAndInvalid(t *testing.T) {
+	events, err := parseCDMs([]byte(`[]`))
+	if err != nil || events == nil || len(events) != 0 {
+		t.Fatal("empty successful feed must serialize as []")
+	}
+	if _, err := parseCDMs([]byte(`{"error":"login required"}`)); err == nil {
+		t.Fatal("authentication response accepted as data")
+	}
+}
+func TestQueryIsDateBounded(t *testing.T) {
+	if strings.Contains(cdmURL, "limit/20") || !strings.Contains(cdmURL, "TCA/%3Enow") || !strings.Contains(cdmURL, "CREATED/%3Enow-3") {
+		t.Fatal(cdmURL)
+	}
 }

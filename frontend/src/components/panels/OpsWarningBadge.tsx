@@ -4,6 +4,7 @@ import { classifyConjunctionFleetSeverity } from "../../utils/conjunctionRisk";
 import { formatConjunctionWarningLabel } from "../../utils/format";
 
 export const OpsWarningBadge = (): JSX.Element | null => {
+  const fetched = useAuroraStore((s) => s.feedLastUpdated.conjunctions);
   const currentMode = useAuroraStore((s) => s.currentMode);
   const conjunctions = useAuroraStore((s) => s.conjunctions);
   const openPanel = useAuroraStore((s) => s.openPanel);
@@ -12,10 +13,9 @@ export const OpsWarningBadge = (): JSX.Element | null => {
   if (currentMode !== "OPS") return null;
 
   const activeCount = conjunctions.length;
-  const badgeColor = conjunctionFleetSeverityColor(classifyConjunctionFleetSeverity(conjunctions));
+  const badgeColor = activeCount ? conjunctionFleetSeverityColor(classifyConjunctionFleetSeverity(conjunctions)) : fetched ? "#9cc2de" : "#e5bf7b";
   const isOpen = activePanels.has("active-conjunctions");
 
-  if (activeCount === 0) return null;
 
   return (
     <div className="pointer-events-auto fixed left-1/2 top-4 z-[70] -translate-x-1/2">
@@ -37,7 +37,7 @@ export const OpsWarningBadge = (): JSX.Element | null => {
           animation: "storm-pulse 3s ease-in-out infinite"
         }}
       >
-        {formatConjunctionWarningLabel(activeCount)}
+        {activeCount ? formatConjunctionWarningLabel(activeCount) : fetched ? "NO UPCOMING PUBLIC CDMs" : "CONJUNCTION FEED UNAVAILABLE"}
       </button>
     </div>
   );

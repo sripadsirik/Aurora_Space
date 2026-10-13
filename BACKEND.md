@@ -20,7 +20,7 @@ Space-Track API ──► spacetrack ingestion ──► Kafka [aurora.conjuncti
 | gateway | Go | 8080 (WS), 2112 (metrics) | WebSocket server broadcasting to frontend |
 | celestrak | Go | 2115 (metrics) | TLE ingestion from CelesTrak every 2h |
 | noaa | Go | 2113 (metrics) | Space weather from NOAA SWPC every 1-3min |
-| spacetrack | Go | 2116 (metrics) | CDM conjunction data every 6h |
+| spacetrack | Go | 2116 (metrics) | CDM conjunction data every 8h |
 | engine | Go | 2114 (metrics) | SGP4 orbital propagation every 30s |
 
 ## Kafka Topics
@@ -34,43 +34,17 @@ Space-Track API ──► spacetrack ingestion ──► Kafka [aurora.conjuncti
 
 ## Quick Start
 
-```powershell
-# 1. Start Docker infra (Kafka, Zookeeper, Prometheus, Grafana)
-cd aurora_space\infra
-docker compose up -d
+From the repository root:
 
-# 2. Build all backend binaries
-cd aurora_space\backend
-go build -o .\bin\gateway.exe .\gateway
-go build -o .\bin\engine.exe .\engine
-go build -o .\bin\noaa.exe .\ingestion\noaa
-go build -o .\bin\celestrak.exe .\ingestion\celestrak
-go build -o .\bin\spacetrack.exe .\ingestion\spacetrack
-
-# 3. Start services (each in a separate terminal, in this order)
-
-# Terminal 1 — Gateway (must start first)
-cd aurora_space\backend
-.\bin\gateway.exe
-
-# Terminal 2 — Engine
-cd aurora_space\backend
-.\bin\engine.exe
-
-# Terminal 3 — CelesTrak ingestion
-cd aurora_space\backend
-.\bin\celestrak.exe
-
-# Terminal 4 — NOAA ingestion
-cd aurora_space\backend
-.\bin\noaa.exe
-
-# Terminal 5 — Space-Track ingestion (optional, requires account)
-cd aurora_space\backend
-$env:SPACETRACK_USERNAME="you@email.com"
-$env:SPACETRACK_PASSWORD="xxx"
-.\bin\spacetrack.exe
+```bash
+npm start
 ```
+
+This starts Kafka, monitoring, the gateway, the Go orbital engine, CelesTrak, NOAA,
+optional Space-Track ingestion, and the frontend in one terminal. Press Ctrl+C to
+stop the session. Use `npm start -- --engine=rust` for the Rust engine, or
+`npm run demo` for the frontend alone. See [README](README.md#start-everything-in-one-terminal)
+for prerequisites and optional configuration.
 
 ## Testing
 

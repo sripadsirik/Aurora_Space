@@ -14,6 +14,7 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
   const closePanel = useAuroraStore((s) => s.closePanel);
   const setSelectedConjunction = useAuroraStore((s) => s.setSelectedConjunction);
   useUtcClock();
+  const fetched = useAuroraStore((s) => s.feedLastUpdated.conjunctions);
 
   if (!activePanels.has("active-conjunctions")) return null;
 
@@ -31,6 +32,8 @@ export const ActiveConjunctionsPanel = (): JSX.Element | null => {
           x
         </button>
       </div>
+      <p className="px-3 py-2 text-[#9cc2de]">{fetched ? `Space-Track public CDMs · fetched ${fetched.toUTCString()} · next 7 days` : "No current Space-Track report received. Sample events, if shown, are demonstrations."}</p>
+      {sorted.length === 0 && <p className="px-3 py-5 text-[#c2def3]">{fetched ? "No upcoming encounters in the latest public feed. This is not an all-clear for the full catalog." : "Waiting for verified conjunction data."}</p>}
       <div className="max-h-[300px] overflow-auto px-2 py-1 max-sm:max-h-[45vh]">
         <table className="w-full text-[10px]">
           <thead>
