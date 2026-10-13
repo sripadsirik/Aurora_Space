@@ -44,7 +44,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
     satelliteCount: satellites.length,
     satelliteFreshness: describeFeedFreshness(feedLastUpdated.satellites, now),
     conjunctionCount: conjunctions.length,
-    conjunctionFreshness: describeFeedFreshness(feedLastUpdated.conjunctions, now),
+    conjunctionFreshness: describeFeedFreshness(feedLastUpdated.conjunctions, now, 8 * 60 + 10, 24 * 60),
     weatherFreshness: describeFeedFreshness(feedLastUpdated.spaceWeather, now)
   });
 
@@ -53,13 +53,15 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
   }
 
   return (
+    <>
+    <header className="mission-header"><div className="mission-brand"><span className="mission-mark" aria-hidden="true">∿</span><div><h1>AURORA</h1><p>ORBITAL OBSERVATORY</p></div></div><div className="mission-status"><span>{formatUtcTime(now)}</span><DataStatusIndicator /></div></header>
     <div
-      className="pointer-events-none absolute inset-0 p-4 font-mono text-[13px] transition-colors duration-400"
+      className="pointer-events-none absolute inset-0 px-6 pb-24 pt-24 font-mono text-[12px] max-sm:px-4 max-sm:pt-20 transition-colors duration-400"
       style={{ color: textColor }}
     >
       <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-4 max-sm:flex max-sm:flex-col max-sm:gap-2">
         <div
-          className="hud-panel pointer-events-auto w-[330px] cursor-pointer self-start rounded p-3 transition-colors hover:border-cyan-400/50 max-sm:max-h-[38vh] max-sm:w-full max-sm:overflow-y-auto"
+          className="hud-panel pointer-events-auto w-[290px] cursor-pointer self-start rounded p-3 transition-colors hover:border-cyan-400/50 max-sm:max-h-[38vh] max-sm:w-full max-sm:overflow-y-auto"
           onClick={() => openPanel("space-weather")}
           role="button"
           tabIndex={0}
@@ -71,7 +73,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs tracking-[0.2em]" style={{ color: accentColor }}>SPACE WEATHER</p>
-            <span className="sm:hidden"><DataStatusIndicator /></span>
+
           </div>
           <div className="mt-2 flex items-end gap-3">
             <p className="text-2xl font-semibold" style={{ color: getKpColor(kpDisplay) }}>
@@ -147,7 +149,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
         )}
 
         <div
-          className="hud-panel pointer-events-auto mt-auto w-[420px] cursor-pointer self-end rounded p-3 transition-colors hover:border-cyan-400/50 max-sm:mb-24 max-sm:max-h-[24vh] max-sm:w-full max-sm:overflow-y-auto"
+          className="hud-panel pointer-events-auto mt-auto w-[310px] cursor-pointer self-end rounded p-3 transition-colors hover:border-cyan-400/50 max-sm:mb-24 max-sm:max-h-[24vh] max-sm:w-full max-sm:overflow-y-auto"
           onClick={() => openPanel("data-layers")}
           role="button"
           tabIndex={0}
@@ -171,14 +173,9 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
           </div>
         </div>
 
-        <div className="ml-auto mt-auto self-end text-right max-sm:hidden">
-          <div className="hud-panel pointer-events-auto inline-block rounded px-4 py-2">
-            <p className="text-lg tracking-[0.25em]" style={{ color: accentColor }}>AURORA</p>
-            <p className="text-xs" style={{ color: clockColor }}>{formatUtcTime(now)}</p>
-            <div className="mt-1"><DataStatusIndicator /></div>
-          </div>
-        </div>
+
       </div>
     </div>
+    </>
   );
 };

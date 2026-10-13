@@ -1,0 +1,15 @@
+{
+  "name": "aurora-space",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "demo": "node scripts/start.mjs --demo",
+    "stop": "node scripts/start.mjs stop",
+    "status": "node scripts/start.mjs status",
+    "test:launcher": "node --test scripts/start.test.mjs",
+    "test": "npm run test:launcher && npm --prefix frontend test",
+    "build": "npm --prefix frontend run build"
+  }
+}

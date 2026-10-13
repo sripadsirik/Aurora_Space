@@ -42,7 +42,7 @@ var (
 	})
 )
 
-const satelliteBatchSize = 2000
+const satelliteBatchSize = 1000
 
 // ── CelesTrak GP record (matches what celestrak ingestion publishes) ────────
 
@@ -92,7 +92,11 @@ func (c *tleCache) count() int {
 
 // ── SGP4 propagation ────────────────────────────────────────────────────────
 
-func propagateSatellite(rec gpRecord) (result *shared.Satellite, ok bool) {
+func propagateSatellite(rec gpRecord) (*shared.Satellite, bool) {
+	return propagateSatelliteAt(rec, time.Now().UTC().Truncate(time.Second))
+}
+
+func propagateSatelliteAt(rec gpRecord, now time.Time) (result *shared.Satellite, ok bool) {
 	// go-satellite panics on malformed TLEs — recover gracefully
 	defer func() {
 		if r := recover(); r != nil {
@@ -104,16 +108,35 @@ func propagateSatellite(rec gpRecord) (result *shared.Satellite, ok bool) {
 	line1 := strings.TrimSpace(rec.TLELine1)
 	line2 := strings.TrimSpace(rec.TLELine2)
 
-	sat := satellite.TLEToSat(line1, line2, satellite.GravityWGS84)
+	sat := satellite.TLEToSat(line1, line2, satellite.GravityWGS72)
 
-	now := time.Now().UTC()
 	year, month, day, hour, min, sec := now.Year(), int(now.Month()), now.Day(),
 		now.Hour(), now.Minute(), now.Second()
 
-	position, velocity := satellite.Propagate(sat, year, month, day, hour, min, sec)
+	// The Go dependency truncates the TLE epoch's fractional second. Compensate
+	// its time origin, interpolating adjacent one-second SGP4 states (metre-scale
+	// interpolation error in LEO), instead of introducing kilometres of offset.
+	epochDays, err := strconv.ParseFloat(line1[20:32], 64)
+	if err != nil {
+		return nil, false
+	}
+	epochSeconds := (epochDays - math.Floor(epochDays)) * 86400
+	fraction := epochSeconds - math.Floor(epochSeconds)
+	adjusted := now.Add(-time.Duration(fraction * float64(time.Second)))
+	whole := adjusted.Truncate(time.Second)
+	alpha := float64(adjusted.Sub(whole)) / float64(time.Second)
+	at := func(t time.Time) (satellite.Vector3, satellite.Vector3) {
+		return satellite.Propagate(sat, t.Year(), int(t.Month()), t.Day(), t.Hour(), t.Minute(), t.Second())
+	}
+	p0, v0 := at(whole)
+	p1, v1 := at(whole.Add(time.Second))
+	lerp := func(a, b satellite.Vector3) satellite.Vector3 {
+		return satellite.Vector3{X: a.X + (b.X-a.X)*alpha, Y: a.Y + (b.Y-a.Y)*alpha, Z: a.Z + (b.Z-a.Z)*alpha}
+	}
+	position, velocity := lerp(p0, p1), lerp(v0, v1)
 
 	// Check for NaN (propagation failure)
-	if math.IsNaN(position.X) || math.IsNaN(position.Y) || math.IsNaN(position.Z) {
+	if math.IsNaN(position.X) || math.IsNaN(position.Y) || math.IsNaN(position.Z) || math.IsInf(position.X, 0) || math.IsInf(position.Y, 0) || math.IsInf(position.Z, 0) {
 		return nil, false
 	}
 
@@ -131,6 +154,7 @@ func propagateSatellite(rec gpRecord) (result *shared.Satellite, ok bool) {
 	noradID := rec.NoradCatID
 
 	return &shared.Satellite{
+		TLELine1: line1, TLELine2: line2, PositionTimestamp: now.Truncate(time.Second).Format(time.RFC3339),
 		NoradID:          noradID,
 		Name:             rec.ObjectName,
 		Lat:              latDeg,

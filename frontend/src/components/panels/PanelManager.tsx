@@ -1,3 +1,4 @@
+import { propagatedTelemetry, elementEpoch } from "../../utils/propagation";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -138,7 +139,9 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
   const relatedConjunctions = conjunctionsForSatellite(selectedSatellite, conjunctions);
 
   const impact = getSpaceWeatherImpact(selectedSatellite, spaceWeather.kpIndex);
-  const periodMinutes = getOrbitPeriodMinutes(selectedSatellite.altitudeKm);
+  const telemetry = propagatedTelemetry(selectedSatellite, now);
+  const periodMinutes = telemetry?.periodMinutes ?? getOrbitPeriodMinutes(selectedSatellite.altitudeKm);
+  const epoch = elementEpoch(selectedSatellite);
 
   return (
     <PanelCard title="Satellite Detail" closeLabel="Close satellite details" onClose={() => closePanel("satellite-detail")}>
@@ -161,14 +164,16 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
             <span className="text-right">
               {selectedSatellite.orbitType} ({ORBIT_LABELS[selectedSatellite.orbitType]})
             </span>
-            <span>Current Altitude</span>
-            <span className="text-right">{formatAltitudeKm(selectedSatellite.altitudeKm)}</span>
+            <span>{telemetry ? "SGP4 altitude" : "Snapshot altitude"}</span>
+            <span className="text-right">{formatAltitudeKm(telemetry?.altitudeKm ?? selectedSatellite.altitudeKm)}</span>
             <span>Velocity</span>
-            <span className="text-right">{formatSpeedKms(selectedSatellite.velocityKms, 3)}</span>
-            <span>Orbital Period</span>
+            <span className="text-right">{formatSpeedKms(telemetry?.velocityKms ?? selectedSatellite.velocityKms, 3)}</span>
+            <span>{telemetry ? "Orbital period" : "Approx. period"}</span>
             <span className="text-right">{periodMinutes.toFixed(1)} min</span>
             <span>Inclination</span>
-            <span className="text-right">--</span>
+            <span className="text-right">{telemetry ? `${telemetry.inclinationDegrees.toFixed(2)}°` : "Unavailable"}</span>
+            <span>Latitude / longitude</span><span className="text-right">{(telemetry?.lat ?? selectedSatellite.lat).toFixed(2)}° / {(telemetry?.lon ?? selectedSatellite.lon).toFixed(2)}°</span>
+            <span>TLE epoch</span><span className="text-right">{epoch?.toUTCString() ?? "Unavailable"}</span>
           </div>
         </div>
 
@@ -176,7 +181,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">CONJUNCTION WARNINGS</p>
           {relatedConjunctions.length === 0 ? (
             <p className="rounded-sm border border-[#3ed08a]/40 bg-[#10392a]/60 px-2 py-1 text-[11px] text-[#79ecb4]">
-              NO ACTIVE WARNINGS
+              NO MATCHING PUBLIC REPORTS
             </p>
           ) : (
             <div className="space-y-1">
@@ -266,8 +271,9 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
             <span className="text-right">{formatCountdownToTca(selectedConjunction.tca)}</span>
             <span>Miss distance</span>
             <span className={`text-right ${missDistanceClass}`}>{formatMissDistance(selectedConjunction.missDistanceM)}</span>
+            <span>Report issued (UTC)</span><span className="text-right">{selectedConjunction.createdAt ? new Date(selectedConjunction.createdAt).toUTCString() : "Sample report"}</span>
             <span>Relative velocity</span>
-            <span className="text-right">{formatSpeedKms(selectedConjunction.relativeVelocityKms, 2)}</span>
+            <span className="text-right">{selectedConjunction.source ? "Not supplied by public CDM" : formatSpeedKms(selectedConjunction.relativeVelocityKms, 2)}</span>
             <span>Collision probability</span>
             <span className={`text-right ${probabilityClass}`}>{formatProbability(selectedConjunction.probability)}</span>
           </div>

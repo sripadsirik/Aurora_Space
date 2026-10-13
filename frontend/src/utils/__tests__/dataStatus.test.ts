@@ -22,6 +22,7 @@ describe("getDataStatus", () => {
     const feeds = { satellites: recent, conjunctions: recent, spaceWeather: recent };
     expect(getDataStatus(true, feeds, now).status).toBe("live");
     expect(getDataStatus(false, feeds, now).status).toBe("offline");
-    expect(getDataStatus(true, { ...feeds, conjunctions: new Date(now.getTime() - 7 * 60_000) }, now).status).toBe("stale");
+    expect(getDataStatus(true, { ...feeds, conjunctions: new Date(now.getTime() - 7 * 60 * 60_000) }, now).status).toBe("live");
+    expect(getDataStatus(true, { ...feeds, conjunctions: new Date(now.getTime() - 9 * 60 * 60_000) }, now).status).toBe("stale");
   });
 });

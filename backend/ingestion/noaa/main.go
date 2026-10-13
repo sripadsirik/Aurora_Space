@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -62,6 +61,7 @@ type weatherState struct {
 	bzComponent      float64
 	xrayFlux         string
 	dirty            bool
+	observed         map[string]time.Time
 }
 
 func (s *weatherState) toMessage() shared.SpaceWeather {
@@ -119,38 +119,16 @@ func parseKpIndex(ctx context.Context, state *weatherState) {
 		return
 	}
 
-	// Format: array of arrays. First row is header: ["time_tag","Kp","a_running","station_count"]
-	// Subsequent rows: ["2026-03-09 00:00:00.000","3.67","8","8"]
-	var rows [][]json.RawMessage
-	if err := json.Unmarshal(body, &rows); err != nil {
+	kp, observedAt, err := latestKpObservation(body)
+	if err != nil {
 		fetchErrors.WithLabelValues(endpoint).Inc()
 		slog.Error("kp parse failed", "err", err)
 		return
 	}
 
-	if len(rows) < 2 {
-		return
-	}
-
-	// Last row is most recent
-	last := rows[len(rows)-1]
-	if len(last) < 2 {
-		return
-	}
-
-	var kpStr string
-	if err := json.Unmarshal(last[1], &kpStr); err != nil {
-		return
-	}
-
-	kp, err := strconv.ParseFloat(kpStr, 64)
-	if err != nil {
-		return
-	}
-
 	state.mu.Lock()
 	state.kpIndex = kp
-	state.dirty = true
+	state.markObserved("kp", observedAt)
 	state.mu.Unlock()
 
 	kpGauge.Set(kp)
@@ -159,7 +137,7 @@ func parseKpIndex(ctx context.Context, state *weatherState) {
 
 func parseSolarWind(ctx context.Context, state *weatherState) {
 	const endpoint = "solar-wind"
-	const url = "https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json"
+	const url = "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
 
 	start := time.Now()
 	body, err := fetchJSON(ctx, url)
@@ -171,55 +149,24 @@ func parseSolarWind(ctx context.Context, state *weatherState) {
 		return
 	}
 
-	// Format: array of arrays. Header: ["time_tag","density","speed","temperature"]
-	// Data: ["2026-03-09 00:00:00.000","5.2","420.3","98000"]
-	var rows [][]json.RawMessage
-	if err := json.Unmarshal(body, &rows); err != nil {
+	record, observedAt, err := latestWindObservation(body, false)
+	if err != nil {
 		fetchErrors.WithLabelValues(endpoint).Inc()
 		slog.Error("solar wind parse failed", "err", err)
 		return
 	}
-
-	if len(rows) < 2 {
-		return
-	}
-
-	// Walk backwards to find a row with valid speed
-	for i := len(rows) - 1; i >= 1; i-- {
-		row := rows[i]
-		if len(row) < 3 {
-			continue
-		}
-
-		var densityStr, speedStr string
-		if err := json.Unmarshal(row[1], &densityStr); err != nil {
-			continue
-		}
-		if err := json.Unmarshal(row[2], &speedStr); err != nil {
-			continue
-		}
-
-		density, err1 := strconv.ParseFloat(densityStr, 64)
-		speed, err2 := strconv.ParseFloat(speedStr, 64)
-		if err1 != nil || err2 != nil {
-			continue
-		}
-
-		state.mu.Lock()
-		state.solarWindDensity = density
-		state.solarWindSpeed = speed
-		state.dirty = true
-		state.mu.Unlock()
-
-		windSpeedGauge.Set(speed)
-		slog.Info("solar wind updated", "speed", speed, "density", density)
-		return
-	}
+	state.mu.Lock()
+	state.solarWindDensity = *record.Density
+	state.solarWindSpeed = *record.Speed
+	state.markObserved("wind", observedAt)
+	state.mu.Unlock()
+	windSpeedGauge.Set(*record.Speed)
+	slog.Info("solar wind updated", "speed", *record.Speed, "density", *record.Density)
 }
 
 func parseBz(ctx context.Context, state *weatherState) {
 	const endpoint = "bz"
-	const url = "https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json"
+	const url = "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json"
 
 	start := time.Now()
 	body, err := fetchJSON(ctx, url)
@@ -231,44 +178,18 @@ func parseBz(ctx context.Context, state *weatherState) {
 		return
 	}
 
-	// Header: ["time_tag","bx_gsm","by_gsm","bz_gsm","lon_gsm","lat_gsm","bt"]
-	// Data: ["2026-03-09 00:00:00.000","1.2","-0.5","-3.4","180.2","12.1","4.5"]
-	var rows [][]json.RawMessage
-	if err := json.Unmarshal(body, &rows); err != nil {
+	record, observedAt, err := latestWindObservation(body, true)
+	if err != nil {
 		fetchErrors.WithLabelValues(endpoint).Inc()
 		slog.Error("bz parse failed", "err", err)
 		return
 	}
-
-	if len(rows) < 2 {
-		return
-	}
-
-	for i := len(rows) - 1; i >= 1; i-- {
-		row := rows[i]
-		if len(row) < 4 {
-			continue
-		}
-
-		var bzStr string
-		if err := json.Unmarshal(row[3], &bzStr); err != nil {
-			continue
-		}
-
-		bz, err := strconv.ParseFloat(bzStr, 64)
-		if err != nil {
-			continue
-		}
-
-		state.mu.Lock()
-		state.bzComponent = bz
-		state.dirty = true
-		state.mu.Unlock()
-
-		bzGauge.Set(bz)
-		slog.Info("bz updated", "bz", bz)
-		return
-	}
+	state.mu.Lock()
+	state.bzComponent = *record.Bz
+	state.markObserved("bz", observedAt)
+	state.mu.Unlock()
+	bzGauge.Set(*record.Bz)
+	slog.Info("bz updated", "bz", *record.Bz)
 }
 
 func parseXray(ctx context.Context, state *weatherState) {
@@ -299,23 +220,27 @@ func parseXray(ctx context.Context, state *weatherState) {
 		return
 	}
 
-	// Find last record with 0.1-0.8nm (long wavelength)
-	for i := len(records) - 1; i >= 0; i-- {
-		rec := records[i]
-		if rec.Energy != "0.1-0.8nm" {
+	var newest xrayRecord
+	var newestTime time.Time
+	for _, rec := range records {
+		if rec.Energy != "0.1-0.8nm" || rec.Flux <= 0 {
 			continue
 		}
-
-		fluxClass := classifyXrayFlux(rec.Flux)
-
-		state.mu.Lock()
-		state.xrayFlux = fluxClass
-		state.dirty = true
-		state.mu.Unlock()
-
-		slog.Info("xray updated", "flux", rec.Flux, "class", fluxClass)
+		observedAt, err := observationTime(rec.TimeTag)
+		if err == nil && observedAt.After(newestTime) {
+			newest, newestTime = rec, observedAt
+		}
+	}
+	if newestTime.IsZero() {
 		return
 	}
+	fluxClass := classifyXrayFlux(newest.Flux)
+	state.mu.Lock()
+	state.xrayFlux = fluxClass
+	state.markObserved("xray", newestTime)
+	state.mu.Unlock()
+	slog.Info("xray updated", "flux", newest.Flux, "class", fluxClass, "observedAt", newestTime)
+
 }
 
 // classifyXrayFlux converts a flux value (W/m²) to NOAA class string like "C2.4".
@@ -349,7 +274,7 @@ func classifyXrayFlux(flux float64) string {
 
 func publishIfDirty(ctx context.Context, state *weatherState, producer *shared.Producer) {
 	state.mu.Lock()
-	if !state.dirty {
+	if !state.dirty || !state.ready(time.Now()) {
 		state.mu.Unlock()
 		return
 	}

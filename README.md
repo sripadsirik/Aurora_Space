@@ -16,9 +16,18 @@ AURORA is a real-time space situational awareness dashboard that combines live o
 
 Current backend split:
 
-- `backend/engine-rust/` is the primary orbital propagation service.
+- `backend/engine/` is the default Go orbital propagation service used by `npm start`.
 - `backend/gateway/` and `backend/ingestion/*` are still Go services.
-- `backend/engine/` is the older Go propagation engine kept in the repo as a fallback/reference path.
+- `backend/engine-rust/` is an optional Rust propagation service (`npm start -- --engine=rust`).
+
+## Launch
+
+```bash
+npm start
+```
+
+One terminal for the frontend, backend, Kafka and monitoring. Open http://localhost:5173.
+For a preview requiring only Node.js: `npm run demo`. See [startup and configuration](#start-everything-in-one-terminal).
 
 ## Stack
 
@@ -537,224 +546,100 @@ Aurora_Space/
    `- prometheus/            Prometheus scrape config
 ```
 
-## Prerequisites
+## Start everything in one terminal
 
-| Tool | Version |
-| --- | --- |
-| Node.js | 18+ |
-| npm | current Node LTS |
-| Go | 1.21+ |
-| Rust | stable |
-| Docker Desktop | recent |
-| Git | recent |
+Install **Node.js 22+**, **Go 1.21+**, and **Docker Desktop**. From the repository root:
 
-If you want to build the Rust engine on Windows, you also need:
+```bash
+npm start
+```
 
-- the Rust target `x86_64-pc-windows-gnu`
-- MinGW-w64 `gcc`
-- CMake
+Open **http://localhost:5173**. The launcher installs frontend dependencies if needed,
+starts Docker Desktop on macOS, waits for Kafka, builds the Go services, starts the
+orbital engine and ingestion feeds, and connects the frontend automatically. All logs
+appear in the same terminal. **Ctrl+C stops the services and containers started by
+that session**; containers that were already running are left running.
 
-The current [backend/engine-rust/.cargo/config.toml](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/backend/engine-rust/.cargo/config.toml) and [backend/Makefile](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/backend/Makefile) use local Windows paths for `gcc` and `cmake`. Update those paths if your install lives somewhere else.
+Grafana and Prometheus use ports 3001 and 9090 when available, and the next available
+port if another application is using them. The launcher prints their actual URLs.
+Grafana's local login is `admin / aurora`. Infrastructure ports bind to localhost.
 
-## Environment Setup
+```bash
+npm run demo                # 3D preview with sample data; only Node.js required
+npm run status              # View the active session and its URLs
+npm stop                    # Stop the session from another terminal
+npm start -- --engine=rust   # Optional Rust engine; requires Rust, CMake and a C/C++ compiler
+```
 
-### Frontend
+`make start`, `make run`, and `./aurora.sh` are aliases for the same launcher.
+Per-service logs are saved to `.aurora/logs/`, and compiled Go binaries go into
+`.aurora/bin/`. Running the launcher a second time reports the existing session.
+A service that exits unexpectedly causes the rest of that session to stop.
+Set `AURORA_PORT` to change the frontend port; Vite won't silently switch ports.
 
-Copy [frontend/.env.example](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/frontend/.env.example) to `frontend/.env`.
+### Optional configuration
+
+No configuration files or accounts are required for the demo. The globe ships with
+Natural Earth imagery. To enable detailed imagery, terrain and buildings, add:
 
 ```env
+# frontend/.env
 VITE_CESIUM_ION_TOKEN=your_real_cesium_ion_token
-VITE_WS_URL=ws://localhost:8080/ws
 ```
 
-Notes:
+If ion services are unavailable, bundled Earth imagery remains available. For live
+conjunction data, copy `backend/.env.example` to `backend/.env` and set
+`SPACETRACK_USERNAME` and `SPACETRACK_PASSWORD`. These credentials stay in the backend.
+The launcher safely parses the file without executing it as a shell script. Existing
+shell environment variables take precedence. It sets the frontend WebSocket address
+from `WS_PORT` automatically; demo mode explicitly disconnects the live backend.
 
-- `VITE_CESIUM_ION_TOKEN` is required.
-- `VITE_WS_URL` is optional. If the backend is not running, the frontend still boots with mock data.
-- Keep Space-Track credentials only in `backend/.env`; `VITE_` variables are exposed in the browser bundle.
+The status badge distinguishes **DEMO**, **MIXED**, **LIVE**, **STALE** and **OFFLINE**
+data. Public feeds may take time to arrive or be unavailable. Starting the stack does
+not guarantee that all upstream providers are responding.
 
-The dashboard labels sample data as **DEMO DATA** and marks each sample data layer as
-**DEMO / SAMPLE**. As backend feeds arrive, the status changes to **MIXED DATA**, then
-**LIVE DATA** once satellites, conjunctions, and space weather are all current. It also
-indicates stale feeds and a lost connection. Malformed WebSocket payloads are ignored
-instead of replacing displayed data.
+### Explore the 3D view
 
-### Backend
+- **View / V** opens graphics quality, scene layers and camera destinations.
+- **Earth**, **Night edge** and **North pole** frame different perspectives; **H** returns home.
+- Select a satellite in the globe or search, then **Follow / F** to keep it in frame.
+- Enable **Selected satellite footprint** for its idealized geometric horizon coverage.
+- **Immerse / 0** hides the dashboard. The visible **Exit immersive** button brings it back.
+- Drag to orbit, scroll to zoom and right-drag to tilt. Slow camera rotation is opt-in.
+- **Smooth**, **Balanced** and **Cinema** trade rendering cost for detail and bloom.
+  Settings are remembered between visits; reduced-motion preferences disable automatic rotation.
 
-Copy [backend/.env.example](C:/Users/sripa/OneDrive/Documents/GitHub/Aurora_Space/backend/.env.example) to `backend/.env`.
+Satellite positions and selected orbit paths use **SGP4 with the actual TLE**
+carried by the backend. Paths cover one revolution (¼ past, ¾ future), with
+Earth rotation applied at every sample; they are open trajectories rather than
+invented closed circles. TLEs older than 14 days have no predicted path. The
+selection card shows the element epoch. These are orbit estimates, not measured
+telemetry or maneuver-aware collision predictions.
 
-```env
-KAFKA_BROKERS=localhost:9092
-SPACETRACK_USERNAME=
-SPACETRACK_PASSWORD=
-METRICS_PORT_GATEWAY=2112
-METRICS_PORT_NOAA=2113
-METRICS_PORT_ENGINE=2114
-METRICS_PORT_ENGINE_RUST=2117
-METRICS_PORT_CELESTRAK=2115
-METRICS_PORT_SPACETRACK=2116
-WS_PORT=8080
-```
+Catalog objects use spacecraft silhouettes; selecting one reveals a highlighted
+3D spacecraft, station, rocket body or debris model. These original procedural
+models are representative, with illustrative attitude and enlarged screen size.
+The quality setting limits catalog markers to keep the globe readable; every
+object remains searchable. Regenerate models with `node scripts/generate-spacecraft.mjs`.
+Demo satellites remain explicitly simulated. Live conjunction connectors show
+current positions and the provider's reported TCA, not a predicted collision point.
 
-Notes:
-
-- `SPACETRACK_USERNAME` and `SPACETRACK_PASSWORD` are only needed if you run the Space-Track ingestion service.
-- The Rust engine reads `METRICS_PORT_ENGINE_RUST` and falls back to `METRICS_PORT`.
-- The legacy Go engine reads `METRICS_PORT_ENGINE`.
-
-## Quick Start
+**Conjunctions:** Space-Track public CDMs are queried by report age (72 hours)
+and upcoming TCA (next 7 days), never a fixed historical limit. Successive reports
+for the same object pair within a 30-minute TCA window are merged, keeping the
+newest. Expired events disappear automatically. Missing distance/probability is
+excluded rather than fabricated as zero. The UI shows report issue and fetch
+stamps; an empty feed is not an all-clear. Live mode never fills conjunctions
+with sample alerts. Bulk fetches are cached across restarts for eight hours,
+following [Space-Track's API guidelines](https://www.space-track.org/documentation).
 
 ### Free public demo
 
-The React frontend can be hosted on GitHub Pages at
-`https://sripadsirik.github.io/Aurora_Space/`. The workflow in
-`.github/workflows/deploy-pages.yml` builds the app for that subpath and publishes
-`frontend/dist` when frontend changes reach `main`. This deployment uses the
-sample feeds; the Go/Rust/Kafka pipeline is not hosted by GitHub Pages.
-
-To enable it, set the repository's Pages source to **GitHub Actions** and add a
-repository Actions secret named `VITE_CESIUM_ION_TOKEN`. Use a Cesium ion token
-restricted to reading only the assets this app uses and to the Pages URL above.
-The token is embedded in the public browser bundle, so do not use an unrestricted
-private token. Run the workflow manually once or push a frontend change to `main`.
-
-### 1. Clone the repo
-
-```powershell
-git clone https://github.com/sripadsirik/Aurora_Space.git
-cd Aurora_Space
-```
-
-### 2. Start the frontend
-
-```powershell
-cd frontend
-npm install
-Copy-Item .env.example .env
-```
-
-Set a real `VITE_CESIUM_ION_TOKEN` in `frontend/.env`, then run:
-
-```powershell
-npm run dev
-```
-
-Frontend URL:
-
-- `http://localhost:5173`
-
-This works immediately with mock data. Live data appears once the backend WebSocket is available.
-
-### 3. Start infrastructure
-
-```powershell
-cd ..\infra
-docker compose up -d
-```
-
-Local infra URLs:
-
-- Kafka: `localhost:9092`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001`
-
-Grafana anonymous access is enabled. If you need admin access, use `admin / aurora`.
-
-### 4. Prepare backend env
-
-```powershell
-cd ..\backend
-Copy-Item .env.example .env
-```
-
-Add `METRICS_PORT_ENGINE_RUST=2117` to `backend/.env` if it is not already there.
-
-### 5. Build the Go services
-
-From `backend/`:
-
-```powershell
-go build -o .\bin\gateway.exe .\gateway
-go build -o .\bin\celestrak.exe .\ingestion\celestrak
-go build -o .\bin\noaa.exe .\ingestion\noaa
-go build -o .\bin\spacetrack.exe .\ingestion\spacetrack
-```
-
-### 6. Build the Rust engine
-
-From `backend/`:
-
-```powershell
-cd engine-rust
-rustup target add x86_64-pc-windows-gnu
-cargo build --release
-Copy-Item .\target\x86_64-pc-windows-gnu\release\engine-rust.exe ..\bin\engine-rust.exe
-cd ..
-```
-
-If you already have `make` and your local paths match the repo config, you can also use:
-
-```powershell
-make engine-rust
-```
-
-### 7. Run the live stack
-
-Use separate terminals, all from `backend/`.
-
-Terminal 1 - gateway
-
-```powershell
-cd backend
-.\bin\gateway.exe
-```
-
-Terminal 2 - CelesTrak ingestion
-
-```powershell
-cd backend
-.\bin\celestrak.exe
-```
-
-Terminal 3 - NOAA ingestion
-
-```powershell
-cd backend
-.\bin\noaa.exe
-```
-
-Terminal 4 - Rust engine
-
-```powershell
-cd backend
-$env:METRICS_PORT_ENGINE_RUST="2117"
-.\bin\engine-rust.exe
-```
-
-Terminal 5 - Space-Track ingestion (optional)
-
-```powershell
-cd backend
-.\bin\spacetrack.exe
-```
-
-Recommended startup order for live data:
-
-```text
-docker compose -> gateway -> celestrak -> noaa -> engine-rust -> spacetrack -> frontend
-```
-
-The frontend can be started earlier, but that order gives the live feeds time to populate.
-
-## Fastest Dev Loop
-
-If you only want to work on the UI:
-
-1. Start the frontend.
-2. Set a valid Cesium Ion token.
-3. Skip Kafka and backend services.
-
-The app boots with mock satellites, conjunctions, and space weather until `VITE_WS_URL` connects.
+The GitHub Pages workflow publishes `frontend/dist` at
+https://sripadsirik.github.io/Aurora_Space/ when frontend changes reach `main`.
+Pages hosts the demo frontend; the Go/Rust/Kafka backend still needs its own host.
+A repository secret named `VITE_CESIUM_ION_TOKEN` is optional. Use a token restricted
+to the app's assets and deployment URL because frontend tokens are public.
 
 ## Frontend Tests
 
@@ -784,8 +669,8 @@ Node environment with Cesium available through `vite-plugin-cesium`.
 | CelesTrak ingestion | `backend/ingestion/celestrak/` | Go | `2115` metrics |
 | NOAA ingestion | `backend/ingestion/noaa/` | Go | `2113` metrics |
 | Space-Track ingestion | `backend/ingestion/spacetrack/` | Go | `2116` metrics |
-| Rust engine | `backend/engine-rust/` | Rust | `2114` metrics |
-| Legacy Go engine | `backend/engine/` | Go | `2114` metrics |
+| Rust engine | `backend/engine-rust/` | Rust | `2117` metrics |
+| Go engine | `backend/engine/` | Go | `2114` metrics |
 
 ## Kafka Topics
 
@@ -807,9 +692,8 @@ Node environment with Cesium available through `vite-plugin-cesium`.
 
 ## Current Notes
 
-- The README now documents the Rust engine as the default propagation path.
-- The old Go engine is still present in the repo but is not the recommended startup path.
-- Rust engine builds on Windows depend on your local MinGW/CMake install paths.
+- The one-command launcher uses the Go engine by default; Rust is selectable.
+- Optional Rust builds require a host C/C++ toolchain and CMake.
 - `backend/bin/` holds local binaries and should stay local-only.
 
 ## License

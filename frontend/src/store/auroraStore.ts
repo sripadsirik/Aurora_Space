@@ -1,3 +1,4 @@
+import { env } from "../utils/env";
 import { create } from "zustand";
 
 import { mockConjunctions } from "../data/mock/conjunctions";
@@ -83,7 +84,7 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   activePanels: new Set<PanelType>(),
   spaceWeather: mockSpaceWeather,
   satellites: mockSatellites,
-  conjunctions: mockConjunctions,
+  conjunctions: env.VITE_WS_URL ? [] : mockConjunctions,
   isConnectedToBackend: false,
   feedLastUpdated: { satellites: null, conjunctions: null, spaceWeather: null },
   sourceDiagnostics: [],

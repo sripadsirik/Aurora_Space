@@ -4,16 +4,19 @@ import "encoding/json"
 
 // Satellite matches frontend/src/types/space.ts Satellite.
 type Satellite struct {
-	NoradID          int     `json:"noradId"`
-	Name             string  `json:"name"`
-	Lat              float64 `json:"lat"`
-	Lon              float64 `json:"lon"`
-	AltitudeKm       float64 `json:"altitudeKm"`
-	VelocityKms      float64 `json:"velocityKms"`
-	OrbitType        string  `json:"orbitType"` // "LEO" | "MEO" | "GEO"
-	RiskLevel        string  `json:"riskLevel"` // "nominal" | "watch" | "warning" | "critical"
-	Owner            string  `json:"owner"`
-	ConjunctionCount int     `json:"conjunctionCount"`
+	TLELine1          string  `json:"tleLine1,omitempty"`
+	TLELine2          string  `json:"tleLine2,omitempty"`
+	PositionTimestamp string  `json:"positionTimestamp,omitempty"`
+	NoradID           int     `json:"noradId"`
+	Name              string  `json:"name"`
+	Lat               float64 `json:"lat"`
+	Lon               float64 `json:"lon"`
+	AltitudeKm        float64 `json:"altitudeKm"`
+	VelocityKms       float64 `json:"velocityKms"`
+	OrbitType         string  `json:"orbitType"` // "LEO" | "MEO" | "GEO"
+	RiskLevel         string  `json:"riskLevel"` // "nominal" | "watch" | "warning" | "critical"
+	Owner             string  `json:"owner"`
+	ConjunctionCount  int     `json:"conjunctionCount"`
 }
 
 type SatelliteBatch struct {
@@ -29,7 +32,15 @@ type ConjunctionObjectRef struct {
 	Name    string `json:"name"`
 }
 
+type ConjunctionFeed struct {
+	Events    []ConjunctionWarning `json:"events"`
+	FetchedAt string               `json:"fetchedAt"`
+	Source    string               `json:"source"`
+}
+
 type ConjunctionWarning struct {
+	CreatedAt           string               `json:"createdAt,omitempty"`
+	Source              string               `json:"source,omitempty"`
 	ID                  string               `json:"id"`
 	Object1             ConjunctionObjectRef `json:"object1"`
 	Object2             ConjunctionObjectRef `json:"object2"`

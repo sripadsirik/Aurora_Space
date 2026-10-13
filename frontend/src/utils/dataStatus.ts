@@ -19,9 +19,9 @@ export const getDataStatus = (
     return { status: "offline", label: "CONNECTION LOST", detail: "Showing the last received feeds alongside sample data." };
   }
   if (received < feeds.length) {
-    return { status: "mixed", label: "MIXED DATA", detail: `${received} of ${feeds.length} live feeds received; other layers use samples.` };
+    return { status: "mixed", label: "MIXED DATA", detail: `${received} of ${feeds.length} live feeds received; unavailable layers are marked.` };
   }
-  if (feeds.some((date) => describeFeedFreshness(date, now).status !== "live")) {
+  if (Object.entries(lastUpdated).some(([key, date]) => describeFeedFreshness(date, now, key === "conjunctions" ? 490 : 5, key === "conjunctions" ? 1440 : 15).status !== "live")) {
     return { status: "stale", label: "STALE DATA", detail: "One or more live feeds have not updated recently." };
   }
   return { status: "live", label: "LIVE DATA", detail: "All three data feeds are current." };

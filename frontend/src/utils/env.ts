@@ -9,20 +9,6 @@ const readEnv = (): AuroraEnv => {
     VITE_WS_URL: import.meta.env.VITE_WS_URL ?? ""
   };
 
-  const required: (keyof AuroraEnv)[] = ["VITE_CESIUM_ION_TOKEN"];
-  for (const key of required) {
-    if (!values[key]) {
-      console.error(`[AURORA] Missing required environment variable: ${key}. Set it in .env`);
-    }
-  }
-
-  const optional: (keyof AuroraEnv)[] = ["VITE_WS_URL"];
-  for (const key of optional) {
-    if (!values[key]) {
-      console.warn(`[AURORA] Optional environment variable ${key} is not set.`);
-    }
-  }
-
   return values;
 };
 
