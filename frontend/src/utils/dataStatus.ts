@@ -24,5 +24,5 @@ export const getDataStatus = (
   if (Object.entries(lastUpdated).some(([key, date]) => describeFeedFreshness(date, now, key === "conjunctions" ? 490 : 5, key === "conjunctions" ? 1440 : 15).status !== "live")) {
     return { status: "stale", label: "STALE DATA", detail: "One or more live feeds have not updated recently." };
   }
-  return { status: "live", label: "LIVE DATA", detail: "All three data feeds are current." };
+  return { status: "live", label: "FEEDS CONNECTED", detail: "Feed receipts are current. Element age, catalog coverage and prediction validity require separate checks; this is not a tracking accuracy assessment." };
 };

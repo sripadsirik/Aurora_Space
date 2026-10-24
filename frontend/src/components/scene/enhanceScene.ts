@@ -1,3 +1,4 @@
+import { gstime } from "satellite.js";
 import {
   HeadingPitchRoll, CallbackPositionProperty, CallbackProperty, Cartesian2, Cartesian3, Color,
   ConstantProperty, EasingFunction, Ellipsoid, JulianDate,
@@ -93,6 +94,26 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     releaseCamera();
     const app = useAuroraStore.getState();
     if (app.currentMode === "HELIO" && !app.earthOnlyMode) { access.helioHome(); return; }
+    if (preset === "orbit") {
+      const selected = access.selected();
+      if (!selected) return;
+      const now = new Date();
+      const samples = predictedOrbit(selected.satellite, now, 240, "orbital");
+      if (samples.length < 3) return;
+      const normal = Cartesian3.cross(samples[0], samples[Math.floor(samples.length / 4)], new Cartesian3());
+      if (Cartesian3.magnitude(normal) < 1) return;
+      Cartesian3.normalize(normal, normal);
+      Matrix3.multiplyByVector(Matrix3.fromRotationZ(-gstime(now)), normal, normal);
+      const radius = Math.max(6_378_137, ...samples.map(p => Cartesian3.magnitude(p)));
+      const up = Math.abs(normal.z) > 0.95 ? Cartesian3.UNIT_Y : Cartesian3.UNIT_Z;
+      viewer.camera.flyTo({
+        destination: Cartesian3.multiplyByScalar(normal, radius * 3.6, new Cartesian3()),
+        orientation: { direction: Cartesian3.negate(normal, new Cartesian3()), up },
+        duration: reducedMotion ? 0 : 1.5
+      });
+      lastInteraction = performance.now();
+      return;
+    }
     const time = viewer.clock.currentTime;
     const sun = Simon1994PlanetaryPositions.computeSunPositionInEarthInertialFrame(time);
     const rotation = Transforms.computeIcrfToFixedMatrix(time) ?? Transforms.computeTemeToPseudoFixedMatrix(time);
@@ -117,12 +138,12 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     const settings = useSceneStore.getState();
     const catalog = access.catalog();
     const selected = access.selected();
-    const key = `${settings.orbitPaths}:${selected?.satellite.noradId}:${Math.floor(Date.now()/60000)}`;
+    const key = `${settings.orbitPaths}:${settings.orbitFrame}:${selected?.satellite.noradId}:${Math.floor(Date.now()/60000)}`;
     if (catalogReference === catalog && orbitKey === key) return;
     catalogReference = catalog; orbitKey = key;
     paths.removeAll();
     if (!settings.orbitPaths || !selected || !hasCurrentElements(selected.satellite)) return;
-    const positions = predictedOrbit(selected.satellite);
+    const positions = predictedOrbit(selected.satellite, new Date(), 240, settings.orbitFrame);
     if (positions.length) paths.add({ positions, width: 2,
       material: Material.fromType("PolylineGlow", { color: accent.withAlpha(0.8), glowPower: 0.13, taperPower: 1 }) });
   }
@@ -134,12 +155,14 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     const selected = earth ? access.selected() : null;
     focusEntity.show = Boolean(selected);
     paths.show = earth && settings.orbitPaths;
+    paths.modelMatrix = settings.orbitFrame === "orbital" ? Matrix4.fromRotationTranslation(Matrix3.fromRotationZ(-gstime(new Date()))) : Matrix4.IDENTITY;
     footprint.show = tether.show = Boolean(selected && settings.coverage);
     if (selected) {
       Cartesian3.clone(propagatedPosition(selected.satellite) ?? selected.position, focusPosition);
       focusEntity.orientation = new ConstantProperty(Transforms.headingPitchRollQuaternion(focusPosition, new HeadingPitchRoll(0, 0, 0)));
       if (selectedId !== selected.satellite.noradId) {
         selectedId = selected.satellite.noradId;
+        if (settings.orbitPaths && !settings.following && selected.satellite.altitudeKm > 20_000) fly("orbit");
         focusEntity.label!.text = new ConstantProperty(selected.satellite.name);
         const kind = selectedId === 25544 ? "station" : /\bDEB\b|DEBRIS/i.test(selected.satellite.name) ? "debris" : /R\/B|ROCKET/i.test(selected.satellite.name) ? "rocket" : "satellite";
         focusEntity.model!.uri = new ConstantProperty(import.meta.env.BASE_URL + `models/${kind}.glb`);

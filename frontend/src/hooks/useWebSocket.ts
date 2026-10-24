@@ -93,7 +93,12 @@ export const useWebSocket = (): void => {
 
           switch (message.type) {
             case "satellites":
-              useAuroraStore.setState({ satellites: message.payload });
+              useAuroraStore.setState(state => ({
+                satellites: message.payload,
+                selectedSatellite: state.selectedSatellite
+                  ? message.payload.find(satellite => satellite.noradId === state.selectedSatellite!.noradId) ?? state.selectedSatellite
+                  : null
+              }));
               useAuroraStore.getState().recordFeedUpdate("satellites");
               break;
             case "conjunctions":

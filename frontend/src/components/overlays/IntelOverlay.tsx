@@ -11,7 +11,7 @@ export const IntelOverlay = (): JSX.Element | null => {
       <div
         className="absolute inset-0"
         style={{
-          background: "repeating-linear-gradient(0deg, rgba(0,255,68,0.04) 0px, rgba(0,255,68,0.04) 1px, transparent 1px, transparent 3px)",
+          background: "repeating-linear-gradient(0deg, rgba(122,183,255,0.015) 0px, rgba(122,183,255,0.015) 1px, transparent 1px, transparent 3px)",
           pointerEvents: "none"
         }}
       />
@@ -20,7 +20,7 @@ export const IntelOverlay = (): JSX.Element | null => {
       <div
         className="absolute inset-0"
         style={{
-          background: "radial-gradient(ellipse at center, rgba(0,255,68,0.02) 0%, rgba(0,255,68,0.04) 50%, rgba(0,40,10,0.08) 100%)",
+          background: "radial-gradient(ellipse at center, rgba(122,183,255,0.01) 0%, rgba(122,183,255,0.015) 50%, rgba(8,20,40,0.08) 100%)",
           mixBlendMode: "screen"
         }}
       />

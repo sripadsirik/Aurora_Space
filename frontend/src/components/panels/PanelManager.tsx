@@ -1,4 +1,9 @@
-import { propagatedTelemetry, elementEpoch } from "../../utils/propagation";
+import { orbitDescription } from "../../utils/propagation";
+import { objectClassification } from "../../utils/objectType";
+import { useState } from "react";
+import { orbitExport } from "../../utils/orbitExport";
+import { downloadText } from "../../utils/download";
+import { propagatedTelemetry, elementEpoch, orbitalElementStatus } from "../../utils/propagation";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -81,20 +86,20 @@ const getConjunctionAction = (probability: number): { label: string; className: 
 
   if (risk === "critical") {
     return {
-      label: "MANEUVER RECOMMENDED",
+      label: "PRIORITY REVIEW · SUPPLIED Pc",
       className: "border-[#ff4d4d] bg-[#591212]/60 text-[#ff7e7e]"
     };
   }
 
   if (risk === "warning") {
     return {
-      label: "MONITORING REQUIRED",
+      label: "REVIEW · SUPPLIED Pc",
       className: "border-[#ff9f43] bg-[#5e3412]/60 text-[#ffbd72]"
     };
   }
 
   return {
-    label: "NO ACTION REQUIRED",
+    label: "LOWER SUPPLIED Pc · REVIEW DATA QUALITY",
     className: "border-[#3bd08c] bg-[#103b29]/60 text-[#7ce8b6]"
   };
 };
@@ -126,6 +131,7 @@ const PanelCard = ({ title, closeLabel, onClose, children }: PanelCardProps): JS
 );
 
 const SatelliteDetailPanel = (): JSX.Element | null => {
+  const [exportError, setExportError] = useState("");
   const now = useUtcClock();
   const selectedSatellite = useAuroraStore((state) => state.selectedSatellite);
   const conjunctions = useAuroraStore((state) => state.conjunctions);
@@ -150,23 +156,29 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
           <p className="text-sm font-semibold text-white">{selectedSatellite.name}</p>
           <p className="text-[11px] text-[#9cc2de]">NORAD {selectedSatellite.noradId}</p>
           <div className="mt-1 flex gap-2">
-            <span className="rounded-sm border border-white/20 px-2 py-0.5 text-[10px]">{selectedSatellite.owner}</span>
+            <span title={objectClassification(selectedSatellite).source} className="rounded-sm border border-white/20 px-2 py-0.5 text-[10px]">{objectClassification(selectedSatellite).label}</span>
             <span className="rounded-sm border border-white/20 px-2 py-0.5 text-[10px] uppercase">
-              {selectedSatellite.riskLevel}
+              {selectedSatellite.riskLevel === "nominal" ? "No elevated report flag" : `Report flag: ${selectedSatellite.riskLevel}`}
             </span>
           </div>
         </div>
 
         <div className="space-y-1 border-t border-white/10 pt-2">
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">ORBITAL PARAMETERS</p>
+          <p className="text-[10px] text-[#9cc2de]">{objectClassification(selectedSatellite).source}{selectedSatellite.metadataFetchedAt ? ` · fetched ${new Date(selectedSatellite.metadataFetchedAt).toUTCString()}` : ""}</p>
+          {!telemetry && <p className="engineering-caution">Current position unavailable. Any snapshot values below are historical feed values, not a current track.</p>}
+          <p className="text-[10px] leading-relaxed text-[#edc18d]">{orbitalElementStatus(selectedSatellite, now)}</p>
+          <a className="inline-block py-2 text-[10px] text-[#9abfff] underline" href={`https://celestrak.org/NORAD/elements/gp.php?CATNR=${selectedSatellite.noradId}&FORMAT=TLE`} target="_blank" rel="noreferrer">Check public CelesTrak elements ↗</a>
+          <a className="block text-[10px] text-[#9abfff] underline" href={`https://keeptrack.space/satellite/${selectedSatellite.noradId}`} target="_blank" rel="noreferrer">Compare same NORAD object in KeepTrack ↗</a>
           <div className="grid grid-cols-[1.4fr_1fr] gap-y-1">
+            <span>Position time · UTC</span><span className="text-right">{telemetry ? now.toISOString().replace("T"," ").slice(0,19) : selectedSatellite.positionTimestamp ?? "Unknown"}</span>
             <span>Orbit Type</span>
             <span className="text-right">
-              {selectedSatellite.orbitType} ({ORBIT_LABELS[selectedSatellite.orbitType]})
+              {orbitDescription(selectedSatellite)}
             </span>
             <span>{telemetry ? "SGP4 altitude" : "Snapshot altitude"}</span>
             <span className="text-right">{formatAltitudeKm(telemetry?.altitudeKm ?? selectedSatellite.altitudeKm)}</span>
-            <span>Velocity</span>
+            <span>{telemetry ? "Velocity" : "Snapshot velocity"}</span>
             <span className="text-right">{formatSpeedKms(telemetry?.velocityKms ?? selectedSatellite.velocityKms, 3)}</span>
             <span>{telemetry ? "Orbital period" : "Approx. period"}</span>
             <span className="text-right">{periodMinutes.toFixed(1)} min</span>
@@ -177,6 +189,12 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
           </div>
         </div>
 
+        <div className="review-actions">
+          <button disabled={!telemetry} onClick={() => {try {downloadText(`norad-${selectedSatellite.noradId}-trajectory.json`, JSON.stringify(orbitExport(selectedSatellite),null,2));setExportError("");} catch(e) {setExportError(e instanceof Error?e.message:"Export failed");}}}>Export SGP4 trajectory</button>
+          <button disabled={!selectedSatellite.tleLine1 || !selectedSatellite.tleLine2} onClick={()=>downloadText(`${selectedSatellite.noradId}.tle`,`${selectedSatellite.name}\n${selectedSatellite.tleLine1}\n${selectedSatellite.tleLine2}\n`,"text/plain")}>Source TLE</button>
+        </div>
+        {exportError && <p role="alert" className="engineering-caution">{exportError}</p>}
+        <p className="engineering-note">Trajectory: one revolution, 25% past / 75% future, UTC samples in Earth-fixed metres. SGP4 prediction without covariance or maneuver modelling.</p>
         <div className="space-y-1 border-t border-white/10 pt-2">
           <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">CONJUNCTION WARNINGS</p>
           {relatedConjunctions.length === 0 ? (
@@ -198,7 +216,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
         </div>
 
         <div className="space-y-1 border-t border-white/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">SPACE WEATHER IMPACT</p>
+          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">SPACE WEATHER CONTEXT · HEURISTIC</p>
           <div className={`inline-block rounded-sm border px-2 py-0.5 text-[10px] ${riskBadgeClass(impact.label)}`}>
             {impact.label}
           </div>
@@ -210,7 +228,7 @@ const SatelliteDetailPanel = (): JSX.Element | null => {
                 : "Radiation impact risk:"}{" "}
             {impact.description}
           </p>
-          <p className="text-[10px] text-[#8eb1cb]">Updated {formatUtcTime(now)}</p>
+          <p className="text-[10px] text-[#8eb1cb]">Computed {formatUtcTime(now)} · no spacecraft telemetry</p>
         </div>
       </div>
     </PanelCard>
@@ -250,14 +268,14 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-white">{selectedConjunction.object1.name}</p>
             <p className="text-[10px] text-[#9cc2de]">
-              NORAD {selectedConjunction.object1.noradId} | {object1?.orbitType ?? "LEO"}
+              NORAD {selectedConjunction.object1.noradId} | {object1?.orbitType ?? "Unknown regime"}
             </p>
           </div>
           <p className="text-center text-[10px] text-[#7ca2bf]">vs</p>
           <div className="rounded-sm border border-white/10 px-2 py-1">
             <p className="text-white">{selectedConjunction.object2.name}</p>
             <p className="text-[10px] text-[#9cc2de]">
-              NORAD {selectedConjunction.object2.noradId} | {object2?.orbitType ?? "LEO"}
+              NORAD {selectedConjunction.object2.noradId} | {object2?.orbitType ?? "Unknown regime"}
             </p>
           </div>
         </div>
@@ -292,7 +310,7 @@ const ConjunctionDetailPanel = (): JSX.Element | null => {
           <div className="flex justify-between text-[10px] text-[#9cc2de]">
             <span>0</span>
             <span>ELEVATED &gt; 1/10000</span>
-            <span>ACTION &gt; 1/1000</span>
+            <span>Pc &gt; 1/1000</span>
             <span>1</span>
           </div>
         </div>
@@ -315,7 +333,6 @@ const SpaceWeatherPanel = (): JSX.Element => {
   const auroraLatitude = kpToAuroraBoundaryLatitude(spaceWeather.kpIndex);
   const auroraRadiusDeg = kpToAuroraRadiusDegrees(spaceWeather.kpIndex);
 
-  const forecast = useMemo(() => buildKpForecast(spaceWeather.kpIndex), [spaceWeather.kpIndex]);
 
   return (
     <PanelCard title="Space Weather" closeLabel="Close space weather panel" onClose={() => closePanel("space-weather")}>
@@ -435,30 +452,11 @@ const SpaceWeatherPanel = (): JSX.Element => {
           ))}
         </div>
 
-        <div className="space-y-1 border-t border-white/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">24H FORECAST (3H STEPS)</p>
-          <svg viewBox="0 0 320 86" className="h-[86px] w-full rounded-sm border border-white/10 bg-[#081423]">
-            {forecast.map((item, index) => {
-              const barWidth = 28;
-              const spacing = 10;
-              const x = 8 + index * (barWidth + spacing);
-              const barHeight = kpToBarHeight(item.kp, 58);
-              const y = 70 - barHeight;
-              return (
-                <g key={item.hoursAhead}>
-                  <rect x={x} y={y} width={barWidth} height={barHeight} fill={getKpColor(item.kp)} opacity="0.82" />
-                  <text x={x + 14} y={80} fill="#9cc2de" textAnchor="middle" fontSize="8">
-                    +{item.hoursAhead}h
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
+        <p className="engineering-note">Forecast not supplied by this feed. <a href="https://www.swpc.noaa.gov/products/3-day-forecast" target="_blank" rel="noreferrer">Open NOAA's forecast ↗</a></p>
 
         <div className="space-y-1 border-t border-white/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">AURORA VISIBILITY</p>
-          <p className="text-[11px] text-white">Currently visible above {auroraLatitude.toFixed(1)}N latitude</p>
+          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">AURORA OVAL ESTIMATE</p>
+          <p className="text-[11px] text-white">Illustrative Kp-based boundary: above {auroraLatitude.toFixed(1)}N latitude</p>
           <svg viewBox="0 0 320 120" className="h-[120px] w-full rounded-sm border border-white/10 bg-[#081423]">
             <rect x="0" y="0" width="320" height="120" fill="#081423" />
             <line x1="0" y1="60" x2="320" y2="60" stroke="#20435d" strokeWidth="1" />

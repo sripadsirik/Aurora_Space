@@ -32,6 +32,7 @@ import {
   PointPrimitiveCollection,
   PolygonHierarchy,
   PolylineDashMaterialProperty,
+  PolylineGlowMaterialProperty,
   PolylineCollection,
   Primitive,
   ScreenSpaceEventType,
@@ -64,11 +65,11 @@ import {
 import { env, hasValidCesiumIonToken } from "../utils/env";
 import { enhanceScene } from "./scene/enhanceScene";
 import { useSceneStore } from "../store/sceneStore";
-import { propagatedPosition } from "../utils/propagation";
+import { propagatedPosition, hasCurrentElements } from "../utils/propagation";
 import { satelliteSnapshotPosition } from "../utils/satellitePosition";
 import { clamp } from "../utils/clamp";
 import { createBezierArcPositions } from "../utils/curves";
-import { createAuroraCapHierarchy } from "../utils/auroraCap";
+import { auroraRibbon, auroraCurtainTexture } from "../utils/auroraVisual";
 import { createFireConeFrontPositions } from "../utils/cmeFlameCone";
 import { createOrbitPositions, earthRadiusMeters, getOrbitalPeriod, getOrbitParams, kpToAuroraRadiusDegrees, orbitPoint, orbitThetaAtElapsed } from "../utils/orbit";
 import type { SatelliteOrbitAnim } from "../utils/satelliteOrbitAnim";
@@ -182,7 +183,6 @@ const HELIO_PLANET_RADII = {
   mars: 290_000
 } as const;
 
-const AURORA_COLOR = Color.fromCssColorString("#00ff96");
 const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
 
@@ -215,15 +215,6 @@ const isSatellitePickPayload = (value: unknown): value is SatellitePickPayload =
   const record = value as Record<string, unknown>;
   return record.type === "satellite" && typeof record.satellite === "object" && record.satellite !== null;
 };
-
-const createAuroraMaterial = (minAlpha: number, maxAlpha: number, modeRef: { current: string }): ColorMaterialProperty =>
-  new ColorMaterialProperty(new CallbackProperty(() => {
-    const isStorm = modeRef.current === "STORM";
-    const phase = 0.5 + 0.5 * Math.sin(performance.now() * (isStorm ? 0.004 : 0.0018));
-    const baseMin = isStorm ? Math.min(minAlpha * 3, 0.6) : minAlpha;
-    const baseMax = isStorm ? Math.min(maxAlpha * 2.5, 0.8) : maxAlpha;
-    return AURORA_COLOR.withAlpha(baseMin + (baseMax - baseMin) * phase);
-  }, false));
 
 const createMutableFlameFront = (count: number): Cartesian3[] => Array.from({ length: count }, () => new Cartesian3());
 
@@ -604,6 +595,8 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           duration: 1.8,
           easingFunction: EasingFunction.QUADRATIC_IN_OUT
         });
+      } else if (mode === "STORM") {
+        useSceneStore.getState().requestCamera("polar");
       } else if (previousMode === "HELIO") {
         viewer.camera.flyTo({
           destination: EARTH_CAMERA_DESTINATION,
@@ -896,58 +889,51 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       flyCameraToSatellite(selectedSatelliteNoradId);
     }
 
-    let auroraCapHierarchies = [
-      createAuroraCapHierarchy(true, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex)),
-      createAuroraCapHierarchy(true, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex) * 0.68),
-      createAuroraCapHierarchy(false, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex)),
-      createAuroraCapHierarchy(false, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex) * 0.68)
-    ];
-    const auroraCapEntities = [
-      registerEarth(viewer.entities.add({
-        polygon: {
-          hierarchy: new CallbackProperty(() => auroraCapHierarchies[0], false),
-          material: createAuroraMaterial(0.07, 0.16, currentModeRef),
-          perPositionHeight: false
+    const curtainTextures = [auroraCurtainTexture(), auroraCurtainTexture(true)];
+    let auroraRibbons = [true, false].flatMap(north => [0, 1, 2].map(layer =>
+      auroraRibbon(north, kpToAuroraRadiusDegrees(spaceWeatherRef.current.kpIndex), layer)));
+    const reducedAuroraMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const auroraCapEntities = auroraRibbons.flatMap((_, index) => {
+      const layer = index % 3;
+      const curtain = registerEarth(viewer.entities.add({
+        name: "Illustrative auroral curtain",
+        wall: {
+          positions: new CallbackProperty(() => auroraRibbons[index].positions, false),
+          minimumHeights: new CallbackProperty(() => auroraRibbons[index].minimumHeights, false),
+          maximumHeights: new CallbackProperty(() => auroraRibbons[index].maximumHeights, false),
+          material: new ImageMaterialProperty({ image: curtainTextures[layer === 2 ? 1 : 0], transparent: true,
+            color: new CallbackProperty(() => {
+              const shimmer = reducedAuroraMotion ? 0.9 : 0.84 + 0.12 * Math.sin(performance.now() * 0.0007 + index);
+              return Color.WHITE.withAlpha(shimmer * (currentModeRef.current === "STORM" ? 1 : 0.55));
+            }, false) })
         }
-      })),
-      registerEarth(viewer.entities.add({
-        polygon: {
-          hierarchy: new CallbackProperty(() => auroraCapHierarchies[1], false),
-          material: createAuroraMaterial(0.17, 0.35, currentModeRef),
-          perPositionHeight: false
+      }));
+      const rim = registerEarth(viewer.entities.add({
+        name: "Illustrative auroral oval",
+        polyline: {
+          positions: new CallbackProperty(() => auroraRibbons[index].rim, false),
+          width: layer === 0 ? 4 : 2,
+          material: new PolylineGlowMaterialProperty({color: Color.fromCssColorString(layer === 2 ? "#987cf5" : "#68ffc4").withAlpha(layer === 0 ? 0.42 : 0.18), glowPower: 0.35, taperPower: 1})
         }
-      })),
-      registerEarth(viewer.entities.add({
-        polygon: {
-          hierarchy: new CallbackProperty(() => auroraCapHierarchies[2], false),
-          material: createAuroraMaterial(0.07, 0.16, currentModeRef),
-          perPositionHeight: false
-        }
-      })),
-      registerEarth(viewer.entities.add({
-        polygon: {
-          hierarchy: new CallbackProperty(() => auroraCapHierarchies[3], false),
-          material: createAuroraMaterial(0.17, 0.35, currentModeRef),
-          perPositionHeight: false
-        }
-      }))
-    ];
+      }));
+      return [curtain, rim];
+    });
 
-    const magnetosphere = registerEarth(viewer.scene.primitives.add(new Primitive({
-      geometryInstances: new GeometryInstance({
-        geometry: new EllipsoidGeometry({
-          radii: new Cartesian3(earthR * 9, earthR * 10, earthR * 10),
-          vertexFormat: PerInstanceColorAppearance.VERTEX_FORMAT,
-          stackPartitions: 64,
-          slicePartitions: 64
-        }),
-        attributes: { color: ColorGeometryInstanceAttribute.fromColor(new Color(100 / 255, 180 / 255, 1, 0.06)) }
-      }),
-      appearance: new PerInstanceColorAppearance({ translucent: true, closed: true }),
-      modelMatrix: Matrix4.fromTranslation(new Cartesian3(earthR, 0, 0)),
-      asynchronous: false,
-      allowPicking: false
-    })));
+    // Schematic dipole traces replace the enclosing ellipsoid, which obscured
+    // Earth when the camera moved outside it. No opaque atmospheric shell.
+    const magnetosphere = registerEarth(viewer.scene.primitives.add(new PolylineCollection()));
+    for (let meridian = 0; meridian < 12; meridian++) {
+      const phi = meridian * Math.PI / 6;
+      const positions: Cartesian3[] = [];
+      const shell = 2.3;
+      const start = Math.asin(Math.sqrt(1 / shell));
+      for (let i = 0; i <= 96; i++) {
+        const theta = start + (Math.PI - 2 * start) * i / 96;
+        const r = earthR * shell * Math.sin(theta) ** 2;
+        positions.push(new Cartesian3(r * Math.sin(theta) * Math.cos(phi), r * Math.sin(theta) * Math.sin(phi), r * Math.cos(theta)));
+      }
+      magnetosphere.add({ positions, width: 1.2, material: Material.fromType("Color", { color: Color.fromCssColorString("#72b9d0").withAlpha(0.14) }) });
+    }
 
     let solarWindColor = getSolarWindColor(spaceWeatherRef.current.solarWindSpeed);
     const particleCollection = registerEarth(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
@@ -976,12 +962,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const syncSpaceWeatherVisuals = (nextSpaceWeather: SpaceWeather): void => {
       solarWindColor = getSolarWindColor(nextSpaceWeather.solarWindSpeed);
       const auroraRadiusDeg = kpToAuroraRadiusDegrees(nextSpaceWeather.kpIndex);
-      auroraCapHierarchies = [
-        createAuroraCapHierarchy(true, auroraRadiusDeg),
-        createAuroraCapHierarchy(true, auroraRadiusDeg * 0.68),
-        createAuroraCapHierarchy(false, auroraRadiusDeg),
-        createAuroraCapHierarchy(false, auroraRadiusDeg * 0.68)
-      ];
+      auroraRibbons = [true, false].flatMap(north => [0, 1, 2].map(layer => auroraRibbon(north, auroraRadiusDeg, layer)));
     };
 
     syncSpaceWeatherRef.current = syncSpaceWeatherVisuals;
@@ -1505,7 +1486,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const presentation = enhanceScene(viewer, {
       selected: () => {
         const selected = selectedSatelliteNoradId === null ? null : satAnimByNorad.get(selectedSatelliteNoradId);
-        return selected ? { satellite: selected.satellite, position: selected.point.position } : null;
+        return selected && (!useAuroraStore.getState().feedLastUpdated.satellites || propagatedPosition(selected.satellite)) ? { satellite: selected.satellite, position: selected.point.position } : null;
       },
       catalog: () => satellitesRef.current,
       helioHome: () => transitionCameraForMode("HELIO")
@@ -1521,8 +1502,8 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const elapsedSeconds = (nowMs - startTimeMs) / 1000;
       elapsedSceneSeconds = elapsedSeconds;
       const showWeather = useSceneStore.getState().spaceWeather && !earthOnlyRef.current && currentModeRef.current !== "HELIO";
-      particleCollection.show = showWeather;
-      magnetosphere.show = showWeather && currentModeRef.current !== "OPS";
+      particleCollection.show = showWeather && currentModeRef.current === "STORM";
+      magnetosphere.show = showWeather && currentModeRef.current === "STORM";
       auroraCapEntities.forEach((entity) => { entity.show = showWeather; });
 
       if (currentModeRef.current === "HELIO" && !earthOnlyRef.current) {
@@ -1540,13 +1521,13 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
 
       // Keep the catalog readable. All objects remain searchable; selected and
       // conjunction objects are always shown. Interpolate one-second SGP4 samples.
-      const budget = useSceneStore.getState().quality === "performance" ? 450 : useSceneStore.getState().quality === "cinematic" ? 1600 : 900;
+      const budget = currentModeRef.current === "STORM" ? 180 : useSceneStore.getState().quality === "performance" ? 450 : useSceneStore.getState().quality === "cinematic" ? 1600 : 900;
       const stride = Math.max(1, Math.ceil(activeSatAnimStates.length / budget));
       const wallTime = Date.now();
       const live = useAuroraStore.getState().feedLastUpdated.satellites !== null;
       activeSatAnimStates.forEach((state) => {
         const selected = state.satellite.noradId === selectedSatelliteNoradId;
-        state.point.show = selected || selectedConjSatIds.has(state.satellite.noradId) || state.satellite.noradId % stride === 0;
+        state.point.show = (!live || hasCurrentElements(state.satellite)) && (selected || selectedConjSatIds.has(state.satellite.noradId) || state.satellite.noradId % stride === 0);
         if (!state.point.show) return;
         if (live) {
           if (!state.interpolationEpoch || wallTime >= state.interpolationEpoch + 1000 || wallTime < state.interpolationEpoch) {
@@ -1554,6 +1535,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
             state.interpolationStart = propagatedPosition(state.satellite, new Date(wallTime)) ?? undefined;
             state.interpolationEnd = propagatedPosition(state.satellite, new Date(wallTime + 1000)) ?? undefined;
           }
+          if (!state.interpolationStart || !state.interpolationEnd) { state.point.show = false; return; }
           if (state.interpolationStart && state.interpolationEnd) {
             state.point.position = Cartesian3.lerp(state.interpolationStart, state.interpolationEnd, (wallTime - state.interpolationEpoch!) / 1000, new Cartesian3());
           }
@@ -1568,24 +1550,9 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       if (mode === "STORM") {
         activeSatAnimStates.forEach((state) => {
           if (!state.point.show) return;
-          const sat = state.satellite;
-          if (sat.altitudeKm < 2000 && sat.owner !== "DEBRIS") {
-            // LEO drag risk
-            state.point.color = Color.fromCssColorString("#ff8b38").withAlpha(1);
-            state.point.width = state.point.height = (10) * 2.5;
-          } else if (sat.altitudeKm > 35000 && sat.owner !== "DEBRIS") {
-            // GEO charging risk
-            state.point.color = Color.fromCssColorString("#ffcc00").withAlpha(1);
-            state.point.width = state.point.height = (10) * 2.5;
-          } else if (sat.owner === "DEBRIS") {
-            // Debris decay risk
-            state.point.color = Color.fromCssColorString("#ff2a2a").withAlpha(1);
-            state.point.width = state.point.height = (8) * 2.5;
-          } else {
-            // Others dimmed
-            state.point.color = riskColorMap[sat.riskLevel].withAlpha(0.15);
-            state.point.width = state.point.height = (4) * 2.5;
-          }
+          // Neutral context markers; weather indices do not establish individual spacecraft risk.
+          state.point.color = Color.fromCssColorString("#8bc4d5").withAlpha(0.28);
+          state.point.width = state.point.height = 7;
         });
       } else if (mode === "INTEL") {
         const intelPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 3);
@@ -1634,7 +1601,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         selectedSatelliteRing.show = false;
       } else if (selectedSatelliteNoradId !== null) {
         const selected = satAnimByNorad.get(selectedSatelliteNoradId);
-        selectedSatelliteRing.show = Boolean(selected);
+        selectedSatelliteRing.show = Boolean(selected && (!live || propagatedPosition(selected.satellite)));
         if (selected) Cartesian3.clone(selected.point.position, selectedRingPosition);
       } else {
         selectedSatelliteRing.show = false;

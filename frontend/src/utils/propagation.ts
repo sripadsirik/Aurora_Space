@@ -13,7 +13,7 @@ export function orbitalElements(satellite: Satellite): SatRec | null {
   if (cached?.key === key) return cached.record;
   let record: SatRec | null = null;
   try {
-    if (line1.length >= 69 && line2.length >= 69 && line1.startsWith("1 ") && line2.startsWith("2 ") && line1.slice(2, 7) === line2.slice(2, 7)) {
+    if (line1.length >= 69 && line2.length >= 69 && line1.startsWith("1 ") && line2.startsWith("2 ") && line1.slice(2, 7) === line2.slice(2, 7) && Number(line1.slice(2, 7)) === satellite.noradId) {
       const parsed = twoline2satrec(line1, line2);
       if (parsed.error === 0 && Number.isFinite(parsed.jdsatepoch) && parsed.no > 0 && parsed.ecco >= 0 && parsed.ecco < 1) record = parsed;
     }
@@ -30,7 +30,18 @@ export function elementEpoch(satellite: Satellite): Date | null {
 
 export function hasCurrentElements(satellite: Satellite, date = new Date()): boolean {
   const epoch = elementEpoch(satellite);
-  return !!epoch && Math.abs(date.getTime() - epoch.getTime()) <= MAX_ELEMENT_AGE_DAYS * 86400000;
+  return !satellite.decayDate && !!epoch && date.getTime() - epoch.getTime() >= -86400000 && date.getTime() - epoch.getTime() <= MAX_ELEMENT_AGE_DAYS * 86400000;
+}
+
+/** Element age is independent of how recently a propagated position arrived. */
+export function orbitalElementStatus(satellite: Satellite, date = new Date()): string {
+  if (satellite.decayDate) return `Catalog reports decay ${satellite.decayDate} · position withheld`;
+  const epoch = elementEpoch(satellite);
+  if (!epoch) return "No valid TLE · path unavailable";
+  const days = (date.getTime() - epoch.getTime()) / 86400000;
+  if (days < -1) return "Future TLE epoch · position withheld";
+  if (!hasCurrentElements(satellite, date)) return `Expired TLE · ${Math.abs(days).toFixed(1)}d from epoch · path hidden`;
+  return `${days > 3 ? "Aged TLE" : "TLE age"} · ${Math.max(0, days).toFixed(1)}d · SGP4 prediction`;
 }
 
 /** SGP4 TEME position, rotated into Earth-fixed coordinates at the sample time. */
@@ -46,14 +57,19 @@ export function propagatedPosition(satellite: Satellite, date = new Date(), resu
   } catch { return null; }
 }
 
-/** Open Earth-fixed trajectory: Earth rotates during one revolution, so it is not a closed ring. */
-export function predictedOrbit(satellite: Satellite, start = new Date(), segments = 180): Cartesian3[] {
+/** One SGP4 revolution. Orbital returns TEME metres; the renderer rotates the whole path at view time. Earth-fixed rotates each sample at its own timestamp. Neither path is forcibly closed. */
+export function predictedOrbit(satellite: Satellite, start = new Date(), segments = 180, frame: "earth-fixed" | "orbital" = "earth-fixed"): Cartesian3[] {
   const record = orbitalElements(satellite);
   if (!record || !hasCurrentElements(satellite, start)) return [];
   const periodMs = 2 * Math.PI / record.no * 60000;
   const positions: Cartesian3[] = [];
   for (let i = 0; i <= segments; i++) {
-    const position = propagatedPosition(satellite, new Date(start.getTime() + periodMs * (i / segments - 0.25)));
+    const sampleTime = new Date(start.getTime() + periodMs * (i / segments - 0.25));
+    let position: Cartesian3 | null = null;
+    if (frame === "earth-fixed") position = propagatedPosition(satellite, sampleTime);
+    else if (hasCurrentElements(satellite, sampleTime)) {
+      try { const state = propagate(record, sampleTime); if (state?.position && !record.error) position = new Cartesian3(state.position.x * 1000, state.position.y * 1000, state.position.z * 1000); } catch { /* withheld */ }
+    }
     if (!position) return [];
     positions.push(position);
   }
@@ -72,4 +88,14 @@ export function propagatedTelemetry(satellite: Satellite, date = new Date()) {
       velocityKms: Math.hypot(state.velocity.x, state.velocity.y, state.velocity.z),
       periodMinutes: 2 * Math.PI / record.no, inclinationDegrees: record.inclo * 180 / Math.PI };
   } catch { return null; }
+}
+
+/** Display classification using orbital period, not instantaneous altitude. */
+export function orbitDescription(satellite: Satellite): string {
+ const record=orbitalElements(satellite);
+ if (!record) return `${satellite.orbitType} · snapshot altitude class`;
+ const period=2*Math.PI/record.no;
+ if (Math.abs(period-1436.068)<15) return record.inclo*180/Math.PI>1 ? "Near-geosynchronous · inclined" : "Near-geosynchronous · near-equatorial";
+ if (record.ecco>0.25) return "Highly elliptical Earth orbit";
+ return `${satellite.orbitType} · altitude class`;
 }

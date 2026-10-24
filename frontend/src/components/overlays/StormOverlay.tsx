@@ -1,86 +1,28 @@
-import { useEffect, useState } from "react";
-
 import { useAuroraStore } from "../../store/auroraStore";
-import { resolveDisplayedWeather } from "../../utils/displayedWeather";
-import { formatKpIndex } from "../../utils/measurements";
-import { kpToGScale } from "../../utils/spaceWeatherScales";
-import { buildStormOverlayStyle } from "../../utils/stormOverlayStyle";
-import { isStormModeActive, shouldAutoActivateStorm } from "../../utils/visualMode";
+import { useSceneStore } from "../../store/sceneStore";
 
 export const StormOverlay = (): JSX.Element | null => {
-  const currentMode = useAuroraStore((s) => s.currentMode);
-  const spaceWeather = useAuroraStore((s) => s.spaceWeather);
-  const timelineEvent = useAuroraStore((s) => s.timelineEvent);
-  const stormAutoTriggered = useAuroraStore((s) => s.stormAutoTriggered);
-  const setStormAutoTriggered = useAuroraStore((s) => s.setStormAutoTriggered);
-  const setMode = useAuroraStore((s) => s.setMode);
-  const [visible, setVisible] = useState(false);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  const { kpIndex: kp, stormLevel } = resolveDisplayedWeather(spaceWeather, timelineEvent);
-  const isStormActive = isStormModeActive(currentMode, kp);
-
-  // Auto-trigger STORM mode when Kp climbs to storm level.
-  useEffect(() => {
-    if (shouldAutoActivateStorm(currentMode, kp)) {
-      setMode("STORM");
-      setStormAutoTriggered(true);
-      setBannerDismissed(false);
-    }
-  }, [kp, currentMode, setMode, setStormAutoTriggered]);
-
-  useEffect(() => {
-    if (isStormActive) {
-      requestAnimationFrame(() => setVisible(true));
-    } else {
-      setVisible(false);
-    }
-  }, [isStormActive]);
-
-  // Reset banner dismissed when leaving storm mode
-  useEffect(() => {
-    if (currentMode !== "STORM") {
-      setBannerDismissed(false);
-    }
-  }, [currentMode]);
-
-  if (!isStormActive && !visible) return null;
-
-  const { vignetteShadow, banner } = buildStormOverlayStyle(kp);
-
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 z-[60] transition-opacity duration-400"
-      style={{ opacity: visible ? 1 : 0 }}
-    >
-      {/* Red vignette */}
-      <div className="absolute inset-0" style={{ boxShadow: vignetteShadow }} />
-
-      {/* Storm banner */}
-      <div className="absolute left-0 right-0 top-0 flex justify-center pt-3">
-        <div
-          className="rounded border px-4 py-1.5 font-mono text-[11px] tracking-[0.2em]"
-          style={{ ...banner, animation: "storm-pulse 2s ease-in-out infinite" }}
-        >
-          GEOMAGNETIC STORM ACTIVE - {stormLevel.toUpperCase()} ({kpToGScale(kp)}) - Kp {formatKpIndex(kp)}
-        </div>
-      </div>
-
-      {/* Auto-trigger banner */}
-      {stormAutoTriggered && !bannerDismissed && currentMode === "STORM" && (
-        <div className="pointer-events-auto absolute left-0 right-0 top-12 flex justify-center pt-2">
-          <div className="flex items-center gap-3 rounded border border-red-500/40 bg-[rgba(80,10,0,0.8)] px-4 py-2 font-mono text-[11px] tracking-[0.15em] text-[#ffaa66] backdrop-blur-sm">
-            <span>STORM MODE AUTO-ACTIVATED — Kp {formatKpIndex(kp)} detected</span>
-            <button
-              type="button"
-              onClick={() => setBannerDismissed(true)}
-              className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-white/60 hover:bg-white/10 hover:text-white"
-            >
-              DISMISS
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const mode = useAuroraStore(s => s.currentMode);
+  const weather = useAuroraStore(s => s.spaceWeather);
+  const selected = useAuroraStore(s => s.selectedSatellite);
+  const received = useAuroraStore(s => s.feedLastUpdated.spaceWeather);
+  const enabled = useSceneStore(s => s.spaceWeather);
+  const toggle = useSceneStore(s => s.toggle);
+  const camera = useSceneStore(s => s.requestCamera);
+  if (mode !== "STORM") return null;
+  return <>
+    <div className="storm-atmosphere" aria-hidden="true" />
+    <aside className="aurora-observatory" aria-label="Aurora visualization controls">
+      <div className="aurora-card-eyebrow"><span className="aurora-status-dot" /> POLAR LIGHTS <span>EARTH / 02</span></div>
+      <h2>The auroral oval</h2>
+      <p className="aurora-intro">A luminous view of the polar atmosphere.</p>
+      <div className="aurora-orbit-art" aria-hidden="true"><div className="aurora-art-halo"/><div className="aurora-art-ring ring-outer"/><div className="aurora-art-ring ring-inner"/><div className="aurora-art-earth"/><span>N</span></div>
+      <div className="aurora-index"><div><span>PLANETARY ACTIVITY</span><strong>{received ? weather.kpIndex.toFixed(1) : "—"}<small> Kp</small></strong></div><div className="aurora-kp-bars" aria-label={received ? `Kp ${weather.kpIndex.toFixed(1)} of 9` : "Kp unavailable"}>{Array.from({length:9},(_,i)=><i key={i} className={received && i < Math.round(weather.kpIndex) ? "lit" : ""} style={{height:12+i*3}} />)}</div></div>
+      <div className="aurora-view-buttons"><button onClick={()=>camera("polar")}>Polar view ↗</button><button onClick={()=>camera("terminator")}>Night edge ↗</button></div>
+      <button className="aurora-layer-toggle" aria-pressed={enabled} onClick={()=>toggle("spaceWeather")}><span>Atmospheric layers</span><span>{enabled ? "ON" : "OFF"}<i className={enabled ? "is-on" : ""}/></span></button>
+      <div className="aurora-color-key"><span><i/>Lower curtain</span><span><i/>Upper glow</span></div>
+      <p className="aurora-model-note">Illustrative Kp-driven oval and schematic dipole field lines. Curtain height, color and motion are stylized; this is not an aurora visibility forecast or a measured emission map.</p>
+    </aside>
+    {!selected && <div className="storm-scene-caption"><span className="aurora-status-dot"/> MAGNETOSPHERE OBSERVATORY <small>Drag to explore · Scroll to zoom</small></div>}
+  </>;
 };

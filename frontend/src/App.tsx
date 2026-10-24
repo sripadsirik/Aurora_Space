@@ -6,16 +6,16 @@ import { HUD } from "./components/HUD";
 import { ModeSelector } from "./components/ModeSelector";
 import { Timeline } from "./components/Timeline";
 import { useWebSocket } from "./hooks/useWebSocket";
-import { HelioOverlay } from "./components/overlays/HelioOverlay";
 import { IntelOverlay } from "./components/overlays/IntelOverlay";
 import { StormOverlay } from "./components/overlays/StormOverlay";
 import { ActiveConjunctionsPanel } from "./components/panels/ActiveConjunctionsPanel";
-import { CmeLibraryPanel } from "./components/panels/CmeLibraryPanel";
 import { IntelAnalysisPanel } from "./components/panels/IntelAnalysisPanel";
 import { OpsWarningBadge } from "./components/panels/OpsWarningBadge";
 import { PanelManager } from "./components/panels/PanelManager";
 import { StormImpactPanel } from "./components/panels/StormImpactPanel";
 import { useAuroraStore } from "./store/auroraStore";
+import { SatelliteWorkbench } from "./components/panels/SatelliteWorkbench";
+import { ModeHeading } from "./components/overlays/ModeHeading";
 import { SceneControls } from "./components/scene/SceneControls";
 
 export const App = (): JSX.Element => {
@@ -46,7 +46,7 @@ export const App = (): JSX.Element => {
 
   return (
     <ErrorBoundary>
-      <div className="relative h-screen w-screen overflow-hidden bg-[var(--aurora-bg)]">
+      <div data-mode={currentMode} className="relative h-screen w-screen overflow-hidden bg-[var(--aurora-bg)]">
         <div className="h-full w-full transition-opacity duration-400">
           <GlobeView
             satellites={satellites}
@@ -59,9 +59,9 @@ export const App = (): JSX.Element => {
 
         {!earthOnlyMode && (
           <>
+            <ModeHeading />
             <StormOverlay />
             <IntelOverlay />
-            <HelioOverlay />
 
             <HUD
               satellites={satellites}
@@ -69,13 +69,13 @@ export const App = (): JSX.Element => {
               spaceWeather={spaceWeather}
             />
 
-            {currentMode !== "HELIO" && <PanelManager />}
+            {currentMode === "OPS" && <PanelManager />}
+            <SatelliteWorkbench />
 
             <OpsWarningBadge />
             <ActiveConjunctionsPanel />
             <StormImpactPanel />
             <IntelAnalysisPanel />
-            <CmeLibraryPanel />
 
             <ModeSelector />
             <Timeline />

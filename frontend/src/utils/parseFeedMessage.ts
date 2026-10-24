@@ -1,3 +1,4 @@
+import { orbitalElements } from "./propagation";
 import type { Conjunction, Satellite, SpaceWeather } from "../types/space";
 
 export type ParsedFeedMessage =
@@ -46,7 +47,7 @@ export const parseFeedMessage = (value: unknown): ParsedFeedMessage | null => {
   if (!record(value)) return null;
   if (value.type === "satellites") {
     return Array.isArray(value.payload) && value.payload.every(satellite)
-      ? { type: "satellites", payload: value.payload }
+      ? { type: "satellites", payload: value.payload.map(s => { const elements=orbitalElements(s); return elements && Math.abs(2*Math.PI/elements.no-1436.068)<15 ? {...s,orbitType:"GEO" as const} : s; }) }
       : null;
   }
   if (value.type === "conjunctions") {

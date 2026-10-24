@@ -48,7 +48,7 @@ export const HUD = ({ satellites, conjunctions, spaceWeather }: HUDProps): JSX.E
     weatherFreshness: describeFeedFreshness(feedLastUpdated.spaceWeather, now)
   });
 
-  if (currentMode === "HELIO") {
+  if (currentMode !== "OPS") {
     return null;
   }
 

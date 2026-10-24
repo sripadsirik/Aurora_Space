@@ -7,7 +7,7 @@ describe("modeForShortcutKey", () => {
     expect(modeForShortcutKey("1")).toBe("OPS");
     expect(modeForShortcutKey("2")).toBe("STORM");
     expect(modeForShortcutKey("3")).toBe("INTEL");
-    expect(modeForShortcutKey("4")).toBe("HELIO");
+    expect(modeForShortcutKey("4")).toBeNull();
   });
 
   it("agrees with MODE_SHORTCUT_ORDER for every entry", () => {

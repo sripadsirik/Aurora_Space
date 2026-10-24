@@ -5,6 +5,11 @@ export type RiskLevel = "nominal" | "watch" | "warning" | "critical";
 export interface Satellite {
   noradId: number;
   name: string;
+  objectType?: string;
+  metadataSource?: string;
+  metadataFetchedAt?: string;
+  decayDate?: string;
+  operationalStatus?: string;
   tleLine1?: string;
   tleLine2?: string;
   positionTimestamp?: string;

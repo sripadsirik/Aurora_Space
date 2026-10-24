@@ -70,6 +70,12 @@ type tleCache struct {
 
 func (c *tleCache) set(noradID string, rec gpRecord) {
 	c.mu.Lock()
+	// Never let an older overlapping group roll back newer orbital elements.
+	old, exists := c.records[noradID]
+	if exists && tleEpoch(old).After(tleEpoch(rec)) {
+		c.mu.Unlock()
+		return
+	}
 	c.records[noradID] = rec
 	c.mu.Unlock()
 }
@@ -146,22 +152,28 @@ func propagateSatelliteAt(rec gpRecord, now time.Time) (result *shared.Satellite
 	alt, _, latLon := satellite.ECIToLLA(position, gmst)
 
 	latDeg := latLon.Latitude * 180.0 / math.Pi
-	lonDeg := latLon.Longitude * 180.0 / math.Pi
+	lonDeg := math.Mod(latLon.Longitude*180.0/math.Pi+540, 360) - 180
 
 	// Velocity magnitude in km/s
 	velKms := math.Sqrt(velocity.X*velocity.X + velocity.Y*velocity.Y + velocity.Z*velocity.Z)
 
 	noradID := rec.NoradCatID
+	regime := shared.ClassifyOrbit(alt)
+	meanMotion, motionErr := strconv.ParseFloat(strings.TrimSpace(line2[52:63]), 64)
+	if motionErr == nil && meanMotion > 0 && math.Abs(1440/meanMotion-1436.068) < 15 {
+		regime = "GEO"
+	}
 
 	return &shared.Satellite{
 		TLELine1: line1, TLELine2: line2, PositionTimestamp: now.Truncate(time.Second).Format(time.RFC3339),
 		NoradID:          noradID,
 		Name:             rec.ObjectName,
+		ObjectType:       rec.ObjectType,
 		Lat:              latDeg,
 		Lon:              lonDeg,
 		AltitudeKm:       alt,
 		VelocityKms:      velKms,
-		OrbitType:        shared.ClassifyOrbit(alt),
+		OrbitType:        regime,
 		RiskLevel:        "nominal",
 		Owner:            "",
 		ConjunctionCount: 0,
@@ -176,6 +188,9 @@ func ingestTLE(data []byte, cache *tleCache) bool {
 		return false
 	}
 	if rec.NoradCatID == 0 {
+		return false
+	}
+	if !isTLEValid(rec) {
 		return false
 	}
 	cache.set(strconv.Itoa(rec.NoradCatID), rec)
@@ -286,6 +301,11 @@ func isTLEValid(rec gpRecord) bool {
 	if !strings.HasPrefix(line1, "1 ") || !strings.HasPrefix(line2, "2 ") {
 		return false
 	}
+	id1, err1 := strconv.Atoi(strings.TrimSpace(line1[2:7]))
+	id2, err2 := strconv.Atoi(strings.TrimSpace(line2[2:7]))
+	if err1 != nil || err2 != nil || id1 != rec.NoradCatID || id2 != id1 || tleEpoch(rec).IsZero() {
+		return false
+	}
 	if rec.Eccentricity >= 1.0 || rec.Eccentricity < 0 {
 		return false // hyperbolic or invalid
 	}
@@ -362,6 +382,7 @@ func propagateAndPublish(ctx context.Context, cache *tleCache, producer *shared.
 			errCount++
 			continue
 		}
+		enrichCatalogObject(sat)
 		positions = append(positions, *sat)
 		if (i+1)%1000 == 0 {
 			slog.Info("propagation progress", "processed", i+1, "ok", len(positions), "errors", errCount)
@@ -421,6 +442,8 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
+	startCatalogMetadata(ctx)
+
 	// Phase 1: Bulk-load all TLEs synchronously (blocks until done or 15s)
 	slog.Info("aurora sgp4 engine starting — bulk loading TLEs")
 	bulkLoadTLEs(ctx, cache, brokers)
@@ -450,4 +473,22 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func tleEpoch(rec gpRecord) time.Time {
+	line := rec.TLELine1
+	if len(line) < 32 {
+		return time.Time{}
+	}
+	year, e1 := strconv.Atoi(line[18:20])
+	day, e2 := strconv.ParseFloat(line[20:32], 64)
+	if e1 != nil || e2 != nil || math.IsNaN(day) || day < 1 || day >= 367 {
+		return time.Time{}
+	}
+	if year < 57 {
+		year += 2000
+	} else {
+		year += 1900
+	}
+	return time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration((day - 1) * 86400 * float64(time.Second)))
 }

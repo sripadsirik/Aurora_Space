@@ -10,6 +10,7 @@ const (
 
 func validRecord() gpRecord {
 	return gpRecord{
+		NoradCatID:   25544,
 		TLELine1:     issLine1,
 		TLELine2:     issLine2,
 		MeanMotion:   15.72125391,
@@ -26,6 +27,7 @@ func TestIsTLEValid(t *testing.T) {
 		name   string
 		mutate func(*gpRecord)
 	}{
+		{"identity mismatch", func(r *gpRecord) { r.NoradCatID = 31029 }},
 		{"short line1", func(r *gpRecord) { r.TLELine1 = "1 25544" }},
 		{"short line2", func(r *gpRecord) { r.TLELine2 = "2 25544" }},
 		{"line1 wrong prefix", func(r *gpRecord) { r.TLELine1 = "X" + issLine1[1:] }},

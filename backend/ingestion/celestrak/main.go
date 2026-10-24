@@ -117,6 +117,9 @@ func fetchWithRetry(ctx context.Context, url string) ([]byte, error) {
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			return nil, fmt.Errorf("provider rejected request: HTTP %d; no immediate retry", resp.StatusCode)
+		}
 		if resp.StatusCode != http.StatusOK {
 			slog.Warn("non-200 response", "status", resp.StatusCode, "attempt", attempt+1, "url", url)
 			continue

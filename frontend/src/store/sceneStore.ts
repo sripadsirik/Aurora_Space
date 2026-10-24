@@ -2,13 +2,15 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type SceneQuality = "performance" | "balanced" | "cinematic";
-export type CameraPreset = "home" | "polar" | "terminator";
+export type CameraPreset = "home" | "polar" | "terminator" | "orbit";
 export type SceneCommand = CameraPreset | "zoom-in" | "zoom-out";
 
 interface SceneState {
   quality: SceneQuality;
   lighting: boolean;
   orbitPaths: boolean;
+  orbitFrame: "orbital" | "earth-fixed";
+  setOrbitFrame: (frame: "orbital" | "earth-fixed") => void;
   coverage: boolean;
   spaceWeather: boolean;
   autoRotate: boolean;
@@ -25,6 +27,8 @@ export const useSceneStore = create<SceneState>()(persist((set) => ({
   quality: "balanced",
   lighting: true,
   orbitPaths: true,
+  orbitFrame: "orbital",
+  setOrbitFrame: (orbitFrame) => set({orbitFrame}),
   coverage: false,
   spaceWeather: true,
   autoRotate: false,

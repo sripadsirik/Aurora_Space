@@ -208,3 +208,274 @@ button:focus-visible, [role="button"]:focus-visible, input:focus-visible {
 
 .scene-selection > div > span { display: block; line-height: 1.5; }
 .scene-selection > div > span:not(.scene-eyebrow) { font-size: 9px; color: #8ba9b5; }
+
+/* Dedicated workspaces for weather, intelligence and solar observation. */
+[data-mode="STORM"] { --mode-accent: #ffb084; }
+[data-mode="INTEL"] { --mode-accent: #9abfff; }
+[data-mode="HELIO"] { --mode-accent: #f4c48e; }
+.mode-heading { position: absolute; z-index: 68; inset: 25px 28px auto; display: flex; justify-content: space-between; pointer-events: none; }
+.mode-heading p { font-size: 9px; letter-spacing: .22em; color: var(--mode-accent); margin: 0 0 8px; }
+.mode-heading h1 { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 30px; font-weight: 400; letter-spacing: -.04em; line-height: 1.15; margin: 0 0 8px; color: #edf4f6; }
+.mode-heading span { font-size: 9px; color: #8ca3af; }
+.mode-heading-status { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.mode-panel { border-radius: 16px !important; border: 1px solid #b4d6e025 !important; background: linear-gradient(145deg, #101d29ed, #060f19eb) !important; box-shadow: 0 18px 70px #0005 !important; backdrop-filter: blur(22px); }
+.mode-panel > div:first-child { padding: 17px 18px; }
+.mode-panel > div:first-child > span { color: var(--mode-accent); font-size: 10px; letter-spacing: .15em; }
+.storm-assessment, .intel-assessment { top: 135px !important; left: 28px !important; width: 310px !important; max-height: calc(100dvh - 240px); overflow: auto; scrollbar-width: thin; }
+.storm-assessment > div + div, .intel-assessment > div + div { padding: 18px; max-height: none; }
+.storm-assessment .text-lg { font-size: 30px; line-height: 1.3; font-weight: 400; }
+.storm-assessment .space-y-3 > :not([hidden]) ~ :not([hidden]), .intel-assessment .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 22px; padding-top: 18px; }
+.intel-assessment th { padding-top: 12px; padding-bottom: 10px; color: #9bb0c4; }
+.intel-assessment td { padding-top: 12px; padding-bottom: 12px; font-size: 9px; }
+.intel-assessment tr:focus-visible { outline: 1px solid var(--mode-accent); }
+.storm-status-banner { position: absolute; top: 135px; right: 28px; max-width: min(420px, calc(100vw - 390px)); }
+.storm-status-banner > div { border-radius: 10px; font-size: 9px; line-height: 1.8; padding: 12px 16px; }
+[data-mode="STORM"] .aurora-panel-stack, [data-mode="INTEL"] .aurora-panel-stack { top: 195px; bottom: 175px; }
+.helio-console { position: absolute; top: 135px; left: 28px; width: 284px; padding: 20px; max-height: calc(100dvh - 235px); overflow-y: auto; pointer-events: auto; scrollbar-width: thin; }
+.observatory-section-label { display: flex; align-items: center; gap: 7px; font-size: 8px; letter-spacing: .13em; color: #e9bc87; padding: 0 !important; }
+.observatory-section-label > span:last-child { margin-left: auto; color: #73828b; }
+.solar-dot { width: 6px; height: 6px; border-radius: 50%; background: #ffc58b; box-shadow: 0 0 12px #ff9b48; }
+.helio-arrival { margin-top: 24px; }
+.helio-arrival p { color: #9aadb7; font-size: 11px; margin: 0 0 8px; }
+.helio-arrival strong { display: block; font-size: 29px; font-weight: 400; letter-spacing: -.05em; color: #f4e1c8; }
+.helio-arrival > span { font-size: 8px; color: #8195a1; display: block; margin-top: 8px; }
+.helio-route { display: flex; align-items: center; margin-top: 25px; }
+.helio-route i { width: 11px; height: 11px; border-radius: 50%; background: #ffc78a; box-shadow: 0 0 15px #f2a64e45; }
+.helio-route i:last-child { background: #8bceec; width: 8px; height: 8px; }
+.helio-route > span { height: 1px; background: linear-gradient(90deg,#f6bd77a0,#8ccce550); flex: 1; }
+.helio-route b { width: 5px; height: 5px; border: 1px solid #8ccce5; transform: rotate(45deg); }
+.helio-route-labels { display: flex; justify-content: space-between; margin: 8px 0 23px; font-size: 8px; letter-spacing: .12em; color: #849ca9; }
+.helio-actions { display: flex; gap: 8px; }
+.helio-actions button, .helio-new { border: 1px solid #f4c48e30; border-radius: 8px; padding: 11px; cursor: pointer; background: #f4c48e09; color: #f4d2a9; font-size: 10px; }
+.helio-actions .helio-primary { flex: 1; background: #edc18d; color: #221d18; border-color: #edc18d; }
+.helio-actions button:hover, .helio-new:hover { filter: brightness(1.15); }
+.helio-control { margin-top: 22px; }
+.helio-control label { display: flex; justify-content: space-between; font-size: 10px; color: #adbdc6; }
+.helio-control strong { color: #e8d1b5; font-weight: 400; }
+.helio-control input { width: 100%; height: 3px; margin: 15px 0 12px; accent-color: #edc18d; cursor: pointer; display: block; }
+.helio-control > div { display: flex; justify-content: space-between; font-size: 7px; letter-spacing: .1em; color: #768e9c; }
+.helio-new { width: 100%; margin-top: 22px; }
+.helio-console-footer { border-top: 1px solid #ffffff10; padding-top: 16px; margin-top: 18px; display: flex; justify-content: space-between; color: #849ba8; font-size: 7px; letter-spacing: .08em; }
+.helio-diagnostics { border-top: 1px solid #ffffff10; margin-top: 16px; padding-top: 14px; }
+.helio-diagnostics summary { color: #a9bbc3; cursor: pointer; font-size: 10px; }
+.helio-diagnostics > div { margin-top: 12px; font-size: 8px; }
+.cme-library { right: 28px !important; top: 135px !important; width: 258px !important; max-height: calc(100dvh - 340px); overflow-y: auto; scrollbar-width: thin; }
+.cme-library > div + div { max-height: none; padding: 12px; }
+.cme-library button { padding: 13px; border-radius: 10px; }
+.cme-library button + button { margin-top: 10px; }
+.helio-telemetry { position: absolute; right: 28px; bottom: 105px; width: 258px; border-top: 1px solid #d0e3ec26; padding-top: 8px; }
+.helio-telemetry > div { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #d0e3ec12; }
+.helio-telemetry span { font-size: 8px; letter-spacing: .08em; color: #8fa5b3; }
+.helio-telemetry strong { font-size: 16px; font-weight: 400; color: #edf5f7; }
+.helio-telemetry small { font-size: 9px; color: #98adb8; }
+.helio-scene-caption { position: absolute; bottom: 170px; left: 50%; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+.helio-scene-caption > span { color: #e7c49a; font-size: 8px; letter-spacing: .25em; }
+.helio-scene-caption p { color: #8fa1ac; font-size: 8px; margin: 9px 0; }
+.helio-scene-caption small { color: #637d8e; font-size: 7px; }
+.helio-notification { position: absolute; top: 110px; left: 50%; transform: translateX(-50%); background: #201b14ed; border: 1px solid #f4c48e60; padding: 12px 18px; border-radius: 9px; color: #f4c48e; font-size: 10px; }
+@media (max-width: 1100px) {
+  .helio-scene-caption { display: none; }
+  .helio-console { width: 250px; left: 18px; }
+  .cme-library, .helio-telemetry { width: 220px !important; right: 18px !important; }
+}
+@media (max-height: 780px) and (min-width: 761px) {
+  .helio-console { top: 120px; max-height: calc(100dvh - 210px); }
+  .helio-arrival { margin-top: 16px; }
+  .helio-control { margin-top: 16px; }
+  .cme-library { top: 120px !important; }
+}
+@media (max-width: 760px) {
+  .mode-heading { inset: 18px 18px auto; }
+  .mode-heading h1 { font-size: 24px; }
+  .mode-heading-status > span { display: none; }
+  .mode-heading > div > span { font-size: 7px; }
+  .storm-assessment, .intel-assessment { left: 16px !important; top: 115px !important; width: min(290px, calc(100vw - 32px)) !important; max-height: calc(100dvh - 250px); }
+  .storm-status-banner { top: auto; bottom: 125px; right: 16px; left: 16px; max-width: none; }
+  .helio-console { top: 115px; left: 16px; width: 230px; max-height: calc(100dvh - 220px); padding: 16px; }
+  .cme-library { top: 115px !important; right: 16px !important; width: 210px !important; max-height: calc(100dvh - 220px); }
+  .helio-telemetry { display: none; }
+}
+@media (max-width: 520px) {
+  .helio-console { top: auto; bottom: 115px; width: calc(100% - 32px); max-height: 32dvh; }
+  .cme-library { top: 112px !important; max-height: 22dvh; width: 180px !important; }
+  .mode-heading-status { max-width: 115px; }
+}
+
+/* Engineering review workspaces: provenance, filters and readable numeric tables. */
+.review-workbench { position:absolute; z-index:70; inset:132px 28px 172px; display:flex; flex-direction:column; border:1px solid #aacbe329; border-radius:16px; background:#08121cf5; backdrop-filter:blur(24px); box-shadow:0 24px 90px #0007; overflow:hidden; font-size:11px; }
+.review-topline { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:20px 24px; border-bottom:1px solid #c0d9e51a; }
+.review-topline h2, .engineering-panel-title h2 { font:400 21px/1.3 ui-sans-serif,system-ui,sans-serif; letter-spacing:-.025em; color:#e5eff3; margin:6px 0 0; }
+.review-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.review-actions button, .engineering-empty button, .review-import-help button, .engineering-export, .catalog-pagination button { border:1px solid #99bfe637; border-radius:7px; background:#a2c4e90c; color:#b8d6f6; padding:9px 12px; font-size:10px; cursor:pointer; }
+.review-actions button:hover, .engineering-export:hover { background:#a2c4e91e; }
+button:disabled { opacity:.4; cursor:not-allowed; }
+.review-summary { display:flex; gap:24px; align-items:center; padding:14px 24px; color:#93aaba; background:#abc7e605; font-size:10px; flex-wrap:wrap; }
+.review-summary b { color:#dae6ee; font-weight:500; }
+.review-summary > span:last-child { margin-left:auto; }
+.engineering-caution { color:#e7bd81 !important; }
+.review-filters { display:flex; gap:12px; padding:14px 24px; border-bottom:1px solid #c0d9e51a; }
+.review-filters label { flex:1; min-width:0; font-size:9px; color:#9aafbf; }
+.review-filters label:first-child { flex:1.5; }
+.review-filters input, .review-filters select, .catalog-filters input:not([type="checkbox"]), .catalog-filters select, .weather-history select { display:block; width:100%; min-width:0; border:1px solid #abc8e42a; border-radius:6px; background:#0c1a27; color:#cbdae7; padding:9px; margin-top:7px; font-size:10px; }
+.review-columns { display:grid; grid-template-columns:minmax(0,1.6fr) minmax(310px,1fr); flex:1; min-height:0; }
+.review-queue, .review-inspector { min-height:0; overflow:auto; scrollbar-width:thin; }
+.review-queue { border-right:1px solid #c0d9e51a; }
+.review-queue table { width:100%; border-collapse:collapse; text-align:left; font-size:10px; }
+.review-queue th { position:sticky; top:0; background:#101e2a; color:#8fa7bb; font-weight:400; padding:13px 16px; z-index:1; }
+.review-queue td { border-bottom:1px solid #c0d9e514; padding:13px 16px; color:#b5c9da; font-variant-numeric:tabular-nums; }
+.review-queue td:first-child { padding:0; width:44%; }
+.review-queue td button { display:block; width:100%; text-align:left; padding:16px; background:none; border:0; color:inherit; cursor:pointer; }
+.review-queue td strong { display:block; color:#d9e7f0; font-weight:400; line-height:1.6; }
+.review-queue td span, .review-queue td small { display:block; margin-top:5px; font-size:9px; color:#8ea6ba; }
+.review-queue tr:hover { background:#aac6ed07; }
+.review-queue tr.is-selected { background:#aac6ed12; box-shadow:inset 2px 0 #98bff3; }
+.review-inspector { padding:24px; }
+.review-inspector h3 { font-size:16px; font-weight:400; color:#dfeef8; margin:8px 0; overflow-wrap:anywhere; }
+.review-inspector-heading p { color:#90a6b7; font-size:9px; }
+.review-inspector h4 { margin:22px 0 12px; font-size:10px; color:#b9d5ee; font-weight:400; }
+.review-object-buttons { display:flex; gap:8px; margin:18px 0; }
+.review-object-buttons button { flex:1; border:1px solid #a0c9e42a; border-radius:8px; background:#accfff08; color:#c8deee; padding:12px; text-align:left; font-size:10px; cursor:pointer; }
+.review-object-buttons span { display:block; font-size:8px; color:#8fa9ba; margin-top:7px; }
+.engineering-readouts { display:grid; grid-template-columns:1fr 1.2fr; gap:10px 14px; font-size:10px; margin:18px 0; }
+.engineering-readouts dt { color:#90a8ba; }
+.engineering-readouts dd { text-align:right; color:#d9e6ef; margin:0; overflow-wrap:anywhere; }
+.review-coverage { display:flex; gap:14px; }
+.review-coverage > div { flex:1; border-left:2px solid #8caecc40; padding-left:10px; font-size:9px; }
+.review-coverage strong { font-weight:400; color:#c5dae9; }
+.review-coverage span { display:block; margin:8px 0; color:#9ab1c2; line-height:1.6; }
+.engineering-note { font-size:10px; line-height:1.75; color:#8ea7b8; margin:12px 0; }
+.review-inspector details { border-top:1px solid #c0d9e51a; padding:14px 0; }
+.review-inspector summary { cursor:pointer; color:#bcd1e3; font-size:10px; }
+.review-revision { width:100%; display:block; background:#c4d7ee05; border:1px solid #c4d7ee16; color:#bccfdd; padding:10px; text-align:left; cursor:pointer; font-size:9px; margin-top:8px; }
+.review-revision span { display:block; color:#95b6d3; margin-top:7px; }
+.review-field { display:contents; }
+.review-notes { display:block; margin-top:16px; font-size:10px; color:#a8c2d5; }
+.review-notes textarea { width:100%; height:95px; resize:vertical; background:#040c13; border:1px solid #b1d0e62c; border-radius:7px; color:#d3e0eb; font-size:11px; padding:12px; margin-top:10px; }
+.review-check { display:flex; align-items:center; gap:9px; color:#9db4c6; font-size:9px; line-height:1.5; margin:12px 0; }
+.review-check input { accent-color:#9abfff; }
+.review-inspector > a, .weather-links a { color:#a9cee8; font-size:9px; display:block; padding:9px 0; }
+.review-import-help { margin:24px; padding:18px; border:1px dashed #accbe328; border-radius:9px; color:#a1b7c7; font-size:10px; line-height:1.8; }
+.review-import-help strong { font-weight:400; color:#c5d8e7; }
+.review-error { padding:12px 24px; margin:0; background:#713a2428; color:#ffc3a3; }
+.engineering-empty { padding:46px 28px; text-align:center; color:#8ca6b8; }
+.engineering-empty > span { font-size:28px; color:#85a8c8; }
+.engineering-empty h3 { color:#cadde9; font-size:15px; font-weight:400; }
+.engineering-empty p { max-width:420px; margin:14px auto 20px; font-size:11px; line-height:1.8; }
+.satellite-workbench { position:absolute; right:26px; top:96px; bottom:180px; width:360px; z-index:65; padding:20px; overflow:auto; scrollbar-width:thin; }
+.engineering-panel-title p { font-size:9px; color:#9bb0bd; line-height:1.6; }
+.catalog-quality { display:flex; gap:12px; margin:20px 0; padding:15px 0; border-block:1px solid #b1d0e61c; }
+.catalog-quality > span { flex:1; color:#8ca5b5; font-size:8px; }
+.catalog-quality strong { display:block; color:#d2e3ed; font-size:17px; font-weight:400; margin-bottom:7px; }
+.catalog-filters > div { display:flex; gap:8px; }
+.catalog-row { display:flex; align-items:center; gap:8px; border-bottom:1px solid #b1d0e614; }
+.catalog-row button { color:#b9d5e1; background:none; border:0; padding:12px 0; text-align:left; cursor:pointer; font-size:15px; }
+.catalog-row button:nth-child(2) { flex:1; min-width:0; }
+.catalog-row strong { font-size:10px; font-weight:400; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.catalog-row button span { display:block; font-size:8px; color:#87a4b5; margin-top:6px; }
+.catalog-row > span { font-size:9px; }
+.catalog-pagination { display:flex; justify-content:space-between; align-items:center; color:#92acbc; margin:15px 0; font-size:9px; }
+.engineering-export { width:100%; }
+.weather-workbench { position:absolute; left:28px; top:132px; bottom:174px; width:360px; z-index:70; padding:22px; overflow:auto; scrollbar-width:thin; }
+.weather-scales { display:flex; justify-content:space-between; padding:18px 0; border-block:1px solid #b1d0e61c; margin-top:20px; gap:12px; }
+.weather-scales span { display:block; font-size:7px; letter-spacing:.07em; color:#9cacb7; }
+.weather-scales strong { display:block; font-size:30px; font-weight:400; color:#e8d6be; margin:8px 0; }
+.weather-scales small { display:block; font-size:8px; color:#9aaebc; }
+.weather-history { border-top:1px solid #b1d0e61c; padding-top:18px; }
+.weather-history label { font-size:10px; color:#bbd0dc; }
+.weather-history svg { width:100%; height:105px; }
+.weather-chart-labels { display:flex; justify-content:space-between; color:#819cab; font-size:8px; margin:10px 0; }
+.weather-context { border-top:1px solid #b1d0e61c; margin-top:22px; padding-top:16px; }
+.weather-context h3 { font-size:11px; font-weight:400; color:#efc591; }
+.weather-context > p:not(.engineering-note) { font-size:10px; color:#c2d5df; }
+[data-mode="INTEL"] .scene-controls { display:none; }
+[data-mode="INTEL"] .mode-heading { z-index:72; }
+@media(max-width:1100px) { .review-workbench { inset:122px 18px 100px; } .review-columns { grid-template-columns:minmax(0,1fr) 330px; } .review-topline { padding:16px; } .review-summary, .review-filters { padding:12px 16px; } .review-summary { gap:12px; } .review-queue th, .review-queue td { padding:10px; } .satellite-workbench { width:310px; } }
+@media(max-width:760px) { .review-workbench { inset:110px 12px 78px; overflow:auto; } .review-topline { align-items:start; } .review-topline h2 { font-size:18px; } .review-actions { gap:5px; } .review-actions button { padding:8px; font-size:9px; } .review-summary { gap:12px; } .review-summary > span:last-child { margin-left:0; width:100%; } .review-filters { flex-wrap:wrap; } .review-filters label { flex:1 1 40%; } .review-columns { display:block; overflow:visible; } .review-queue { max-height:44vh; overflow:auto; } .review-inspector { border-top:1px solid #c0d9e51a; } .satellite-workbench { top:84px; right:12px; bottom:124px; width:min(310px,calc(100vw - 24px)); } .weather-workbench { top:112px; left:12px; bottom:125px; width:min(340px,calc(100vw - 24px)); } }
+
+/* Storm observatory: quiet instruments around a luminous polar scene. */
+[data-mode="STORM"] .mode-heading h1 { color:#e4fff7; }
+[data-mode="STORM"] .mode-heading p { color:#74d9c1; }
+.storm-atmosphere { position:absolute; inset:0; z-index:59; pointer-events:none; background:radial-gradient(ellipse at 59% 31%,#51e5b80b,transparent 51%); box-shadow:inset 0 0 170px #020b1377; }
+.weather-workbench { width:326px; background:linear-gradient(145deg,#0d2229ee,#07121bf5); border:1px solid #9ae0d329; box-shadow:0 20px 70px #0005; padding:20px; border-radius:18px; }
+.weather-workbench > .engineering-panel-title:first-child { padding:0 0 17px; background:none; border:0; }
+.weather-workbench .scene-eyebrow { color:#79ccba; font-size:8px; }
+.weather-workbench h2 { font-size:24px; margin:9px 0; letter-spacing:-.04em; }
+.weather-scales { gap:6px; border:0; padding:0; margin:8px 0 20px; }
+.weather-scales > div { flex:1; padding:12px 8px; border:1px solid #94c9c31c; background:#8acab205; border-radius:9px; }
+.weather-scales strong { font-size:27px; margin:9px 0; }
+.weather-scales span { font-size:6px; letter-spacing:.03em; white-space:nowrap; }
+.weather-scales small { font-size:7px; }
+.storm-wind-hero { padding:17px; margin-bottom:18px; border:1px solid #74e8c92c; border-radius:12px; background:linear-gradient(115deg,#143a3a99,#0d202d55); }
+.storm-wind-hero > span { font-size:8px; letter-spacing:.15em; color:#8ebfb6; }
+.storm-wind-hero > div { display:flex; align-items:baseline; gap:9px; margin:8px 0 12px; }
+.storm-wind-hero strong { font-family:Inter,sans-serif; font-size:44px; font-weight:300; letter-spacing:-.05em; color:#d9fff1; }
+.storm-wind-hero div > span { font-size:10px; color:#8fc6be; }
+.storm-wind-hero svg { width:78px; margin-left:auto; align-self:center; fill:none; stroke:#72dfbc; stroke-width:1.3; }
+.storm-wind-hero p { display:flex; gap:10px; border-top:1px solid #a7e0c71c; padding-top:12px; margin:0; font-size:9px; color:#a2c2c3; }
+.storm-wind-hero b { color:#d5f6e9; font-weight:400; }
+.storm-wind-hero p span { margin-left:auto; color:#7ccebb; }
+.storm-method { color:#8db5b1; font-size:9px; margin:16px 0; }
+.storm-method summary { cursor:pointer; padding:5px 0; }
+.weather-history { margin-top:18px; }
+.weather-history svg { height:95px; }
+.weather-context h3 { color:#9cdecf; }
+.aurora-observatory { position:absolute; z-index:70; right:28px; top:132px; width:286px; padding:23px; border:1px solid #a5d6e028; border-radius:18px; background:linear-gradient(145deg,#10262de8,#09141fef); backdrop-filter:blur(20px); box-shadow:0 22px 70px #0004; }
+.aurora-card-eyebrow { display:flex; gap:7px; align-items:center; color:#8ed7c7; font-size:8px; letter-spacing:.13em; }
+.aurora-card-eyebrow > span:last-child { margin-left:auto; color:#698b9b; font-size:7px; }
+.aurora-status-dot { display:inline-block; width:5px; height:5px; border-radius:50%; background:#8be9bd; box-shadow:0 0 10px #8be9bd80; }
+.aurora-observatory h2 { font-family:Inter,sans-serif; font-size:25px; letter-spacing:-.045em; color:#e1f7f1; font-weight:400; margin:19px 0 7px; }
+.aurora-intro { font-size:9px; line-height:1.7; color:#91afb8; }
+.aurora-orbit-art { position:relative; height:145px; margin:8px -10px; overflow:hidden; }
+.aurora-art-earth { position:absolute; width:119px; height:119px; border-radius:50%; left:calc(50% - 60px); top:20px; background:radial-gradient(circle at 34% 27%,#254c5d,#0b202e 60%,#030d19 95%); border:1px solid #82d8df33; box-shadow:inset -12px -10px 25px #0009,0 0 20px #6cdbc419; }
+.aurora-art-ring { position:absolute; left:calc(50% - 65px); top:30px; width:130px; height:58px; border-radius:50%; z-index:2; transform:rotate(-20deg); border:3px solid #7ef9bca6; box-shadow:0 0 7px #4aeab8,0 0 21px #4aeab855,inset 0 0 10px #40ffd144; filter:blur(.6px); }
+.aurora-art-ring.ring-outer { width:148px; height:73px; left:calc(50% - 74px); top:22px; border:2px solid #a18aed66; box-shadow:0 0 14px #8b70ff44; filter:blur(2px); }
+.aurora-art-halo { position:absolute; inset:0; background:radial-gradient(ellipse,#4bebbb18,transparent 65%); }
+.aurora-orbit-art > span { position:absolute; z-index:3; left:49%; top:50px; font-size:8px; color:#cef9eb; }
+.aurora-index { display:flex; align-items:center; justify-content:space-between; border-block:1px solid #b3dddf1c; padding:17px 0; }
+.aurora-index div > span { font-size:7px; letter-spacing:.12em; color:#8cabaf; }
+.aurora-index strong { display:block; font-family:Inter,sans-serif; font-size:34px; font-weight:300; color:#d6f8e8; margin-top:5px; }
+.aurora-index small { font-size:12px; color:#7dada3; }
+.aurora-kp-bars { display:flex; gap:4px; align-items:end; }
+.aurora-kp-bars i { width:6px; background:#a5d5cc14; border-radius:2px; }
+.aurora-kp-bars i.lit { background:#82e4bb; box-shadow:0 0 9px #82e4bb30; }
+.aurora-view-buttons { display:flex; gap:8px; margin:18px 0; }
+.aurora-view-buttons button { flex:1; border:1px solid #86c7b83b; background:#78d4bb09; border-radius:7px; padding:10px 4px; color:#b2e8da; font-family:inherit; font-size:9px; cursor:pointer; }
+.aurora-view-buttons button:hover { background:#78d4bb20; border-color:#86c7b8; }
+.aurora-layer-toggle { display:flex; justify-content:space-between; width:100%; padding:0 0 17px; color:#a8c3ca; font-size:9px; border:0; border-bottom:1px solid #a5d6e01c; background:none; cursor:pointer; }
+.aurora-layer-toggle > span:last-child { display:flex; gap:8px; align-items:center; font-size:8px; }
+.aurora-layer-toggle i { width:21px; height:11px; background:#59716d; border-radius:8px; position:relative; }
+.aurora-layer-toggle i:after { content:""; width:7px; height:7px; background:#dae7e2; border-radius:50%; position:absolute; top:2px; left:2px; }
+.aurora-layer-toggle i.is-on { background:#377d68; }
+.aurora-layer-toggle i.is-on:after { left:12px; background:#a4f1cf; }
+.aurora-color-key { display:flex; gap:16px; margin-top:17px; font-size:7px; color:#94afb8; }
+.aurora-color-key i { display:inline-block; width:5px; height:5px; background:#72e8b3; border-radius:50%; margin-right:5px; }
+.aurora-color-key span:last-child i { background:#a394ee; }
+.aurora-model-note { color:#7e9eac; font-size:8px; line-height:1.8; margin:12px 0 0; }
+.storm-scene-caption { position:absolute; z-index:61; bottom:175px; left:50%; transform:translateX(-50%); color:#9ccbc5; font-size:8px; letter-spacing:.16em; pointer-events:none; text-align:center; }
+.storm-scene-caption > span { margin-right:7px; }
+.storm-scene-caption small { display:block; margin-top:8px; color:#7999a5; font-size:8px; letter-spacing:.04em; }
+@media(max-width:1100px) { .aurora-observatory { right:18px; width:240px; padding:18px; top:122px; } .weather-workbench { left:18px; width:290px; top:122px; padding:18px; } .storm-scene-caption { display:none; } }
+@media(max-width:760px) { .weather-workbench { left:12px; top:110px; bottom:120px; width:260px; } .aurora-observatory { top:auto; bottom:133px; right:12px; width:160px; padding:13px; } .aurora-observatory h2 { font-size:18px; margin-top:10px; } .aurora-intro,.aurora-orbit-art,.aurora-index,.aurora-color-key,.aurora-card-eyebrow > span:last-child { display:none; } .aurora-card-eyebrow { font-size:7px; } .aurora-view-buttons { flex-direction:column; margin:12px 0; } }
+@media(max-width:480px) { .weather-workbench { width:calc(100% - 24px); bottom:240px; } .aurora-observatory { left:12px; right:12px; bottom:80px; width:auto; } .aurora-observatory h2,.aurora-card-eyebrow,.aurora-layer-toggle { display:none; } .aurora-view-buttons { flex-direction:row; margin:0; } .aurora-model-note { margin-top:8px; } }
+.catalog-assurance { padding:12px; margin-bottom:14px; border:1px solid #d9b66c38; border-radius:8px; background:#cfaa5410; color:#b8c9d0; font-size:9px; line-height:1.7; }
+.catalog-assurance summary { cursor:pointer; color:#e3c58a; }
+.catalog-assurance button { background:#10232b; border:1px solid #a7c6d033; border-radius:5px; padding:8px; color:#b9dfde; cursor:pointer; }
+.orbit-frame-choice { display:flex; gap:5px; margin:8px 0; }
+.orbit-frame-choice button { color:#9abbbf; background:#12252b; border:1px solid #83c7b82b; border-radius:4px; padding:5px 8px; font-size:9px; cursor:pointer; }
+.orbit-frame-choice button[aria-pressed="true"] { color:#b9ffe4; border-color:#79cdb5; background:#193f39; }
+
+/* Keep detail sheets clear of orbit controls in narrow desktop windows. */
+@media (max-width: 1100px) {
+  .aurora-panel-stack,
+  [data-mode="STORM"] .aurora-panel-stack,
+  [data-mode="INTEL"] .aurora-panel-stack {
+    top: 16px;
+    bottom: auto;
+    max-height: 42dvh;
+  }
+  .aurora-panel-stack .aurora-slide-panel {
+    max-height: 42dvh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+}

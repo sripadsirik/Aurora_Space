@@ -1,159 +1,45 @@
-import { useEffect, useMemo } from "react";
-
-import { mockKp24hHistory } from "../../data/mock/spaceWeather";
+import { useEffect, useState } from "react";
+import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
-import { getKpColor } from "../../utils/colors";
-import { resolveDisplayedWeather } from "../../utils/displayedWeather";
-import { formatKpIndex } from "../../utils/measurements";
-import { gScaleColor, kpSparklineColor, kpToGScale } from "../../utils/spaceWeatherScales";
-import { getStormSystemImpacts } from "../../utils/stormSystemImpacts";
-import { countStormExposedAssets } from "../../utils/stormExposure";
-import { buildSparkline, sparklineThresholdY } from "../../utils/sparkline";
+import type { SpaceWeather } from "../../types/space";
+import { kpToGScale, gScaleColor, xrayClassToRScaleInfo, protonFluxToSScaleInfo } from "../../utils/spaceWeatherScales";
+import { solarWindDynamicPressure } from "../../utils/solarWindPressure";
+import { geoeffectiveElectricField } from "../../utils/solarWindElectricField";
+import { describeFeedFreshness } from "../../utils/feedFreshness";
+import { downloadText, csv } from "../../utils/download";
 
 export const StormImpactPanel = (): JSX.Element | null => {
-  const currentMode = useAuroraStore((s) => s.currentMode);
-  const spaceWeather = useAuroraStore((s) => s.spaceWeather);
-  const satellites = useAuroraStore((s) => s.satellites);
-  const timelineEvent = useAuroraStore((s) => s.timelineEvent);
-  const openPanel = useAuroraStore((s) => s.openPanel);
-
-  const { kpIndex: kp } = resolveDisplayedWeather(spaceWeather, timelineEvent);
-
-  useEffect(() => {
-    if (currentMode === "STORM") {
-      openPanel("storm-impact");
-    }
-  }, [currentMode, openPanel]);
-
-  const riskCounts = useMemo(() => countStormExposedAssets(satellites), [satellites]);
-
-  if (currentMode !== "STORM") return null;
-
-  const gLevel = kpToGScale(kp);
-  const gColor = gScaleColor(gLevel);
-  const impacts = getStormSystemImpacts(kp);
-
-  // KP Sparkline
-  const sparklineWidth = 240;
-  const sparklineHeight = 40;
-  const sparklineScale = { width: sparklineWidth, height: sparklineHeight, min: 0, max: 9 };
-  const { points, path: pathD } = buildSparkline(mockKp24hHistory, sparklineScale);
-  const activeThresholdY = sparklineThresholdY(5, sparklineScale);
-  const severeThresholdY = sparklineThresholdY(7, sparklineScale);
-
-  return (
-    <div
-      className="pointer-events-auto fixed left-4 top-4 z-[70] w-[300px] rounded border font-mono text-[11px] shadow-[0_0_30px_rgba(255,60,0,0.08)] backdrop-blur-xl"
-      style={{
-        borderColor: "rgba(255,60,0,0.3)",
-        backgroundColor: "rgba(5,15,30,0.92)",
-        boxShadow: "0 0 30px rgba(255,60,0,0.08), inset 0 0 1px rgba(255,60,0,0.15)"
-      }}
-    >
-      <div className="border-b border-red-500/20 px-3 py-2">
-        <span className="text-xs tracking-[0.18em] text-[#ff6644]">STORM IMPACT ASSESSMENT</span>
-      </div>
-
-      <div className="space-y-3 px-3 py-2">
-        {/* Current Storm */}
-        <div>
-          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">CURRENT STORM</p>
-          <div className="mt-1 flex items-center gap-3">
-            <span
-              className="rounded border px-2 py-0.5 text-[14px] font-bold"
-              style={{ borderColor: gColor, color: gColor, backgroundColor: `${gColor}18` }}
-            >
-              {gLevel}
-            </span>
-            <div>
-              <p className="text-lg font-semibold" style={{ color: getKpColor(kp) }}>
-                Kp {formatKpIndex(kp)}
-              </p>
-            </div>
-          </div>
-          <div className="mt-1 space-y-0.5 text-[10px] text-[#ffccaa]">
-            <p>Storm start: 14 minutes ago (mock)</p>
-            <p>Est. duration: 6-12 hours (mock)</p>
-          </div>
-        </div>
-
-        {/* At-Risk Assets */}
-        <div className="border-t border-red-500/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">AT-RISK ASSETS</p>
-          <div className="mt-1 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#ff8b38]" />
-                LEO — Drag Risk
-              </span>
-              <span className="text-[#ffcc88]">{riskCounts.leoDrag} satellites</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#ffcc00]" />
-                GEO — Charge Risk
-              </span>
-              <span className="text-[#ffcc88]">{riskCounts.geoCharging} satellites</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#ff2a2a]" />
-                Debris — Decay Risk
-              </span>
-              <span className="text-[#ffcc88]">{riskCounts.debris} objects</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Affected Systems */}
-        <div className="border-t border-red-500/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">AFFECTED SYSTEMS (mock)</p>
-          <div className="mt-1 space-y-1">
-            {impacts.map((row) => (
-              <div key={row.system} className="flex items-center justify-between">
-                <span className="text-[#d8c8b8]">{row.system}</span>
-                <span style={{ color: row.color }} className="text-[10px]">{row.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Kp Sparkline */}
-        <div className="border-t border-red-500/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[#ff8844]">KP HISTORY (24h, mock)</p>
-          <svg
-            viewBox={`-4 -4 ${sparklineWidth + 8} ${sparklineHeight + 8}`}
-            className="mt-1 h-[50px] w-full"
-          >
-            {/* Threshold lines */}
-            <line
-              x1="0" y1={activeThresholdY}
-              x2={sparklineWidth} y2={activeThresholdY}
-              stroke="#ffcc0030" strokeWidth="1" strokeDasharray="4 4"
-            />
-            <line
-              x1="0" y1={severeThresholdY}
-              x2={sparklineWidth} y2={severeThresholdY}
-              stroke="#ff2a2a30" strokeWidth="1" strokeDasharray="4 4"
-            />
-            {/* Path */}
-            <path d={pathD} fill="none" stroke="#ff8844" strokeWidth="1.5" />
-            {/* Segment coloring */}
-            {points.map((p, i) => (
-              <circle key={i} cx={p.x} cy={p.y} r="2" fill={kpSparklineColor(p.value)} />
-            ))}
-            {/* Current value dot */}
-            <circle
-              cx={points[points.length - 1].x}
-              cy={points[points.length - 1].y}
-              r="4"
-              fill={getKpColor(mockKp24hHistory[mockKp24hHistory.length - 1])}
-              stroke="white"
-              strokeWidth="1"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
+  const mode=useAuroraStore(s=>s.currentMode);
+  const weather=useAuroraStore(s=>s.spaceWeather);
+  const received=useAuroraStore(s=>s.feedLastUpdated.spaceWeather);
+  const satellites=useAuroraStore(s=>s.satellites);
+  const selected=useAuroraStore(s=>s.selectedSatellite);
+  const [history,setHistory]=useState<SpaceWeather[]>([]);
+  const [metric,setMetric]=useState<"solarWindSpeed"|"bzComponent"|"kpIndex">("bzComponent");
+  const now=useUtcClock();
+  useEffect(()=>{if(!received)return;setHistory(rows=>rows.at(-1)?.lastUpdated.getTime()===weather.lastUpdated.getTime()?rows:[...rows,weather].slice(-120));},[weather,received]);
+  if(mode!=="STORM")return null;
+  const g=kpToGScale(weather.kpIndex);
+  const r=xrayClassToRScaleInfo(weather.xrayFlux);
+  const radiation=weather.protonFlux===undefined?null:protonFluxToSScaleInfo(weather.protonFlux);
+  const freshness=describeFeedFreshness(received,now);
+  const valid=received!==null;
+  const values=history.map(sample=>sample[metric]);
+  const low=Math.min(...values),high=Math.max(...values);
+  const start=history[0]?.lastUpdated.getTime()??0,end=history.at(-1)?.lastUpdated.getTime()??1;
+  const points=history.map(sample=>`${8+((sample.lastUpdated.getTime()-start)/Math.max(1,end-start))*284},${high===low?51:84-((sample[metric]-low)/(high-low))*66}`).join(" ");
+  return <section className="weather-workbench mode-panel" aria-label="Space weather monitoring">
+    <div className="engineering-panel-title"><span className="scene-eyebrow">NOAA SWPC · MONITORING</span><h2>Solar conditions</h2><p className={freshness.status!=="live"?"engineering-caution":""}>{valid?`Feed received ${freshness.label}`:"Awaiting weather feed · no measured values available"}</p></div>
+    {valid&&<>
+    <div className="weather-scales"><div><span>GEOMAGNETIC</span><strong style={{color:gScaleColor(g)}}>{g}</strong><small>Kp {weather.kpIndex.toFixed(1)}</small></div><div><span>RADIO BLACKOUT</span><strong>{r.level}</strong><small>X-ray {weather.xrayFlux}</small></div><div><span>SOLAR RADIATION</span><strong>{radiation?.level??"—"}</strong><small>{weather.protonFlux===undefined?"No proton measurement":`${weather.protonFlux} pfu`}</small></div></div>
+    <div className="storm-wind-hero"><span>UPSTREAM SOLAR WIND</span><div><strong>{weather.solarWindSpeed.toFixed(0)}</strong><span>km/s</span><svg viewBox="0 0 120 46" aria-hidden="true"><path d="M0 8H77M16 23H104M0 38H84"/><path d="m72 3 7 5-7 5m27 5 7 5-7 5m-24 5 7 5-7 5"/></svg></div><p>IMF Bz <b>{weather.bzComponent.toFixed(2)} nT</b><span>{weather.bzComponent < 0 ? "Southward" : "Northward"}</span></p></div>
+    <dl className="engineering-readouts"><dt>Solar wind speed</dt><dd>{weather.solarWindSpeed.toFixed(1)} km/s</dd><dt>Proton density</dt><dd>{weather.solarWindDensity.toFixed(2)} cm⁻³</dd><dt>IMF Bz</dt><dd className={weather.bzComponent<0?"engineering-caution":""}>{weather.bzComponent.toFixed(2)} nT</dd><dt>Dynamic pressure*</dt><dd>{solarWindDynamicPressure(weather.solarWindDensity,weather.solarWindSpeed).toFixed(2)} nPa</dd><dt>Southward coupling*</dt><dd>{geoeffectiveElectricField(weather.solarWindSpeed,weather.bzComponent).toFixed(2)} mV/m</dd><dt>Feed timestamp · UTC</dt><dd>{weather.lastUpdated.toISOString().replace("T"," ").slice(0,19)}</dd></dl>
+    <details className="storm-method"><summary>Measurement notes</summary><p className="engineering-note">*Derived: proton-only pressure = mₚnv²; coupling = V·max(−Bz,0). Individual measurement epochs and alpha-particle contribution are not supplied in this feed.</p></details>
+    <div className="weather-history"><label>Session trend<select value={metric} onChange={e=>setMetric(e.target.value as typeof metric)}><option value="bzComponent">IMF Bz · nT</option><option value="solarWindSpeed">Wind · km/s</option><option value="kpIndex">Kp index</option></select></label>
+    {history.length>1?<><div className="weather-chart-labels"><span>{high.toFixed(1)} max</span><span>{low.toFixed(1)} min</span></div><svg viewBox="0 0 300 100" role="img" aria-label={`${metric} observed during this session`}><path d="M8 18H292 M8 51H292 M8 84H292" stroke="#ffffff14" fill="none"/><polygon points={`8,92 ${points} 292,92`} fill="url(#storm-trend-fill)"/><defs><linearGradient id="storm-trend-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#72e8ce" stopOpacity="0.25"/><stop offset="100%" stopColor="#72e8ce" stopOpacity="0"/></linearGradient></defs><polyline points={points} stroke="#72e8ce" strokeWidth="2" fill="none"/></svg><div className="weather-chart-labels"><span>{history[0].lastUpdated.toISOString().slice(11,19)} UTC</span><span>{history.at(-1)!.lastUpdated.toISOString().slice(11,19)} UTC</span></div></>:<p className="engineering-note">Collecting session samples. A trend appears after the next distinct weather update.</p>}
+    <button className="engineering-export" disabled={!history.length} onClick={()=>downloadText("aurora-weather-session.csv",csv([["Feed UTC","Kp","Wind km/s","Density cm^-3","Bz nT","X-ray class","Protons pfu"],...history.map(w=>[w.lastUpdated.toISOString(),w.kpIndex,w.solarWindSpeed,w.solarWindDensity,w.bzComponent,w.xrayFlux,w.protonFlux??null])]),"text/csv")}>Export observed session · CSV</button></div>
+    </>}
+    <div className="weather-context"><h3>Mission context</h3><p>{selected?`${selected.name} · ${selected.orbitType}`:`Catalog: ${satellites.filter(s=>s.orbitType==="LEO").length.toLocaleString()} LEO objects`}</p><p className="engineering-note">{selected?.orbitType==="GEO"?"Review charging environment and operator telemetry. Kp alone cannot establish spacecraft charging risk.":"Elevated geomagnetic activity can change atmospheric drag. Review updated orbit determination and mission density models; this view does not estimate per-spacecraft drag or decay."}</p></div>
+    <div className="weather-links"><a href="https://www.swpc.noaa.gov/products/alerts-watches-and-warnings" target="_blank" rel="noreferrer">NOAA alerts & warnings ↗</a><a href="https://www.swpc.noaa.gov/products/3-day-forecast" target="_blank" rel="noreferrer">Official 3-day forecast ↗</a><a href="https://www.swpc.noaa.gov/noaa-scales-explanation" target="_blank" rel="noreferrer">NOAA scale definitions ↗</a></div>
+  </section>;
 };

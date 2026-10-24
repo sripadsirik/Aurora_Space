@@ -6,9 +6,9 @@ import { MODE_SHORTCUT_ORDER, modeForShortcutKey } from "../utils/modeShortcuts"
 import { SatelliteSearch } from "./SatelliteSearch";
 
 const MODE_SUBTITLES: Record<VisualMode, string> = {
-  OPS: "Operator Dashboard",
-  STORM: "Weather Response",
-  INTEL: "Conjunction Analysis",
+  OPS: "Satellite Operations",
+  STORM: "Space Weather",
+  INTEL: "Conjunction Review",
   HELIO: "Solar Forecasting"
 };
 
@@ -42,7 +42,8 @@ export const ModeSelector = (): JSX.Element => {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.target instanceof HTMLElement && (e.target.isContentEditable || e.target.closest("input, textarea, select"))) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "Escape") {
         closeAllPanels();
         return;

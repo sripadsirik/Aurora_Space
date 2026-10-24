@@ -1,7 +1,7 @@
 /**
  * Number-key shortcuts for the visual-mode selector.
  *
- * The mode selector lets the operator jump straight to a view by pressing 1-4.
+ * The mode selector lets the operator jump straight to a view by pressing 1-3.
  * That mapping was inlined in the `ModeSelector` key handler as a `parseInt`
  * plus a bounds check against a magic `4`; centralising both the ordering and
  * the lookup here keeps the rendered buttons and the keyboard shortcuts driven
@@ -15,7 +15,7 @@ import type { VisualMode } from "../types/space";
  * the order their `1`-based number-key shortcuts follow (`1` -> `OPS`, `2` ->
  * `STORM`, and so on).
  */
-export const MODE_SHORTCUT_ORDER: readonly VisualMode[] = ["OPS", "STORM", "INTEL", "HELIO"];
+export const MODE_SHORTCUT_ORDER: readonly VisualMode[] = ["OPS", "STORM", "INTEL"];
 
 /**
  * Resolves a keyboard `event.key` to the visual mode it selects, or `null` when

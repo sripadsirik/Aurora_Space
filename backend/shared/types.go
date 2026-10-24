@@ -4,6 +4,11 @@ import "encoding/json"
 
 // Satellite matches frontend/src/types/space.ts Satellite.
 type Satellite struct {
+	MetadataSource    string  `json:"metadataSource,omitempty"`
+	MetadataFetchedAt string  `json:"metadataFetchedAt,omitempty"`
+	DecayDate         string  `json:"decayDate,omitempty"`
+	OperationalStatus string  `json:"operationalStatus,omitempty"`
+	ObjectType        string  `json:"objectType,omitempty"`
 	TLELine1          string  `json:"tleLine1,omitempty"`
 	TLELine2          string  `json:"tleLine2,omitempty"`
 	PositionTimestamp string  `json:"positionTimestamp,omitempty"`

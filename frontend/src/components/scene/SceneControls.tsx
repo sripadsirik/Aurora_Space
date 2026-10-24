@@ -1,7 +1,8 @@
+import { objectClassification } from "../../utils/objectType";
 import { useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
 import { useSceneStore, type SceneQuality } from "../../store/sceneStore";
-import { elementEpoch, hasCurrentElements } from "../../utils/propagation";
+import { elementEpoch, orbitalElementStatus, orbitDescription } from "../../utils/propagation";
 import { env, hasValidCesiumIonToken } from "../../utils/env";
 
 export const SceneControls = (): JSX.Element => {
@@ -61,7 +62,7 @@ export const SceneControls = (): JSX.Element => {
         <span className="scene-divider" />
         <button className="scene-tool scene-immerse-button" aria-pressed={earthOnly} onClick={toggleEarth} title="Immersive Earth (0)">{earthOnly ? "Exit immersive" : "Immerse"}</button>
       </div>
-      {selected && earthView && !earthOnly && <div className="scene-selection"><div><span className="scene-eyebrow">{live ? (hasCurrentElements(selected) ? "SGP4 · REAL ORBITAL ELEMENTS" : "SNAPSHOT · NO CURRENT TLE") : "DEMO · SIMULATED"}</span><strong>{selected.name}</strong><span>{Math.round(selected.altitudeKm).toLocaleString()} km · {selected.orbitType}</span><span>Representative model · illustrative attitude & size</span><span>{elementEpoch(selected) ? `TLE epoch ${elementEpoch(selected)!.toUTCString()}` : "No TLE: predicted path unavailable"}</span></div><button className="scene-follow" aria-pressed={scene.following} onClick={() => scene.setFollowing(!scene.following)}>{scene.following ? "Following ●" : "Follow ↗"}</button></div>}
+      {selected && earthView && !earthOnly && <div className="scene-selection"><div><span className="scene-eyebrow">{live ? (orbitalElementStatus(selected)) : "DEMO · SIMULATED"}</span><strong>{selected.name} · #{selected.noradId}</strong><span>{orbitDescription(selected)}</span><span>{objectClassification(selected).label}</span><span>{Math.round(selected.altitudeKm).toLocaleString()} km · {selected.orbitType}</span><span>Representative model · illustrative attitude & size</span><div className="orbit-frame-choice" role="group" aria-label="Trajectory reference frame"><button aria-pressed={scene.orbitFrame==="orbital"} onClick={()=>scene.setOrbitFrame("orbital")}>Orbital space</button><button aria-pressed={scene.orbitFrame==="earth-fixed"} onClick={()=>scene.setOrbitFrame("earth-fixed")}>Earth-fixed</button><button onClick={()=>scene.requestCamera("orbit")}>Fit orbit</button></div><span>{scene.orbitFrame==="orbital" ? "TEME path · whole orbit oriented at current UTC" : "Earth-fixed positions · Earth rotates between samples"}</span><span>{elementEpoch(selected) ? `TLE epoch ${elementEpoch(selected)!.toUTCString()}` : "No TLE: predicted path unavailable"}</span></div><button className="scene-follow" aria-pressed={scene.following} onClick={() => scene.setFollowing(!scene.following)}>{scene.following ? "Following ●" : "Follow ↗"}</button></div>}
     </div>
   );
 };
