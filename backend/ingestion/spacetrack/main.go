@@ -288,6 +288,8 @@ func main() {
 	metricsPort := envOr("METRICS_PORT_SPACETRACK", "2116")
 
 	producer := shared.NewProducer(brokers, shared.TopicConjunctionsAlerts)
+	orbitProducer := shared.NewProducer(brokers, shared.TopicSatellitesTLE)
+	defer orbitProducer.Close()
 	sess := newSession(user, pass)
 
 	// Metrics endpoint
@@ -376,10 +378,20 @@ func main() {
 		} else {
 			slog.Info("published conjunctions", "count", len(warnings), "active", active)
 		}
+		if err := publishConjunctionOrbits(ctx, warnings, sess, orbitProducer, cachePath+".orbits"); err != nil {
+			slog.Warn("conjunction orbit coverage incomplete", "err", err)
+		} else {
+			slog.Info("published conjunction orbital elements", "objects", len(conjunctionObjectIDs(warnings)))
+		}
 	}
 
 	// Initial fetch
 	fetchAndPublish()
+	// A one-shot refresh can enrich a running stack without restarting its feeds.
+	if os.Getenv("SPACETRACK_RUN_ONCE") == "true" {
+		_ = producer.Close()
+		return
+	}
 
 	// Check schedule each minute; fetch at most once every 8 hours across restarts.
 	ticker := time.NewTicker(time.Minute)

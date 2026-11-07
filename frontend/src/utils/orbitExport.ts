@@ -12,7 +12,7 @@ export function orbitExport(satellite: Satellite, now = new Date()) {
     return {utc:time.toISOString(),xM:position.x,yM:position.y,zM:position.z};
   });
   return {schema:"aurora-sgp4-trajectory-v1",noradId:satellite.noradId,name:satellite.name,generatedAt:now.toISOString(),
-    source:"CelesTrak GP / NORAD TLE",elementEpoch:elementEpoch(satellite)!.toISOString(),tle:[satellite.tleLine1,satellite.tleLine2],
+    source:"CelesTrak GP / SGP4 mean elements",elementEpoch:elementEpoch(satellite)!.toISOString(),tle:satellite.tleLine1 ? [satellite.tleLine1,satellite.tleLine2] : null,omm:satellite.omm ?? null,
     model:"SGP4 / satellite.js",frame:"Earth-fixed via TEME + GMST (polar motion omitted)",units:"metres",window:"One revolution: 25% before and 75% after generatedAt",
     limitations:"Prediction from mean elements; no covariance, maneuver model or accuracy guarantee. Not an operational ephemeris.",samples};
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,6 +24,7 @@ import (
 // ── Prometheus metrics ──────────────────────────────────────────────────────
 
 var (
+	wsSlowClients = promauto.NewCounter(prometheus.CounterOpts{Name: "aurora_websocket_slow_clients_disconnected_total", Help: "Clients disconnected after exhausting their bounded send queue"})
 	wsConnections = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "aurora_websocket_clients_connected",
 		Help: "Current WebSocket connections",
@@ -42,9 +44,10 @@ var (
 // ── WebSocket hub ───────────────────────────────────────────────────────────
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 4096,
-	CheckOrigin:     func(r *http.Request) bool { return true }, // CORS for dev
+	ReadBufferSize:    1024,
+	WriteBufferSize:   64 * 1024,
+	EnableCompression: true,
+	CheckOrigin:       func(r *http.Request) bool { return true }, // CORS for dev
 }
 
 type client struct {
@@ -92,17 +95,30 @@ func (h *hub) broadcast(msgType string, payload json.RawMessage) {
 		return
 	}
 
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	// A lagging client must reconnect for a coherent cached snapshot. Silently
+	// dropping individual feed updates can leave its displayed state inconsistent.
+	h.mu.Lock()
+	var slow []*client
 	for c := range h.clients {
 		select {
 		case c.send <- data:
 			wsMessagesSent.WithLabelValues(msgType).Inc()
 		default:
-			// Client too slow, drop message
+			delete(h.clients, c)
+			close(c.send)
+			slow = append(slow, c)
+			wsSlowClients.Inc()
 		}
 	}
+	count := len(h.clients)
+	h.mu.Unlock()
+	wsConnections.Set(float64(count))
+	for _, c := range slow {
+		if c.conn != nil {
+			_ = c.conn.Close()
+		}
+	}
+
 }
 
 // ── State cache (last known state for new connections) ──────────────────────
@@ -209,6 +225,24 @@ func (sc *stateCache) set(msgType string, payload json.RawMessage) {
 
 	switch msgType {
 	case "satellites":
+		// Kafka can replay old positions during startup. Receipt time is not
+		// evidence that their propagation epoch is current.
+		snapshot.lastUpdated = time.Time{}
+		var positions []struct {
+			PositionTimestamp string `json:"positionTimestamp"`
+		}
+		if json.Unmarshal(payload, &positions) == nil {
+			for _, position := range positions {
+				epoch, err := time.Parse(time.RFC3339Nano, position.PositionTimestamp)
+				if err != nil {
+					snapshot.lastUpdated = time.Time{}
+					break
+				}
+				if snapshot.lastUpdated.IsZero() || epoch.Before(snapshot.lastUpdated) {
+					snapshot.lastUpdated = epoch
+				}
+			}
+		}
 		sc.satellites = snapshot
 	case "conjunctions":
 		var feed shared.ConjunctionFeed
@@ -219,6 +253,15 @@ func (sc *stateCache) set(msgType string, payload json.RawMessage) {
 		}
 		sc.conjunctions = snapshot
 	case "spaceWeather":
+		snapshot.lastUpdated = time.Time{}
+		var weather struct {
+			LastUpdated string `json:"lastUpdated"`
+		}
+		if json.Unmarshal(payload, &weather) == nil {
+			if observed, err := time.Parse(time.RFC3339Nano, weather.LastUpdated); err == nil {
+				snapshot.lastUpdated = observed
+			}
+		}
 		sc.spaceWeather = snapshot
 	}
 }
@@ -337,7 +380,7 @@ func wsHandler(h *hub, cache *stateCache) http.HandlerFunc {
 						return
 					}
 					conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-					if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+					if err := writeSnapshot(conn, msg); err != nil {
 						return
 					}
 				case <-pingTicker.C:
@@ -376,7 +419,7 @@ func consumeAndBroadcast(
 	msgType string,
 	satelliteAssembler *satelliteBatchAssembler,
 ) {
-	groupID := "aurora-gateway-" + strings.ReplaceAll(topic, ".", "-")
+	groupID := envOr("GATEWAY_CONSUMER_GROUP", "aurora-gateway") + "-" + strings.ReplaceAll(topic, ".", "-")
 	consumer := shared.NewConsumer(brokers, topic, groupID)
 	defer consumer.Close()
 
@@ -428,6 +471,19 @@ func main() {
 	brokers := strings.Split(envOr("KAFKA_BROKERS", "localhost:9092"), ",")
 	wsPort := envOr("WS_PORT", "8080")
 	metricsPort := envOr("METRICS_PORT_GATEWAY", "2112")
+	// Bind before declaring readiness or starting consumers. Another process must
+	// never satisfy the launcher's health check for this instance.
+	wsListener, err := net.Listen("tcp", ":"+wsPort)
+	if err != nil {
+		slog.Error("ws bind failed", "err", err)
+		os.Exit(1)
+	}
+	metricsListener, err := net.Listen("tcp", ":"+metricsPort)
+	if err != nil {
+		_ = wsListener.Close()
+		slog.Error("metrics bind failed", "err", err)
+		os.Exit(1)
+	}
 
 	h := newHub()
 	cache := &stateCache{}
@@ -447,17 +503,37 @@ func main() {
 		mux.Handle("/metrics", promhttp.Handler())
 		addr := ":" + metricsPort
 		slog.Info("metrics server starting", "addr", addr)
-		if err := http.ListenAndServe(addr, mux); err != nil {
+		if err := http.Serve(metricsListener, mux); err != nil {
 			slog.Error("metrics server failed", "err", err)
 		}
 	}()
 
 	// WebSocket server
 	mux := http.NewServeMux()
+	registerAerospace(mux)
+	registerRocketTelemetry(mux)
+	registerEarth(mux)
 	mux.HandleFunc("/ws", wsHandler(h, cache))
 	mux.HandleFunc("/diagnostics", diagnosticsHandler(cache))
+	mux.HandleFunc("/snapshot", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method != "GET" {
+			w.WriteHeader(405)
+			return
+		}
+		state := cache.snapshot()
+		messages := []shared.WSMessage{}
+		for kind, payload := range map[string]json.RawMessage{"satellites": state.satellites.payload, "conjunctions": state.conjunctions.payload, "spaceWeather": state.spaceWeather.payload} {
+			if payload != nil {
+				messages = append(messages, shared.WSMessage{Type: kind, Payload: payload})
+			}
+		}
+		json.NewEncoder(w).Encode(messages)
+	})
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("X-Aurora-Instance", os.Getenv("AURORA_INSTANCE_ID"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
@@ -472,7 +548,7 @@ func main() {
 	// Start WS server in background
 	go func() {
 		slog.Info("websocket server starting", "addr", server.Addr)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.Serve(wsListener); err != nil && err != http.ErrServerClosed {
 			slog.Error("ws server failed", "err", err)
 		}
 	}()

@@ -12,17 +12,46 @@ describe("getDataStatus", () => {
   });
 
   it("labels partial feed replacement as mixed data", () => {
-    expect(getDataStatus(true, { ...empty, satellites: recent }, now)).toMatchObject({
+    expect(
+      getDataStatus(true, { ...empty, satellites: recent }, now),
+    ).toMatchObject({
       status: "mixed",
-      label: "MIXED DATA"
+      label: "MIXED DATA",
     });
   });
 
   it("requires three recent feeds before calling the dashboard live", () => {
-    const feeds = { satellites: recent, conjunctions: recent, spaceWeather: recent };
+    const feeds = {
+      satellites: recent,
+      conjunctions: recent,
+      spaceWeather: recent,
+    };
     expect(getDataStatus(true, feeds, now).status).toBe("live");
     expect(getDataStatus(false, feeds, now).status).toBe("offline");
-    expect(getDataStatus(true, { ...feeds, conjunctions: new Date(now.getTime() - 7 * 60 * 60_000) }, now).status).toBe("live");
-    expect(getDataStatus(true, { ...feeds, conjunctions: new Date(now.getTime() - 9 * 60 * 60_000) }, now).status).toBe("stale");
+    expect(
+      getDataStatus(
+        true,
+        { ...feeds, conjunctions: new Date(now.getTime() - 7 * 60 * 60_000) },
+        now,
+      ).status,
+    ).toBe("live");
+    expect(
+      getDataStatus(
+        true,
+        { ...feeds, conjunctions: new Date(now.getTime() - 9 * 60 * 60_000) },
+        now,
+      ).status,
+    ).toBe("stale");
+  });
+  it("does not call cached or unverified source epochs live", () => {
+    const feeds = {
+      satellites: new Date(now.getTime() - 6 * 60000),
+      conjunctions: recent,
+      spaceWeather: recent,
+    };
+    expect(getDataStatus(true, feeds, now).status).toBe("stale");
+    expect(
+      getDataStatus(true, { ...feeds, satellites: new Date(NaN) }, now).status,
+    ).toBe("stale");
   });
 });

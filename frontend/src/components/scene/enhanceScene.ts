@@ -1,3 +1,4 @@
+import { detachAerospaceCamera } from "../../aerospace/store";
 import { gstime } from "satellite.js";
 import {
   HeadingPitchRoll, CallbackPositionProperty, CallbackProperty, Cartesian2, Cartesian3, Color,
@@ -10,6 +11,7 @@ import { useSceneStore, type CameraPreset } from "../../store/sceneStore";
 import { propagatedPosition, predictedOrbit, hasCurrentElements } from "../../utils/propagation";
 import type { Satellite } from "../../types/space";
 import { coverageRadiusKm } from "../../utils/coverageFootprint";
+import { GlobeOcclusion } from "../../utils/globeOcclusion";
 
 interface FocusTarget { satellite: Satellite; position: Cartesian3 }
 interface SceneAccess {
@@ -22,6 +24,7 @@ interface SceneAccess {
 export function enhanceScene(viewer: Viewer, access: SceneAccess) {
   const accent = Color.fromCssColorString("#72e5d5");
   const focusPosition = new Cartesian3();
+  const focusOccluder = new GlobeOcclusion(viewer.scene.globe.ellipsoid, viewer.camera.positionWC);
   let groundPosition = new Cartesian3();
   let footprintRadius = 1;
   let selectedId: number | null = null;
@@ -88,9 +91,11 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
   function releaseCamera() {
     viewer.trackedEntity = undefined;
     viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+    viewer.camera.setView({orientation:{heading:viewer.camera.heading,pitch:viewer.camera.pitch,roll:0}});
   }
 
   function fly(preset: CameraPreset) {
+    detachAerospaceCamera();
     releaseCamera();
     const app = useAuroraStore.getState();
     if (app.currentMode === "HELIO" && !app.earthOnlyMode) { access.helioHome(); return; }
@@ -127,7 +132,7 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
       Cartesian3.normalize(direction, direction);
     }
     viewer.camera.flyTo({
-      destination: Cartesian3.multiplyByScalar(direction, preset === "polar" ? 22_000_000 : 25_000_000, new Cartesian3()),
+      destination: Cartesian3.multiplyByScalar(direction, preset === "catalog" ? 72_000_000 : preset === "polar" ? 22_000_000 : 25_000_000, new Cartesian3()),
       orientation: { direction: Cartesian3.negate(direction, new Cartesian3()), up: preset === "polar" ? Cartesian3.UNIT_Y : Cartesian3.UNIT_Z },
       duration: reducedMotion ? 0 : 1.8, easingFunction: EasingFunction.QUADRATIC_IN_OUT
     });
@@ -144,14 +149,14 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     paths.removeAll();
     if (!settings.orbitPaths || !selected || !hasCurrentElements(selected.satellite)) return;
     const positions = predictedOrbit(selected.satellite, new Date(), 240, settings.orbitFrame);
-    if (positions.length) paths.add({ positions, width: 2,
-      material: Material.fromType("PolylineGlow", { color: accent.withAlpha(0.8), glowPower: 0.13, taperPower: 1 }) });
+    if (positions.length) paths.add({ positions, width: 2.8,
+      material: Material.fromType("PolylineGlow", { color: Color.fromCssColorString("#ffe69b").withAlpha(0.95), glowPower: 0.13, taperPower: 1 }) });
   }
 
   function update(_time: JulianDate, deltaSeconds: number) {
     const app = useAuroraStore.getState();
     const settings = useSceneStore.getState();
-    const earth = app.currentMode !== "HELIO" && !app.earthOnlyMode;
+    const earth = app.currentMode !== "HELIO" && !app.earthOnlyMode && settings.satellitesOn;
     const selected = earth ? access.selected() : null;
     focusEntity.show = Boolean(selected);
     paths.show = earth && settings.orbitPaths;
@@ -159,6 +164,8 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     footprint.show = tether.show = Boolean(selected && settings.coverage);
     if (selected) {
       Cartesian3.clone(propagatedPosition(selected.satellite) ?? selected.position, focusPosition);
+      focusOccluder.cameraPosition = viewer.camera.positionWC;
+      focusEntity.show = focusOccluder.isPointVisible(focusPosition);
       focusEntity.orientation = new ConstantProperty(Transforms.headingPitchRollQuaternion(focusPosition, new HeadingPitchRoll(0, 0, 0)));
       if (selectedId !== selected.satellite.noradId) {
         selectedId = selected.satellite.noradId;
@@ -191,8 +198,8 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     if (state.quality !== previous.quality || state.lighting !== previous.lighting) applyQuality();
     if (!state.following && previous.following) releaseCamera();
     if (state.commandId !== previous.commandId) {
-      if (state.command === "zoom-in") viewer.camera.zoomIn(viewer.camera.positionCartographic.height * 0.3);
-      else if (state.command === "zoom-out") viewer.camera.zoomOut(viewer.camera.positionCartographic.height * 0.4);
+      if (state.command === "zoom-in") viewer.camera.zoomIn((Matrix4.equals(viewer.camera.transform,Matrix4.IDENTITY)?viewer.camera.positionCartographic.height:Cartesian3.magnitude(viewer.camera.position)) * 0.3);
+      else if (state.command === "zoom-out") viewer.camera.zoomOut((Matrix4.equals(viewer.camera.transform,Matrix4.IDENTITY)?viewer.camera.positionCartographic.height:Cartesian3.magnitude(viewer.camera.position)) * 0.4);
       else fly(state.command);
     }
   });

@@ -69,9 +69,13 @@ func buildDiagnosticsRows(cache *stateCache) []sourceDiagnosticRow {
 	processes := loadTrackedProcessSnapshots(discoverRepoRoot())
 	spaceTrackConfigured := os.Getenv("SPACETRACK_USERNAME") != "" && os.Getenv("SPACETRACK_PASSWORD") != ""
 
+	engine := processes["engine-rust"]
+	if current, ok := processes["engine"]; ok {
+		engine = current
+	}
 	return []sourceDiagnosticRow{
 		buildCelestrakRow(processes["celestrak"], feeds.satellites),
-		buildEngineRow(processes["engine-rust"], feeds.satellites),
+		buildEngineRow(engine, feeds.satellites),
 		buildSpaceTrackRow(processes["spacetrack"], feeds.conjunctions, spaceTrackConfigured),
 		buildNoaaRow(processes["noaa"], feeds.spaceWeather),
 	}
@@ -91,7 +95,7 @@ func buildCelestrakRow(process trackedProcessSnapshot, feed feedSnapshot) source
 
 	return sourceDiagnosticRow{
 		Key:       "celestrak",
-		Name:      "CelesTrak TLE Feed",
+		Name:      "CelesTrak GP Feed",
 		URL:       "https://celestrak.org",
 		Status:    status,
 		LastEvent: formatEventTime(maxTime(process.LastActivity, feed.lastUpdated)),
@@ -110,15 +114,15 @@ func buildEngineRow(process trackedProcessSnapshot, feed feedSnapshot) sourceDia
 		status = "ERROR"
 	}
 
-	detail := firstNonEmpty(
-		process.LastError,
-		process.LastMessage,
-		"Waiting for initial satellite positions",
-	)
+	fallback := "Waiting for initial satellite positions"
+	if feed.count > 0 {
+		fallback = "Last propagated positions: " + formatEventTime(feed.lastUpdated)
+	}
+	detail := firstNonEmpty(process.LastError, process.LastMessage, fallback)
 
 	return sourceDiagnosticRow{
 		Key:       "engine-rust",
-		Name:      "Rust Propagation Engine",
+		Name:      "Orbital Propagation Engine",
 		URL:       "kafka://aurora.satellites.positions",
 		Status:    status,
 		LastEvent: formatEventTime(maxTime(process.LastActivity, feed.lastUpdated)),
@@ -194,6 +198,16 @@ func loadTrackedProcessSnapshots(repoRoot string) map[string]trackedProcessSnaps
 			LastMessage:  readLogSummary(record.Log, false),
 			LastError:    readLogSummary(record.ErrorLog, true),
 			LastActivity: maxTime(fileModTime(record.Log), fileModTime(record.ErrorLog)),
+		}
+	}
+	// The cross-platform launcher writes named logs rather than processes.json.
+	for _, name := range []string{"celestrak", "engine", "engine-rust", "spacetrack", "noaa"} {
+		if _, exists := snapshots[name]; exists {
+			continue
+		}
+		log := filepath.Join(repoRoot, ".aurora", "logs", name+".log")
+		if modified := fileModTime(log); !modified.IsZero() {
+			snapshots[name] = trackedProcessSnapshot{Name: name, LastMessage: readLogSummary(log, false), LastActivity: modified}
 		}
 	}
 	return snapshots

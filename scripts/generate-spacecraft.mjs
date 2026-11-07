@@ -56,7 +56,43 @@ function makeModel(kind) {
     for(let i=0;i<=8;i++) box('Cell conductor',[x-w/2+w*i/8,y+.035,z],[.012,.012,h],3);
     for(let i=0;i<=4;i++) box('Cell conductor',[x,y+.035,z-h/2+h*i/4],[w,.012,.012],3);
   }
-  if(kind==='satellite') {
+  if(kind==='airliner' || kind==='fighter') {
+    const fighter=kind==='fighter';
+    doc.materials[2].pbrMetallicRoughness.baseColorFactor=fighter?[.42,.48,.52,1]:[.88,.92,.96,1];
+    doc.materials[2].pbrMetallicRoughness.metallicFactor=.2;
+    doc.materials[2].emissiveFactor=[.12,.13,.14];
+    const bodyLength=fighter?15:38, radius=fighter?.85:2.05;
+    // Smooth tapered fuselage, glTF -Z is forward; +Y is up.
+    const p=[],n=[],indices=[],profile=[[-.55,0],[-.5,.45],[-.4,.9],[-.3,1],[.25,1],[.43,.65],[.5,.12]];
+    profile.forEach(([z,r],j)=>{for(let k=0;k<=24;k++){const a=k*Math.PI/12;p.push(radius*r*Math.cos(a),radius*r*Math.sin(a),z*bodyLength);n.push(Math.cos(a),Math.sin(a),0);if(j&&k<24){const b=j*25+k;indices.push(b-25,b,b+1,b-25,b+1,b-24);}}});
+    doc.scenes[0].nodes.push(doc.nodes.length);doc.nodes.push({name:'Streamlined fuselage',mesh:mesh(p,n,indices,2)});
+    function wing(name,points,thickness,material=2){
+      const ps=[],ns=[],ix=[];const verts=points.map(([x,z])=>[x,-.3,z]);
+      for(const side of [-1,1]){const base=ps.length/3;for(const [x,y,z] of verts){ps.push(x,y+side*thickness/2,z);ns.push(0,side,0);}for(let j=1;j<verts.length-1;j++)ix.push(base,base+(side>0?j+1:j),base+(side>0?j:j+1));}
+      for(let j=0;j<verts.length;j++){const a=verts[j],b=verts[(j+1)%verts.length],base=ps.length/3;for(const [v,side] of [[a,-1],[b,-1],[b,1],[a,1]]){ps.push(v[0],v[1]+side*thickness/2,v[2]);ns.push(0,0,1);}ix.push(base,base+1,base+2,base,base+2,base+3);}
+      const m=mesh(ps,ns,ix,material);doc.materials[material].doubleSided=true;doc.scenes[0].nodes.push(doc.nodes.length);doc.nodes.push({name,mesh:m});
+    }
+    const span=fighter?5:17;
+    for(const side of [-1,1]){
+      wing('Swept wing',[[side*.7,-bodyLength*.12],[side*span,bodyLength*.15],[side*span,bodyLength*.22],[side*.7,bodyLength*.2]],.3);
+      wing('Tailplane',[[side*.5,bodyLength*.32],[side*span*.35,bodyLength*.43],[side*span*.35,bodyLength*.47],[side*.5,bodyLength*.46]],.2);
+      if(!fighter){cylinder('Turbofan nacelle',[side*6,-2.1,0],1.25,4.5,2,true);cylinder('Dark engine intake',[side*6,-2.1,-2.3],1.05,.15,4,true);box('Engine pylon',[side*6,-1,1],[.4,2,2]);box('Winglet',[side*span,.6,bodyLength*.19],[.18,1.8,2]);}
+    }
+    box('Vertical stabilizer',[0,radius+1.3,bodyLength*.39],[.3,4,4],1);
+    box('Cockpit glazing',[0,radius*.8,-bodyLength*.39],[radius*1.5,.3,1.6],4);
+    if(!fighter)for(let z=-12;z<13;z+=1.4)for(const x of [-1,1])box('Cabin window',[x*radius*.98,.55,z],[.07,.42,.6],4);
+  } else if(kind==='launch-vehicle') {
+    doc.materials[2].pbrMetallicRoughness.baseColorFactor=[.87,.9,.94,1];doc.materials[2].emissiveFactor=[.12,.13,.14];
+    cylinder('First stage',[0,19,0],2,38);
+    cylinder('Interstage',[0,39,0],2.02,3,4);
+    cylinder('Upper stage',[0,45,0],2,9);
+    cylinder('Payload fairing',[0,53,0],2.4,7);
+    cylinder('Ogive fairing tip',[0,59,0],2.4,5,2,false,0);
+    for(const y of [2,8,18,28,36,49])cylinder('Structural seam',[0,y,0],2.025,.12,4);
+    box('Service raceway',[2,20,0],[.18,33,.3]);
+    for(const x of [-.9,0,.9])for(const z of [-.9,0,.9])cylinder('Engine bell',[x,-.7,z],.46,1.4,4,false,.23);
+    for(const x of [-3,3]){cylinder('Side booster',[x,14,0],.9,28);cylinder('Booster nose',[x,29.5,0],.9,3,2,false,0);cylinder('Booster nozzle',[x,-.5,0],.7,1,4,false,.35);}
+  } else if(kind==='satellite') {
     box('Thermal blanket bus',[0,0,0],[1.8,1.4,1.7],0);
     box('Instrument deck',[0,.76,0],[1.9,.12,1.8]);
     box('Solar array boom',[0,0,0],[9,.1,.1]);
@@ -86,4 +122,4 @@ function makeModel(kind) {
   function chunkHeader(size,type){const b=Buffer.alloc(8);b.writeUInt32LE(size);b.writeUInt32LE(type,4);return b;}
   writeFileSync(target+kind+'.glb',Buffer.concat([header,chunkHeader(padded.length,0x4e4f534a),padded,chunkHeader(binary.length,0x004e4942),binary]));
 }
-for(const kind of ['satellite','station','rocket','debris']) makeModel(kind);
+for(const kind of ['satellite','station','rocket','debris','airliner','fighter','launch-vehicle']) makeModel(kind);

@@ -41,11 +41,11 @@ async function readEnv(path) {
   catch (error) { if (error.code === 'ENOENT') return {}; throw error; }
 }
 
-async function portAvailable(port) {
+export async function portAvailable(port) {
   return new Promise((done) => {
     const server = createTcpServer();
     server.once('error', () => done(false));
-    server.listen(port, '127.0.0.1', () => server.close(() => done(true)));
+    server.listen(port, () => server.close(() => done(true)));
   });
 }
 
@@ -174,12 +174,14 @@ async function main() {
     });
     await writeFile(stateFile, JSON.stringify({ pid: process.pid, controlPort: controlServer.address().port, token }), { mode: 0o600 });
     const backendEnv = { ...await readEnv(join(backend, '.env')), ...process.env };
+    backendEnv.AURORA_INSTANCE_ID = randomBytes(16).toString("hex");
     backendEnv.SPACETRACK_CACHE_PATH ||= join(stateDir, "cdm-current-v1.json");
     const wsPort = Number(backendEnv.WS_PORT || 8080);
     const frontendPort = Number(process.env.AURORA_PORT || 5173);
     const metrics = [['GATEWAY', 2112], [options.engine === 'rust' ? 'ENGINE_RUST' : 'ENGINE', options.engine === 'rust' ? 2117 : 2114], ['NOAA', 2113], ['CELESTRAK', 2115]];
     if (backendEnv.SPACETRACK_USERNAME && backendEnv.SPACETRACK_PASSWORD) metrics.push(['SPACETRACK', 2116]);
     const ports = options.demo ? [frontendPort] : [frontendPort, wsPort, ...metrics.map(([key, fallback]) => Number(backendEnv[`METRICS_PORT_${key}`] || fallback))];
+    if(new Set(ports).size !== ports.length) throw new Error("Service ports must be distinct.");
     for (const port of ports) {
       if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`Invalid port: ${port}`);
       if (!await portAvailable(port)) throw new Error(`Port ${port} is already in use. Stop the existing service before starting Aurora.`);
@@ -224,7 +226,7 @@ async function main() {
       const services = [['gateway', './gateway'], ['celestrak', './ingestion/celestrak'], ['noaa', './ingestion/noaa']];
       if (options.engine === 'go') services.push(['engine', './engine']);
       if (backendEnv.SPACETRACK_USERNAME && backendEnv.SPACETRACK_PASSWORD) services.push(['spacetrack', './ingestion/spacetrack']);
-      else say('Space-Track credentials are absent; conjunctions stay clearly labeled as sample data.');
+      else say('Space-Track credentials are absent; live conjunctions remain unavailable until credentials are configured.');
       say(`Building backend (${options.engine} orbital engine)…`);
       for (const [name, target] of services) {
         await run(`build-${name}`, 'go', ['build', '-o', join(stateDir, 'bin', name + (process.platform === 'win32' ? '.exe' : '')), target], { cwd: backend });
@@ -234,7 +236,7 @@ async function main() {
       }
       launch('gateway', join(stateDir, 'bin', process.platform === 'win32' ? 'gateway.exe' : 'gateway'), [], { cwd: backend, env: backendEnv, service: true });
       await waitUntil(async () => {
-        try { return (await fetch(`http://127.0.0.1:${wsPort}/health`, { signal: AbortSignal.timeout(1000) })).ok; } catch { return false; }
+        try { const response = await fetch(`http://127.0.0.1:${wsPort}/health`, { signal: AbortSignal.timeout(1000) }); return response.ok && response.headers.get("X-Aurora-Instance") === backendEnv.AURORA_INSTANCE_ID; } catch { return false; }
       }, { signal: controller.signal, label: 'Gateway' });
       for (const [name] of services.filter(([name]) => name !== 'gateway').sort(([a], [b]) => Number(b === 'engine') - Number(a === 'engine'))) {
         launch(name, join(stateDir, 'bin', name + (process.platform === 'win32' ? '.exe' : '')), [], { cwd: backend, env: backendEnv, service: true });

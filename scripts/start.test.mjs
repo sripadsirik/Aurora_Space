@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { optionsFrom, waitUntil } from './start.mjs';
+import { optionsFrom, waitUntil, portAvailable } from './start.mjs';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, copyFile, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -85,4 +85,12 @@ test('a supervised session rejects duplicates, reports status, cleans up, and fa
     try { process.kill(Number(await readFile(join(directory, '.aurora/test-child-pid'), 'utf8')), 'SIGTERM'); } catch { /* exited */ }
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+
+test('preflight detects a wildcard listener before starting a second stack', async()=>{
+ const server=createServer();await new Promise(done=>server.listen(0,done));
+ const port=server.address().port;
+ try{assert.equal(await portAvailable(port),false);}finally{await new Promise(done=>server.close(done));}
+ assert.equal(await portAvailable(port),true);
 });

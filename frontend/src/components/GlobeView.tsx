@@ -1,7 +1,12 @@
+import { installEarth } from "../earth/scene";
+import { useEarth } from "../earth/store";
+import { useExplorer, type PickChoice } from "../explorer/store";
+import { detachAerospaceCamera, useAerospace } from "../aerospace/store";
+import { installCatalogModels, catalogModelKind } from "./scene/catalogModels";
+import { installAerospace } from "../aerospace/scene";
 import {
   BlendOption,
-  Billboard,
-  BillboardCollection,
+  Billboard, BillboardCollection, NearFarScalar,
   buildModuleUrl,
   GeographicTilingScheme,
   UrlTemplateImageryProvider,
@@ -26,6 +31,7 @@ import {
   LabelCollection,
   Material,
   Math as CesiumMath,
+  Matrix3,
   Matrix4,
   PerInstanceColorAppearance,
   PointPrimitive,
@@ -40,12 +46,13 @@ import {
   Viewer
 } from "cesium";
 import { useEffect, useRef } from "react";
+import { gstime } from "satellite.js";
 
 import { useAuroraStore } from "../store/auroraStore";
 import type { ConjunctionWarning, Satellite, SpaceWeather } from "../types/space";
-import { getSolarWindColor, riskColorMap } from "../utils/colors";
+import { getSolarWindColor } from "../utils/colors";
 import { conjunctionArcLineWidth, resolveConjunctionRiskLevel } from "../utils/conjunctionRisk";
-import { getConjunctionColor } from "../utils/conjunctionVisual";
+import { conjunctionObjectLabel, conjunctionPairStyle, orderedConjunctionPairs } from "../utils/conjunctionPairs";
 import { formatDurationToTca } from "../utils/format";
 import {
   createOrbitArcPositions,
@@ -65,9 +72,12 @@ import {
 import { env, hasValidCesiumIonToken } from "../utils/env";
 import { enhanceScene } from "./scene/enhanceScene";
 import { useSceneStore } from "../store/sceneStore";
-import { propagatedPosition, hasCurrentElements } from "../utils/propagation";
+import { propagatedPosition, hasCurrentElements, predictedOrbit, orbitalElements } from "../utils/propagation";
 import { satelliteSnapshotPosition } from "../utils/satellitePosition";
+import type { CatalogWindow } from "../utils/catalogPropagation";
+import { objectClassification } from "../utils/objectType";
 import { clamp } from "../utils/clamp";
+import { GlobeOcclusion } from "../utils/globeOcclusion";
 import { createBezierArcPositions } from "../utils/curves";
 import { auroraRibbon, auroraCurtainTexture } from "../utils/auroraVisual";
 import { createFireConeFrontPositions } from "../utils/cmeFlameCone";
@@ -89,22 +99,30 @@ interface SatellitePickPayload {
 
 interface SatelliteAnimState extends SatelliteOrbitAnim {
   point: Billboard;
-  interpolationStart?: Cartesian3;
-  interpolationEnd?: Cartesian3;
-  interpolationEpoch?: number;
+  positionScratch: Cartesian3;
+  catalogColor: Color;
   satellite: Satellite;
 }
 
 interface ConjunctionVisualState {
   conjunction: ConjunctionWarning;
+  pairNumber: string;
+  pairColor: Color;
   riskLevel: Satellite["riskLevel"];
   object1Arc: ReturnType<PolylineCollection["add"]>;
   object2Arc: ReturnType<PolylineCollection["add"]>;
   missDistanceLine: ReturnType<PolylineCollection["add"]>;
   marker: PointPrimitive;
   label: ReturnType<LabelCollection["add"]>;
+  object2Marker: PointPrimitive;
+  object2Label: ReturnType<LabelCollection["add"]>;
   sat1NoradId: number;
   sat2NoradId: number;
+  orbitCache?: {
+    minute: number;
+    object1Elements: ReturnType<typeof orbitalElements>;
+    object2Elements: ReturnType<typeof orbitalElements>;
+  };
 }
 
 interface SolarWindParticle {
@@ -183,7 +201,6 @@ const HELIO_PLANET_RADII = {
   mars: 290_000
 } as const;
 
-const ORANGE_COLOR = Color.fromCssColorString("#ff6600");
 const RED_COLOR = Color.fromCssColorString("#ff0000");
 
 const randomInRange = (min: number, max: number): number => min + Math.random() * (max - min);
@@ -584,6 +601,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     };
 
     const transitionCameraForMode = (mode: string, previousMode?: string): void => {
+      detachAerospaceCamera();
       if (earthOnlyRef.current) return;
       if (mode === "HELIO") {
         viewer.camera.flyTo({
@@ -630,11 +648,18 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     }
 
     const earthR = earthRadiusMeters;
-    const satellitePoints = registerEarth(viewer.scene.primitives.add(new BillboardCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
+    // Cesium needs the scene to depth-test billboards against Earth and terrain.
+    const satellitePoints = registerEarth(viewer.scene.primitives.add(new BillboardCollection({
+      scene: viewer.scene,
+      coarseDepthTestDistance: Number.POSITIVE_INFINITY,
+    })));
+    const satelliteOccluder = new GlobeOcclusion(viewer.scene.globe.ellipsoid, viewer.camera.positionWC);
+    const catalogModels = installCatalogModels(viewer);
+    const catalogIcon = (satellite:Satellite) => import.meta.env.BASE_URL + `models/${catalogModelKind(satellite) === "station" ? "satellite" : catalogModelKind(satellite)}-icon.svg`;
     const conjunctionPolylines = registerEarth(viewer.scene.primitives.add(new PolylineCollection()));
     const conjunctionMarkers = registerEarth(viewer.scene.primitives.add(new PointPrimitiveCollection({ blendOption: BlendOption.OPAQUE_AND_TRANSLUCENT })));
-    const conjunctionLabels = registerEarth(viewer.scene.primitives.add(new LabelCollection()));
-    const criticalPoints: Billboard[] = [];
+    const conjunctionLabels = registerEarth(viewer.scene.primitives.add(new LabelCollection({ scene: viewer.scene })));
+
     const satellitePointPool: SatelliteAnimState[] = [];
     let activeSatAnimStates: SatelliteAnimState[] = [];
     const satAnimByNorad = new Map<number, SatelliteAnimState>();
@@ -646,6 +671,26 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     let elapsedSceneSeconds = 0;
     let lastHelioStoreValue = -1;
 
+    const catalogWorker = new Worker(new URL("../workers/catalog.worker.ts", import.meta.url), { type: "module" });
+    let catalogGeneration = 0;
+    let catalogWindow: CatalogWindow | null = null;
+    let catalogWorkerFailed = false;
+    let lastCatalogStatsMs = 0;
+    catalogWorker.onmessage = (event: MessageEvent<CatalogWindow>) => {
+      if (event.data.generation === catalogGeneration) { catalogWindow = event.data; catalogWorkerFailed = false; }
+    };
+    catalogWorker.onerror = () => { catalogWorkerFailed = true; };
+    const catalogColors: Record<string, Color> = {
+      Payload: Color.fromCssColorString("#6be8a5"),
+      Debris: Color.fromCssColorString("#b1bcc8"),
+      "Rocket body": Color.fromCssColorString("#edb96b"),
+      Unknown: Color.fromCssColorString("#819ebc")
+    };
+    const catalogColor = (satellite: Satellite): Color => catalogColors[objectClassification(satellite).label] ?? catalogColors.Unknown;
+    const initialCatalogPosition = (satellite: Satellite): Cartesian3 => useAuroraStore.getState().feedLastUpdated.satellites
+      ? Cartesian3.fromDegrees(satellite.lon, satellite.lat, satellite.altitudeKm * 1000)
+      : satelliteSnapshotPosition(satellite, false);
+
     const applySatelliteToState = (state: SatelliteAnimState, satellite: Satellite, thetaEpochSeconds: number): void => {
       const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
       state.satellite = satellite;
@@ -655,27 +700,30 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       state.period = getOrbitalPeriod(radius);
       state.initialTheta = CesiumMath.toRadians(satellite.lon + 180);
       state.thetaEpochSeconds = thetaEpochSeconds;
-      state.interpolationEpoch = undefined;
       state.point.show = true;
-      state.point.position = satelliteSnapshotPosition(satellite, useAuroraStore.getState().feedLastUpdated.satellites !== null);
-      state.point.width = state.point.height = (satellite.riskLevel === "critical" ? 10 : 6) * 2.5;
-      state.point.color = riskColorMap[satellite.riskLevel].clone();
+      state.point.position = initialCatalogPosition(satellite);
+      state.point.image = catalogIcon(satellite);
+      state.catalogColor = catalogColor(satellite);
+      state.point.color = Color.WHITE;
       state.point.id = { type: "satellite", satellite };
     };
 
     const createSatelliteAnimState = (satellite: Satellite, thetaEpochSeconds: number): SatelliteAnimState => {
       const { radius, inclination, ascendingNode } = getOrbitParams(satellite);
       const point = satellitePoints.add({
-        image: import.meta.env.BASE_URL + "models/satellite-icon.svg",
-        width: 16, height: 16,
-        position: satelliteSnapshotPosition(satellite, useAuroraStore.getState().feedLastUpdated.satellites !== null),
-        color: riskColorMap[satellite.riskLevel].clone(),
+        image: catalogIcon(satellite), width:18, height:18,
+        scaleByDistance: new NearFarScalar(1e5,1.5,2e7,0.65),
+        show: false,
+        position: initialCatalogPosition(satellite),
+        color: Color.WHITE,
         disableDepthTestDistance: 0.0,
         id: { type: "satellite", satellite }
       });
 
       return {
         point,
+        positionScratch: new Cartesian3(),
+        catalogColor: catalogColor(satellite),
         satellite,
         radius,
         inclination,
@@ -687,8 +735,10 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     };
 
     const syncSatellitePoints = (nextSatellites: Satellite[]): void => {
+      catalogGeneration++;
+      catalogWindow = null;
+      catalogWorker.postMessage({ satellites: nextSatellites, generation: catalogGeneration });
       satAnimByNorad.clear();
-      criticalPoints.length = 0;
       activeSatAnimStates = [];
 
       nextSatellites.forEach((satellite, index) => {
@@ -700,7 +750,6 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         }
         activeSatAnimStates.push(state);
         satAnimByNorad.set(satellite.noradId, state);
-        if (satellite.riskLevel === "critical") criticalPoints.push(state.point);
       });
 
       for (let index = nextSatellites.length; index < satellitePointPool.length; index += 1) {
@@ -709,6 +758,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     };
 
     const flyCameraToSatellite = (noradId: number): void => {
+      detachAerospaceCamera();
       if (currentModeRef.current === "HELIO") return;
       const state = satAnimByNorad.get(noradId);
       if (!state) return;
@@ -787,8 +837,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     });
     const findSatelliteMatch = (objectRef: ConjunctionWarning["object1"]): Satellite | undefined => {
       const noradId = Number(objectRef.noradId);
-      return satellitesRef.current.find((satellite) => satellite.noradId === noradId)
-        ?? satellitesRef.current.find((satellite) => satellite.name === objectRef.name);
+      return satellitesRef.current.find((satellite) => satellite.noradId === noradId);
     };
 
     const syncConjunctionVisuals = (nextConjunctions: ConjunctionWarning[]): void => {
@@ -797,45 +846,33 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       conjunctionLabels.removeAll();
       conjunctionVisualState.length = 0;
 
-      nextConjunctions.forEach((conjunction) => {
-        const missDistanceKm = conjunction.missDistanceKm ?? conjunction.missDistanceM / 1000;
-        if (!conjunction.tca || missDistanceKm === 0 || isNaN(new Date(conjunction.tca).getTime())) {
+      orderedConjunctionPairs(nextConjunctions).forEach(({ conjunction, number, color: pairColor }) => {
+        if (!conjunction.tca || isNaN(new Date(conjunction.tca).getTime())) {
           return;
         }
 
         const sat1 = findSatelliteMatch(conjunction.object1);
         const sat2 = findSatelliteMatch(conjunction.object2);
-        console.log(
-          "sat match",
-          String(conjunction.object1.noradId),
-          String(conjunction.object2.noradId),
-          sat1?.noradId,
-          sat2?.noradId,
-          !!sat1,
-          !!sat2
-        );
-        if (!sat1 || !sat2) {
-          return;
-        }
-
         const riskLevel = resolveConjunctionRiskLevel(conjunction);
-        if (riskLevel === "nominal") return;
 
-        const color = getConjunctionColor(riskLevel);
+        const color = Color.fromCssColorString(pairColor);
+        const pick = { type: "conjunction", id: conjunction.id };
         const width = conjunctionArcLineWidth(riskLevel);
-        const sat1NoradId = sat1.noradId;
-        const sat2NoradId = sat2.noradId;
+        const sat1NoradId = sat1?.noradId ?? Number(conjunction.object1.noradId);
+        const sat2NoradId = sat2?.noradId ?? Number(conjunction.object2.noradId);
         const object1Arc = conjunctionPolylines.add({
+          id: pick,
           positions: [],
           show: false,
           width,
           material: Material.fromType("Color", { color: color.clone() })
         });
         const object2Arc = conjunctionPolylines.add({
+          id: pick,
           positions: [],
           show: false,
           width,
-          material: Material.fromType("Color", { color: color.clone() })
+          material: Material.fromType("PolylineDash", { color: color.clone(), gapColor: Color.TRANSPARENT, dashLength: 14 })
         });
         const missDistanceLine = conjunctionPolylines.add({
           positions: [],
@@ -843,13 +880,10 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           width,
           material: Material.fromType("Color", { color: color.clone() })
         });
-        console.log("arc created", {
-          sat1: { lat: sat1.lat, lng: sat1.lon, alt: sat1.altitudeKm },
-          sat2: { lat: sat2.lat, lng: sat2.lon, alt: sat2.altitudeKm },
-          added: viewer.scene.primitives.contains(conjunctionPolylines)
-        });
         conjunctionVisualState.push({
           conjunction,
+          pairNumber: number,
+          pairColor: color,
           riskLevel,
           sat1NoradId,
           sat2NoradId,
@@ -857,6 +891,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           object2Arc,
           missDistanceLine,
           marker: conjunctionMarkers.add({
+            id: pick,
             position: Cartesian3.ZERO,
             show: false,
             pixelSize: riskLevel === "watch" ? 9 : 11,
@@ -866,6 +901,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
             disableDepthTestDistance: 0.0
           }),
           label: conjunctionLabels.add({
+            id: pick,
             position: Cartesian3.ZERO,
             show: false,
             text: `TCA ${formatDurationToTca(conjunction.tca)}`,
@@ -873,9 +909,11 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
             font: "11px monospace",
             showBackground: true,
             backgroundColor: Color.BLACK.withAlpha(0.45),
-            pixelOffset: new Cartesian2(0, -20),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY
-          })
+            pixelOffset: new Cartesian2(12, -20),
+            disableDepthTestDistance: 0
+          }),
+          object2Marker: conjunctionMarkers.add({ id: pick, position: Cartesian3.ZERO, show: false, pixelSize: 8, color: color.clone(), outlineColor: Color.WHITE, outlineWidth: 1, disableDepthTestDistance: 0 }),
+          object2Label: conjunctionLabels.add({ id: pick, position: Cartesian3.ZERO, show: false, font: "11px monospace", fillColor: color.clone(), showBackground: true, backgroundColor: Color.BLACK.withAlpha(0.8), pixelOffset: new Cartesian2(12, 20), disableDepthTestDistance: 0 })
         });
       });
     };
@@ -1486,7 +1524,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
     const presentation = enhanceScene(viewer, {
       selected: () => {
         const selected = selectedSatelliteNoradId === null ? null : satAnimByNorad.get(selectedSatelliteNoradId);
-        return selected && (!useAuroraStore.getState().feedLastUpdated.satellites || propagatedPosition(selected.satellite)) ? { satellite: selected.satellite, position: selected.point.position } : null;
+        return useSceneStore.getState().satellitesOn && selected && (!useAuroraStore.getState().feedLastUpdated.satellites || propagatedPosition(selected.satellite)) ? { satellite: selected.satellite, position: selected.point.position } : null;
       },
       catalog: () => satellitesRef.current,
       helioHome: () => transitionCameraForMode("HELIO")
@@ -1501,17 +1539,24 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const timeSeconds = JulianDate.toDate(time).getTime() / 1000;
       const elapsedSeconds = (nowMs - startTimeMs) / 1000;
       elapsedSceneSeconds = elapsedSeconds;
+      const showConjunctions = useSceneStore.getState().conjunctionPaths && !earthOnlyRef.current && currentModeRef.current !== "HELIO";
+      conjunctionPolylines.show = showConjunctions;
+      conjunctionMarkers.show = showConjunctions;
+      conjunctionLabels.show = showConjunctions;
+      conjOrbitPolylines.show = showConjunctions;
       const showWeather = useSceneStore.getState().spaceWeather && !earthOnlyRef.current && currentModeRef.current !== "HELIO";
       particleCollection.show = showWeather && currentModeRef.current === "STORM";
       magnetosphere.show = showWeather && currentModeRef.current === "STORM";
       auroraCapEntities.forEach((entity) => { entity.show = showWeather; });
 
       if (currentModeRef.current === "HELIO" && !earthOnlyRef.current) {
+        catalogModels.update(activeSatAnimStates, false);
         updateHelioVisuals(time, deltaSeconds, true);
         presentation.update(time, deltaSeconds);
         return;
       }
       if (earthOnlyRef.current) {
+        catalogModels.update(activeSatAnimStates, false);
         presentation.update(time, deltaSeconds);
         if (useSceneStore.getState().autoRotate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches && nowMs - earthOnlyLastInteractionMs > EARTH_ONLY_IDLE_DELAY_MS) {
           viewer.camera.rotate(Cartesian3.UNIT_Z, CesiumMath.toRadians(EARTH_ONLY_ROTATION_DEGREES_PER_SECOND) * deltaSeconds);
@@ -1519,98 +1564,80 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         return;
       }
 
-      // Keep the catalog readable. All objects remain searchable; selected and
-      // conjunction objects are always shown. Interpolate one-second SGP4 samples.
-      const budget = currentModeRef.current === "STORM" ? 180 : useSceneStore.getState().quality === "performance" ? 450 : useSceneStore.getState().quality === "cinematic" ? 1600 : 900;
-      const stride = Math.max(1, Math.ceil(activeSatAnimStates.length / budget));
+      // Batched object silhouettes; SGP4 runs off the UI thread.
       const wallTime = Date.now();
       const live = useAuroraStore.getState().feedLastUpdated.satellites !== null;
-      activeSatAnimStates.forEach((state) => {
+      const mode = currentModeRef.current;
+      const settings = useSceneStore.getState();
+      const snapshot = catalogWindow;
+      const usable = !!snapshot && snapshot.generation === catalogGeneration && wallTime <= snapshot.endMs + 1000;
+      const fraction = snapshot ? clamp((wallTime - snapshot.startMs) / (snapshot.endMs - snapshot.startMs), 0, 1) : 0;
+      const stride = settings.catalogDensity === "all" ? 1 : Math.max(1, Math.ceil(activeSatAnimStates.length / 900));
+      let plotted = 0;
+      satelliteOccluder.cameraPosition = viewer.camera.positionWC;
+      activeSatAnimStates.forEach((state, index) => {
         const selected = state.satellite.noradId === selectedSatelliteNoradId;
-        state.point.show = (!live || hasCurrentElements(state.satellite)) && (selected || selectedConjSatIds.has(state.satellite.noradId) || state.satellite.noradId % stride === 0);
+        const pair = selectedConjSatIds.has(state.satellite.noradId);
+        const offset = index * 6;
+        const eligible = !live || (usable && Number.isFinite(snapshot!.positions[offset]));
+        if (!settings.satellitesOn || !eligible) { state.point.show = false; return; }
+        if (live && snapshot) {
+          const p = snapshot.positions;
+          Cartesian3.fromElements(
+            p[offset] + (p[offset + 3] - p[offset]) * fraction,
+            p[offset + 1] + (p[offset + 4] - p[offset + 1]) * fraction,
+            p[offset + 2] + (p[offset + 5] - p[offset + 2]) * fraction,
+            state.positionScratch);
+        } else Cartesian3.clone(getSatellitePositionAtOffset(state, elapsedSeconds, 0), state.positionScratch);
+        state.point.position = state.positionScratch;
+        if (!satelliteOccluder.isPointVisible(state.positionScratch)) {
+          state.point.show = false;
+          return;
+        }
+        // Evaluate proximity from the current propagated position, even for
+        // objects omitted by the wide-view density limit.
+        state.point.show = selected || pair || index % stride === 0 || Cartesian3.distanceSquared(state.positionScratch, viewer.camera.positionWC) < 1000000 ** 2;
         if (!state.point.show) return;
-        if (live) {
-          if (!state.interpolationEpoch || wallTime >= state.interpolationEpoch + 1000 || wallTime < state.interpolationEpoch) {
-            state.interpolationEpoch = wallTime;
-            state.interpolationStart = propagatedPosition(state.satellite, new Date(wallTime)) ?? undefined;
-            state.interpolationEnd = propagatedPosition(state.satellite, new Date(wallTime + 1000)) ?? undefined;
-          }
-          if (!state.interpolationStart || !state.interpolationEnd) { state.point.show = false; return; }
-          if (state.interpolationStart && state.interpolationEnd) {
-            state.point.position = Cartesian3.lerp(state.interpolationStart, state.interpolationEnd, (wallTime - state.interpolationEpoch!) / 1000, new Cartesian3());
-          }
-        } else state.point.position = getSatellitePositionAtOffset(state, elapsedSeconds, 0);
-        // A 3D model takes over for the selected spacecraft.
+        plotted++;
+        state.point.scale = selected || pair ? 1.4 : 1;
+        state.point.color = Color.WHITE;
+        // Close inspection uses the existing representative 3D model and selection ring.
         if (selected) state.point.show = false;
       });
+      if (nowMs - lastCatalogStatsMs > 1000) {
+        lastCatalogStatsMs = nowMs;
+        const eligible = live ? snapshot?.valid ?? 0 : activeSatAnimStates.length;
+        useSceneStore.getState().setCatalogStats({ total: activeSatAnimStates.length, eligible, plotted,
+          withheld: live && snapshot ? activeSatAnimStates.length - eligible : 0,
+          limited: usable || !live ? Math.max(0, eligible - plotted) : 0,
+          computeMs: snapshot?.computeMs ?? 0,
+          state: !live ? "demo" : catalogWorkerFailed ? "error" : !snapshot ? "loading" : usable ? "ready" : "late" });
+      }
+      catalogModels.update(activeSatAnimStates, settings.satellitesOn);
       presentation.update(time, deltaSeconds);
-
-      // Mode-specific satellite styling
-      const mode = currentModeRef.current;
-      if (mode === "STORM") {
-        activeSatAnimStates.forEach((state) => {
-          if (!state.point.show) return;
-          // Neutral context markers; weather indices do not establish individual spacecraft risk.
-          state.point.color = Color.fromCssColorString("#8bc4d5").withAlpha(0.28);
-          state.point.width = state.point.height = 7;
-        });
-      } else if (mode === "INTEL") {
-        const intelPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 3);
-        activeSatAnimStates.forEach((state) => {
-          if (!state.point.show) return;
-          const risk = state.satellite.riskLevel;
-          if (risk === "critical") {
-            state.point.color = RED_COLOR.withAlpha(0.8 + intelPulse * 0.2);
-            state.point.width = state.point.height = (12) * 2.5;
-          } else if (risk === "warning") {
-            state.point.color = ORANGE_COLOR.withAlpha(0.9);
-            state.point.width = state.point.height = (9) * 2.5;
-          } else if (risk === "watch") {
-            state.point.color = Color.fromCssColorString("#ffcc00").withAlpha(0.85);
-            state.point.width = state.point.height = (activeSatAnimStates.length > 1000 ? 3 : 5) * 2.5;
-          } else {
-            state.point.color = riskColorMap[risk].withAlpha(0.08);
-            state.point.width = state.point.height = (3) * 2.5;
-          }
-        });
-      } else if (mode === "OPS") {
-        // Restore default colors in OPS mode
-        activeSatAnimStates.forEach((state) => {
-          if (!state.point.show) return;
-          const risk = state.satellite.riskLevel;
-          if (risk !== "critical") {
-            state.point.color = (risk === "nominal" ? Color.fromCssColorString("#b4d9ef") : riskColorMap[risk]).withAlpha(0.85);
-            state.point.width = state.point.height = (activeSatAnimStates.length > 1000 ? 3 : 5) * 2.5;
-          }
-        });
-      }
-
-      // Highlight conjunction satellites in red
-      if (selectedConjSatIds.size > 0) {
-        const conjPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4);
-        for (const nid of selectedConjSatIds) {
-          const satState = satAnimByNorad.get(nid);
-          if (satState) {
-            satState.point.color = Color.RED.withAlpha(0.8 + conjPulse * 0.2);
-            satState.point.width = satState.point.height = (12) * 2.5;
-                      }
-        }
-      }
 
       if (earthOnlyRef.current || currentModeRef.current === "HELIO") {
         selectedSatelliteRing.show = false;
       } else if (selectedSatelliteNoradId !== null) {
         const selected = satAnimByNorad.get(selectedSatelliteNoradId);
-        selectedSatelliteRing.show = Boolean(selected && (!live || propagatedPosition(selected.satellite)));
+        selectedSatelliteRing.show = Boolean(settings.satellitesOn && selected && satelliteOccluder.isPointVisible(selected.point.position) && (!live || propagatedPosition(selected.satellite)));
         if (selected) Cartesian3.clone(selected.point.position, selectedRingPosition);
       } else {
         selectedSatelliteRing.show = false;
       }
 
+      // Live paths are sampled in TEME, then rotated together at the current UTC.
+      // Never connect current positions and present that chord as a future encounter.
+      conjunctionPolylines.modelMatrix = live
+        ? Matrix4.fromRotationTranslation(Matrix3.fromRotationZ(-gstime(new Date(wallTime))))
+        : Matrix4.IDENTITY;
+      const activePairId = conjunctionVisualState.some(v => v.conjunction.id === selectedConjunctionId) ? selectedConjunctionId : null;
       conjunctionVisualState.forEach((visual) => {
+        if (!showConjunctions) return;
+        visual.object2Marker.show = visual.object2Label.show = false;
         const object1State = satAnimByNorad.get(visual.sat1NoradId);
         const object2State = satAnimByNorad.get(visual.sat2NoradId);
-        if (!object1State || !object2State) {
+        if (!object1State && !object2State) {
           visual.object1Arc.show = false;
           visual.object2Arc.show = false;
           visual.missDistanceLine.show = false;
@@ -1620,12 +1647,62 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         }
 
         const isSelected = selectedConjunctionId === visual.conjunction.id;
-        const baseColor = mode === "INTEL" ? RED_COLOR.withAlpha(1) : getConjunctionColor(visual.riskLevel);
+        const style = conjunctionPairStyle(visual.conjunction.id, activePairId, useSceneStore.getState().conjunctionFocus);
+        const baseColor = visual.pairColor.withAlpha(style.opacity);
+        if (live) {
+          const at = new Date(wallTime);
+          const minute = Math.floor(wallTime / 60000);
+          const object1Elements = object1State ? orbitalElements(object1State.satellite) : null;
+          const object2Elements = object2State ? orbitalElements(object2State.satellite) : null;
+          const cached = visual.orbitCache;
+          if (!cached || cached.minute !== minute || cached.object1Elements !== object1Elements || cached.object2Elements !== object2Elements) {
+            visual.object1Arc.positions = object1State ? predictedOrbit(object1State.satellite, at, 240, "orbital") : [];
+            visual.object2Arc.positions = object2State ? predictedOrbit(object2State.satellite, at, 240, "orbital") : [];
+            visual.orbitCache = { minute, object1Elements, object2Elements };
+          }
+          visual.object1Arc.show = !!object1State && hasCurrentElements(object1State.satellite, at) && visual.object1Arc.positions.length > 1;
+          visual.object2Arc.show = !!object2State && hasCurrentElements(object2State.satellite, at) && visual.object2Arc.positions.length > 1;
+          for (const arc of [visual.object1Arc, visual.object2Arc]) {
+            arc.width = style.width;
+            (arc.material.uniforms as { color: Color }).color = baseColor.clone();
+          }
+          // Public catalog elements do not establish the CDM encounter geometry.
+          visual.missDistanceLine.show = false;
+          const anchor = isSelected && object1State ? propagatedPosition(object1State.satellite, at) : null;
+          const anchor2 = isSelected && object2State ? propagatedPosition(object2State.satellite, at) : null;
+          visual.label.show = anchor !== null;
+          visual.marker.show = anchor !== null;
+          visual.object2Label.show = visual.object2Marker.show = anchor2 !== null;
+          if (anchor) {
+            visual.marker.position = anchor;
+            visual.marker.color = baseColor.clone();
+            visual.marker.pixelSize = 8;
+            visual.label.position = anchor;
+            visual.label.text = `${visual.pairNumber} A · ${conjunctionObjectLabel(visual.conjunction.object1)}`;
+            visual.label.fillColor = baseColor.clone();
+          }
+          if (anchor2) {
+            visual.object2Marker.position = anchor2;
+            visual.object2Marker.color = baseColor.clone();
+            visual.object2Label.position = anchor2;
+            visual.object2Label.text = `${visual.pairNumber} B · ${conjunctionObjectLabel(visual.conjunction.object2)}`;
+            visual.object2Label.fillColor = baseColor.clone();
+          }
+          return;
+        }
+        // Partial demo pairs can still show their available illustrative orbit.
+        if (!object1State || !object2State) {
+          visual.object1Arc.positions = object1State ? createOrbitPositions(object1State.satellite) : [];
+          visual.object2Arc.positions = object2State ? createOrbitPositions(object2State.satellite) : [];
+          visual.object1Arc.show = !!object1State;
+          visual.object2Arc.show = !!object2State;
+          visual.missDistanceLine.show = visual.marker.show = visual.label.show = false;
+          return;
+        }
         const tcaDate = visual.conjunction.tca instanceof Date ? visual.conjunction.tca : new Date(visual.conjunction.tca);
         const timeUntilTcaSeconds = Math.max(0, (tcaDate.getTime() - Date.now()) / 1000);
-        const isLivePosition = useAuroraStore.getState().feedLastUpdated.satellites !== null;
-        const object1TcaPosition = isLivePosition ? object1State.point.position : getSatellitePositionAtOffset(object1State, elapsedSeconds, timeUntilTcaSeconds);
-        const object2TcaPosition = isLivePosition ? object2State.point.position : getSatellitePositionAtOffset(object2State, elapsedSeconds, timeUntilTcaSeconds);
+        const object1TcaPosition = getSatellitePositionAtOffset(object1State, elapsedSeconds, timeUntilTcaSeconds);
+        const object2TcaPosition = getSatellitePositionAtOffset(object2State, elapsedSeconds, timeUntilTcaSeconds);
         const midpoint = Cartesian3.midpoint(object1TcaPosition, object2TcaPosition, new Cartesian3());
         const midpointMagnitude = Cartesian3.magnitude(midpoint);
         const labelDirection = midpointMagnitude < 1
@@ -1637,18 +1714,16 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           new Cartesian3()
         );
         const pulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
-        const lineWidth = Math.max(conjunctionArcLineWidth(visual.riskLevel), isSelected ? 4 : 0);
+        const lineWidth = style.width;
 
-        visual.object1Arc.show = !isLivePosition;
-        visual.object2Arc.show = !isLivePosition;
-        visual.missDistanceLine.show = true;
-        visual.marker.show = true;
-        visual.label.show = true;
+        visual.object1Arc.show = true;
+        visual.object2Arc.show = true;
+        visual.missDistanceLine.show = isSelected;
+        visual.marker.show = isSelected;
+        visual.label.show = isSelected;
 
-        if (!isLivePosition) {
-          visual.object1Arc.positions = createConjunctionOrbitArcPositions(object1State, elapsedSeconds, timeUntilTcaSeconds);
-          visual.object2Arc.positions = createConjunctionOrbitArcPositions(object2State, elapsedSeconds, timeUntilTcaSeconds);
-        }
+        visual.object1Arc.positions = createConjunctionOrbitArcPositions(object1State, elapsedSeconds, timeUntilTcaSeconds);
+        visual.object2Arc.positions = createConjunctionOrbitArcPositions(object2State, elapsedSeconds, timeUntilTcaSeconds);
         visual.missDistanceLine.positions = [object1TcaPosition, object2TcaPosition];
         visual.object1Arc.width = lineWidth;
         visual.object2Arc.width = lineWidth;
@@ -1660,15 +1735,20 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         visual.marker.pixelSize = (visual.riskLevel === "watch" ? 9 : 11) + pulse * 3;
         visual.marker.color = baseColor.withAlpha(clamp(baseColor.alpha * (0.75 + pulse * 0.35), 0.5, 1));
         visual.label.position = labelPosition;
-        visual.label.text = `${isLivePosition ? "Snapshot · reported" : "Illustrative"} TCA ${formatDurationToTca(visual.conjunction.tca)}`;
+        visual.label.text = `Illustrative TCA ${formatDurationToTca(visual.conjunction.tca)}`;
         visual.label.fillColor = baseColor.clone();
       });
-
-      const criticalPulse = 0.5 + 0.5 * Math.sin(timeSeconds * 4.5);
-      criticalPoints.forEach((point) => {
-        point.width = point.height = 24 + criticalPulse * 4;
-        point.color = RED_COLOR.withAlpha(0.7 + criticalPulse * 0.3);
-      });
+      if (showConjunctions) {
+        const visible = conjunctionVisualState.reduce((count, visual) => count + Number(visual.object1Arc.show) + Number(visual.object2Arc.show), 0);
+        useSceneStore.getState().setConjunctionPathCount(visible, conjunctionsRef.current.length * 2);
+        if (useSceneStore.getState().conjunctionFocus && activePairId) {
+          for (const visual of conjunctionVisualState) {
+            if (conjunctionPairStyle(visual.conjunction.id, activePairId, true).visible) continue;
+            visual.object1Arc.show = visual.object2Arc.show = visual.missDistanceLine.show = false;
+            visual.marker.show = visual.object2Marker.show = visual.label.show = visual.object2Label.show = false;
+          }
+        }
+      }
 
       const latestSpaceWeather = spaceWeatherRef.current;
       const isStormMode = isStormModeActive(currentModeRef.current, latestSpaceWeather.kpIndex);
@@ -1814,26 +1894,20 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
             console.warn("[AURORA] Conjunction satellites not in feed:",
               state.selectedConjunction.object1.name, `(${state.selectedConjunction.object1.noradId})`,
               state.selectedConjunction.object2.name, `(${state.selectedConjunction.object2.noradId})`,
-              "— restart CelesTrak ingestion to load debris/supplemental catalogs"
+              "— orbital elements unavailable in the catalog and conjunction lookup"
             );
           }
 
-          const conjRed = Color.RED.withAlpha(0.7);
           let flyTarget: number | null = null;
 
           for (const match of [match1, match2]) {
             if (match) {
               selectedConjSatIds.add(match.satellite.noradId);
-              if (!state.feedLastUpdated.satellites) conjOrbitPolylines.add({
-                positions: createOrbitPositions(match.satellite),
-                width: 2,
-                material: Material.fromType("Color", { color: conjRed.clone() })
-              });
               if (flyTarget === null) flyTarget = match.satellite.noradId;
             }
           }
 
-          if (flyTarget !== null && state.currentMode !== "HELIO" && !state.earthOnlyMode) {
+          if (flyTarget !== null && state.activePanels.has("conjunction-detail") && state.currentMode !== "HELIO" && !state.earthOnlyMode) {
             flyCameraToSatellite(flyTarget);
           }
         }
@@ -1868,6 +1942,32 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       }
     };
     viewer.canvas.addEventListener("pointermove", onPointerMove);
+    const pickChoices=(picks:{id?:any}[]):PickChoice[]=>{
+      const found=new Map<string,PickChoice>();
+      for(const {id} of picks){
+        if(isSatellitePickPayload(id)){const satellite=id.satellite;found.set('sat:'+satellite.noradId,{id:'sat:'+satellite.noradId,name:satellite.name,detail:`Satellite · #${satellite.noradId}`,select:()=>{useAerospace.getState().set({selected:null,simulation:null,followedLaunchId:null});useAuroraStore.getState().closeAllPanels();setSelectedSatellite(satellite);}});}
+        else if(id?.type==='conjunction'){const c=conjunctionsRef.current.find(c=>c.id===id.id);if(c)found.set(c.id,{id:c.id,name:'Conjunction pair',detail:c.id,select:()=>{useAuroraStore.getState().setSelectedConjunction(c,false);useSceneStore.getState().setOpsPanel('pairs');useExplorer.getState().set({catalogOpen:true});}});}
+        else if(typeof id?.id==='string'){
+          const key=id.id,state=useAerospace.getState();
+          const camera=useEarth.getState().cameras.find(c=>c.id===key);
+          if(camera&&useEarth.getState().camerasOn){found.set(key,{id:key,name:camera.name,detail:'Public traffic camera · Singapore',select:()=>{useAuroraStore.getState().closeAllPanels();useAerospace.getState().set({open:false});useExplorer.getState().set({catalogOpen:false,earthOpen:true});useEarth.getState().set({selected:key});}});continue;}
+
+          const a=state.aircraft.find(a=>'air:'+a.id===key),l=state.launches.find(l=>'launch:'+l.id===key);
+          if(a||l)found.set(key,{id:key,name:a?.name||l!.name,detail:a?`${a.model} · ${a.military?'Military-tagged aircraft':'Aircraft'}`:'Launch site',select:()=>{useAuroraStore.getState().closeAllPanels();state.set({selected:key,open:true,tab:a?'aircraft':'launches',simulation:null});}});
+        }
+      }
+      return [...found.values()];
+    };
+    let lastHover=0;
+    viewer.screenSpaceEventHandler.setInputAction((event:{endPosition:Cartesian2})=>{
+      if(performance.now()-lastHover<100)return;lastHover=performance.now();
+      const choices=pickChoices(viewer.scene.drillPick(event.endPosition,8,10,10));
+      viewer.canvas.style.cursor=choices.length?'pointer':'';
+      useExplorer.getState().set({hover:choices.length?{x:event.endPosition.x,y:event.endPosition.y,text:choices.length>1?`${choices.length} objects · click to choose`:choices[0].name}:null});
+    },ScreenSpaceEventType.MOUSE_MOVE);
+    // Selection is handled above with overlap disambiguation, not Cesium's default click.
+    viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_CLICK);
+    viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
     let mouseDownPosition = { x: 0, y: 0 };
     viewer.screenSpaceEventHandler.setInputAction((event: { position: Cartesian2 }) => {
       mouseDownPosition = { x: event.position.x, y: event.position.y };
@@ -1877,26 +1977,21 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const dx = event.position.x - mouseDownPosition.x;
       const dy = event.position.y - mouseDownPosition.y;
       if (Math.sqrt(dx * dx + dy * dy) > 5) return;
-      const pickedList = viewer.scene.drillPick(event.position);
-      if (!pickedList || pickedList.length === 0) return;
-      for (const picked of pickedList) {
-        const pickedWithId = picked as { id?: unknown };
-        if (currentModeRef.current === "HELIO") {
-          const helioPlanetId = getPickedHelioPlanetId(pickedWithId.id);
-          if (helioPlanetId) {
-            flyCameraToHelioPlanet(helioPlanetId);
-            return;
-          }
-        }
-        if (isSatellitePickPayload(pickedWithId.id)) {
-          setSelectedSatellite(pickedWithId.id.satellite);
-          return;
-        }
-      }
+      const pickedList = viewer.scene.drillPick(event.position, 24, 12, 12);
+      if(currentModeRef.current==='HELIO') {for(const p of pickedList){const id=getPickedHelioPlanetId(p.id);if(id){flyCameraToHelioPlanet(id);return;}}return;}
+      const choices=pickChoices(pickedList);
+      if(choices.length===1)choices[0].select();
+      useExplorer.getState().set({choices:choices.length>1?choices:[],hover:null});
     }, ScreenSpaceEventType.LEFT_UP);
 
+    const disposeAerospace = installAerospace(viewer);
+    const disposeEarth = installEarth(viewer);
     return () => {
+      disposeEarth();
+      disposeAerospace();
       isDisposed = true;
+      catalogWorker.terminate();
+      catalogModels.dispose();
       presentation.dispose();
       syncSatellitesRef.current = null;
       syncConjunctionsRef.current = null;
@@ -1907,6 +2002,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       viewer.canvas.removeEventListener("touchstart", markEarthOnlyInteraction);
       viewer.canvas.removeEventListener("touchmove", markEarthOnlyInteraction);
       viewer.canvas.removeEventListener("pointermove", onPointerMove);
+      viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.MOUSE_MOVE);
       viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOWN);
       viewer.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_UP);
       unsubscribeStore();

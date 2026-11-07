@@ -46,20 +46,7 @@ const satelliteBatchSize = 1000
 
 // ── CelesTrak GP record (matches what celestrak ingestion publishes) ────────
 
-type gpRecord struct {
-	ObjectName    string  `json:"OBJECT_NAME"`
-	NoradCatID    int     `json:"NORAD_CAT_ID"`
-	ObjectType    string  `json:"OBJECT_TYPE"`
-	TLELine1      string  `json:"TLE_LINE1"`
-	TLELine2      string  `json:"TLE_LINE2"`
-	MeanMotion    float64 `json:"MEAN_MOTION"`
-	Inclination   float64 `json:"INCLINATION"`
-	Eccentricity  float64 `json:"ECCENTRICITY"`
-	Period        float64 `json:"PERIOD"`
-	Apoapsis      float64 `json:"APOAPSIS"`
-	Periapsis     float64 `json:"PERIAPSIS"`
-	SemiMajorAxis float64 `json:"SEMIMAJOR_AXIS"`
-}
+type gpRecord = shared.GPRecord
 
 // ── TLE cache ───────────────────────────────────────────────────────────────
 
@@ -103,6 +90,9 @@ func propagateSatellite(rec gpRecord) (*shared.Satellite, bool) {
 }
 
 func propagateSatelliteAt(rec gpRecord, now time.Time) (result *shared.Satellite, ok bool) {
+	if rec.Epoch != "" {
+		return propagateOMM(rec, now)
+	}
 	// go-satellite panics on malformed TLEs — recover gracefully
 	defer func() {
 		if r := recover(); r != nil {
@@ -246,7 +236,7 @@ func bulkLoadTLEs(ctx context.Context, cache *tleCache, brokers []string) {
 // ── Phase 2: Ongoing TLE consumer (picks up new/updated TLEs) ──────────────
 
 func consumeTLEUpdates(ctx context.Context, cache *tleCache, brokers []string) {
-	consumer := shared.NewConsumer(brokers, shared.TopicSatellitesTLE, "aurora-engine")
+	consumer := shared.NewConsumer(brokers, shared.TopicSatellitesTLE, envOr("ENGINE_CONSUMER_GROUP", "aurora-engine"))
 	defer consumer.Close()
 
 	slog.Info("TLE update consumer started")
@@ -293,6 +283,9 @@ func propagationLoop(ctx context.Context, cache *tleCache, producer *shared.Prod
 // isTLEValid pre-checks orbital elements to skip TLEs that cause
 // the go-satellite library to hang (infinite loops on degenerate orbits).
 func isTLEValid(rec gpRecord) bool {
+	if rec.Epoch != "" {
+		return rec.ValidateOMM() == nil
+	}
 	line1 := strings.TrimSpace(rec.TLELine1)
 	line2 := strings.TrimSpace(rec.TLELine2)
 	if len(line1) < 69 || len(line2) < 69 {
@@ -476,6 +469,10 @@ func envOr(key, fallback string) string {
 }
 
 func tleEpoch(rec gpRecord) time.Time {
+	if rec.Epoch != "" {
+		epoch, _ := rec.OMMEpoch()
+		return epoch
+	}
 	line := rec.TLELine1
 	if len(line) < 32 {
 		return time.Time{}

@@ -1,0 +1,14 @@
+[
+  {
+    "area": "military",
+    "fetchedAt": "2026-11-04T22:24:39.763437Z",
+    "stale": false,
+    "records": 339
+  },
+  {
+    "area": "point/41/-88",
+    "fetchedAt": "2026-11-04T22:24:39.811726Z",
+    "stale": false,
+    "records": 682
+  }
+]

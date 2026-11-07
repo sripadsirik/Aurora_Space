@@ -1,0 +1,104 @@
+{
+  "schema": "aurora-validation-v1",
+  "generatedAt": "2026-11-07T07:25:37.838Z",
+  "modelVersion": "aurora-analysis-1.2.1",
+  "baseCommit": "9bd953b8de0072f626d7bebe1bc51972809e422d",
+  "workingTree": "Local working tree; source changes may be uncommitted",
+  "hardware": {
+    "cpu": "Apple M5 Pro",
+    "logicalCpus": 15,
+    "memoryGB": 24,
+    "os": "darwin 27.2.0 arm64",
+    "node": "v25.8.1"
+  },
+  "references": {
+    "source": "https://celestrak.org/publications/AIAA/2006-6753/AIAA-2006-6753.zip",
+    "archiveSha256": "3642043b706c76be87cf012db3f22e04da6b80498d00f515e51879e0ffadc115",
+    "frame": "TEME",
+    "results": [
+      {
+        "noradId": "00005",
+        "samples": 13,
+        "maxPositionM": 0.000006819206706052019,
+        "maxVelocityMs": 7.70480217497559e-7,
+        "maxOMMPositionM": 0.000006819206706052019
+      },
+      {
+        "noradId": "04632",
+        "samples": 5,
+        "maxPositionM": 0.000005971630012994096,
+        "maxVelocityMs": 6.520349240499199e-7,
+        "maxOMMPositionM": 0.000021058179757759165
+      },
+      {
+        "noradId": "06251",
+        "samples": 25,
+        "maxPositionM": 0.000007266465865791276,
+        "maxVelocityMs": 6.893817396127629e-7,
+        "maxOMMPositionM": 0.000007266465865791276
+      },
+      {
+        "noradId": "08195",
+        "samples": 25,
+        "maxPositionM": 0.000006271563674150093,
+        "maxVelocityMs": 6.700863654311235e-7,
+        "maxOMMPositionM": 0.0012180242014144316
+      },
+      {
+        "noradId": "14128",
+        "samples": 25,
+        "maxPositionM": 0.0000069593571978886065,
+        "maxVelocityMs": 6.782373018671541e-7,
+        "maxOMMPositionM": 0.00007372617786820205
+      }
+    ]
+  },
+  "analyticOrbit": {
+    "closureErrorM": 0.0009230121055226008,
+    "relativeEnergyError": 8.528733275170453e-13
+  },
+  "mission": {
+    "candidateCount": 11,
+    "screeningObjects": 2,
+    "baselinePc": 0.0007250702874136937,
+    "quadratureDifference": 1.6263032587282567e-18,
+    "coastMissM": 85.00000277465993,
+    "maximumCandidateMissM": 7592.471393630558,
+    "latency": {
+      "samples": 50,
+      "p50Ms": 271.3259160000016,
+      "p95Ms": 281.44637499999953,
+      "p99Ms": 283.59170899999936,
+      "minMs": 266.1263749999998,
+      "maxMs": 283.59170899999936
+    }
+  },
+  "propagationBenchmark": {
+    "scope": "20,000 synthetic catalog entries repeating five published reference element sets; propagation only, no Kafka/network/rendering",
+    "objects": 20000,
+    "cycles": 30,
+    "failed": 0,
+    "latency": {
+      "samples": 30,
+      "p50Ms": 6.32354099999975,
+      "p95Ms": 7.026499999999942,
+      "p99Ms": 7.20824999999968,
+      "minMs": 5.7485410000008414,
+      "maxMs": 7.20824999999968
+    },
+    "objectsPerSecondAtP50": 3162784.9016873282
+  },
+  "memory": {
+    "rss": 351518720,
+    "heapTotal": 223379456,
+    "heapUsed": 142322304,
+    "external": 27351602,
+    "arrayBuffers": 307308
+  },
+  "limitations": [
+    "Reference agreement is not observational accuracy.",
+    "These timings describe this machine and workload only.",
+    "Frontend rendering and gateway throughput are measured separately.",
+    "Candidate Pc requires full state covariance and explicit burn execution uncertainty; linearized propagation only."
+  ]
+}

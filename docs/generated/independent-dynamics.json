@@ -1,0 +1,117 @@
+{
+  "schema": "aurora-independent-dynamics-v1",
+  "inputSha256": "745a9b45f7ac120f69a0d1b9b1edad73cd84f82bbad2713030fbfb4a9ec2f5e5",
+  "method": "SciPy DOP853 + independent bounded TCA minimization + central differences + adaptive Gaussian-disk quadrature",
+  "python": "3.12.13",
+  "scipy": "1.18.1",
+  "numpy": "2.5.4",
+  "tolerances": {
+    "positionM": 0.1,
+    "velocityMs": 0.001,
+    "missDistanceM": 0.1,
+    "tcaSeconds": 0.001,
+    "pcAbsolute": 1e-08
+  },
+  "results": [
+    {
+      "id": "coast",
+      "positionErrorM": 0.0002850239884197763,
+      "velocityErrorMs": 3.587922913942079e-07,
+      "missDistanceErrorM": 2.743926287962495e-06,
+      "tcaErrorSeconds": 5.788203250034485e-12,
+      "independentPc": 0.0007250702871589823,
+      "pcAbsoluteError": 2.1426002573717018e-11
+    },
+    {
+      "id": "along-0.25--1",
+      "positionErrorM": 0.0002865334180331191,
+      "velocityErrorMs": 3.6065077009058856e-07,
+      "missDistanceErrorM": 5.393044375523459e-06,
+      "tcaErrorSeconds": 3.209174062920872e-06,
+      "independentPc": 1.3748497954431655e-35,
+      "pcAbsoluteError": 8.046017251266547e-42
+    },
+    {
+      "id": "along-0.25-1",
+      "positionErrorM": 0.00028398494174085894,
+      "velocityErrorMs": 3.564666834205591e-07,
+      "missDistanceErrorM": 2.978871634695679e-06,
+      "tcaErrorSeconds": 5.636289917329562e-06,
+      "independentPc": 2.3673786898100982e-30,
+      "pcAbsoluteError": 1.6383091820360915e-36
+    },
+    {
+      "id": "along-0.5--1",
+      "positionErrorM": 0.0002880125139206326,
+      "velocityErrorMs": 3.6253669989310593e-07,
+      "missDistanceErrorM": 6.177029263199074e-06,
+      "tcaErrorSeconds": 8.873228293515556e-07,
+      "independentPc": 2.2472029472821995e-125,
+      "pcAbsoluteError": 7.990683085301475e-131
+    },
+    {
+      "id": "along-0.5-1",
+      "positionErrorM": 0.00028293962530218303,
+      "velocityErrorMs": 3.541370535013518e-07,
+      "missDistanceErrorM": 2.3632642296433914e-06,
+      "tcaErrorSeconds": 4.136706403978785e-06,
+      "independentPc": 6.2555129472011555e-115,
+      "pcAbsoluteError": 3.76648974818165e-120
+    },
+    {
+      "id": "along-1--1",
+      "positionErrorM": 0.00029093775424443,
+      "velocityErrorMs": 3.6640471929042353e-07,
+      "missDistanceErrorM": 8.18331591290189e-06,
+      "tcaErrorSeconds": 7.0278922444932945e-06,
+      "independentPc": 0.0,
+      "pcAbsoluteError": 0.0
+    },
+    {
+      "id": "along-1-1",
+      "positionErrorM": 0.0002807399153997639,
+      "velocityErrorMs": 3.5302650181163766e-07,
+      "missDistanceErrorM": 4.943458407069556e-07,
+      "tcaErrorSeconds": 5.935794905154168e-06,
+      "independentPc": 0.0,
+      "pcAbsoluteError": 0.0
+    },
+    {
+      "id": "axis-0--1",
+      "positionErrorM": 0.00028878469202642883,
+      "velocityErrorMs": 3.6206086231498943e-07,
+      "missDistanceErrorM": 5.781669187854277e-06,
+      "tcaErrorSeconds": 2.0359142988146672e-06,
+      "independentPc": 3.439810124624736e-67,
+      "pcAbsoluteError": 4.854183811300907e-73
+    },
+    {
+      "id": "axis-0-1",
+      "positionErrorM": 0.00028219579927884743,
+      "velocityErrorMs": 3.547249393110593e-07,
+      "missDistanceErrorM": 1.0905851013376378e-06,
+      "tcaErrorSeconds": 6.955389479479379e-06,
+      "independentPc": 1.611482628778168e-67,
+      "pcAbsoluteError": 2.7413004878966316e-73
+    },
+    {
+      "id": "axis-2--1",
+      "positionErrorM": 0.0002851317416704878,
+      "velocityErrorMs": 3.587425916720575e-07,
+      "missDistanceErrorM": 3.2624340917664085e-07,
+      "tcaErrorSeconds": 5.986812686015197e-07,
+      "independentPc": 0.0005853713639761075,
+      "pcAbsoluteError": 9.878133575870474e-12
+    },
+    {
+      "id": "axis-2-1",
+      "positionErrorM": 0.00028507283239312593,
+      "velocityErrorMs": 3.5883966304200844e-07,
+      "missDistanceErrorM": 4.205182449368294e-06,
+      "tcaErrorSeconds": 9.151837717311095e-07,
+      "independentPc": 0.0006332807153681117,
+      "pcAbsoluteError": 1.71056342918377e-11
+    }
+  ],
+  "limitations": "Same force-model equations; independent numerical integrator. Does not validate omitted forces or observational covariance realism."
+}

@@ -1,0 +1,292 @@
+{
+  "schema": "aurora-archive-v1",
+  "modelVersion": "aurora-analysis-1.2.1",
+  "scenario": {
+    "schema": "aurora-mission-v1",
+    "id": "pathfinder-crossing-001",
+    "name": "The 85-metre encounter",
+    "description": "A synthetic LEO crossing at 550 km. Investigate the uncertainty, then compare an impulse 45 minutes before closest approach.",
+    "kind": "synthetic",
+    "epoch": "2026-10-26T12:00:00.000Z",
+    "frame": "GCRF",
+    "primary": {
+      "id": "SIM-001",
+      "name": "AURORA / Pathfinder",
+      "state": {
+        "r": [
+          6928137,
+          0,
+          0
+        ],
+        "v": [
+          0,
+          7585.088535158763,
+          0
+        ]
+      },
+      "covariance": [
+        [
+          3600,
+          0,
+          0
+        ],
+        [
+          0,
+          14400,
+          0
+        ],
+        [
+          0,
+          0,
+          1600
+        ]
+      ],
+      "radiusM": 4,
+      "stateCovariance": [
+        [
+          3600,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          14400,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1600,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0.0004,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0.0004,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.0004
+        ]
+      ]
+    },
+    "secondary": {
+      "id": "SIM-002",
+      "name": "Fragment / K-17",
+      "state": {
+        "r": [
+          6928222,
+          0,
+          0
+        ],
+        "v": [
+          0,
+          4350.62805140354,
+          6213.340779688295
+        ]
+      },
+      "covariance": [
+        [
+          6400,
+          0,
+          0
+        ],
+        [
+          0,
+          22500,
+          0
+        ],
+        [
+          0,
+          0,
+          2500
+        ]
+      ],
+      "radiusM": 2,
+      "stateCovariance": [
+        [
+          6400,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          22500,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2500,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0.0004,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0.0004,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.0004
+        ]
+      ]
+    },
+    "screeningObjects": [
+      {
+        "id": "SIM-003",
+        "name": "AURORA / Companion",
+        "state": {
+          "r": [
+            6928137,
+            25000,
+            5000
+          ],
+          "v": [
+            -25,
+            7585.088535158763,
+            0
+          ]
+        },
+        "covariance": [
+          [
+            10000,
+            0,
+            0
+          ],
+          [
+            0,
+            10000,
+            0
+          ],
+          [
+            0,
+            0,
+            10000
+          ]
+        ],
+        "radiusM": 4
+      },
+      {
+        "id": "SIM-004",
+        "name": "Fragment / M-08",
+        "state": {
+          "r": [
+            6968137,
+            -10000,
+            -20000
+          ],
+          "v": [
+            0,
+            6068.070828127011,
+            4551.053121095258
+          ]
+        },
+        "covariance": [
+          [
+            10000,
+            0,
+            0
+          ],
+          [
+            0,
+            10000,
+            0
+          ],
+          [
+            0,
+            0,
+            10000
+          ]
+        ],
+        "radiusM": 1
+      }
+    ],
+    "source": {
+      "name": "AURORA deterministic fixture",
+      "reference": "Synthetic states constructed in mission/scenario.ts; no real spacecraft event is represented.",
+      "capturedAt": "2026-10-26T10:00:00.000Z"
+    },
+    "revisions": [
+      {
+        "id": "SIM-R1",
+        "issuedAt": "2026-10-25T12:00:00.000Z",
+        "missDistanceM": 420,
+        "suppliedPc": 0.000012
+      },
+      {
+        "id": "SIM-R2",
+        "issuedAt": "2026-10-26T00:00:00.000Z",
+        "missDistanceM": 210,
+        "suppliedPc": 0.00009
+      },
+      {
+        "id": "SIM-R3",
+        "issuedAt": "2026-10-26T06:00:00.000Z",
+        "missDistanceM": 85,
+        "suppliedPc": null
+      }
+    ],
+    "config": {
+      "stepSeconds": 10,
+      "burnLeadSeconds": 2700,
+      "encounterWindowSeconds": 180,
+      "maxDeltaVMs": 1,
+      "screeningDistanceM": 5000,
+      "massKg": 300,
+      "ispSeconds": 1600,
+      "forceModel": "J2",
+      "burnExecutionSigmaMs": 0.01
+    }
+  },
+  "notes": "Bundled reproducible demonstration. Synthetic crossing encounter.",
+  "selectedCandidate": "coast",
+  "replaySeconds": -2700,
+  "capture": null,
+  "sha256": "cd1da733d13224986d7ef96c4c4ca9e39da6575c0288287ece94f783fad550fe"
+}

@@ -1,3 +1,35 @@
+# Engineering validation — Mission Lab update
+
+The original 2026-10-24 catalog audit below is historical evidence, not a fresh
+measurement of the revised OMM pipeline. Current numerical methods, supported input
+contracts and operational limits are in [Mission Lab](mission-lab.md). Reproducible
+results are in [generated evidence](generated/mission-validation.json) and the
+[independent trajectory/Pc cross-check](generated/independent-dynamics.json).
+
+The implementation now supports OMM in ingestion, Go/Rust propagation, the browser,
+and catalog audits. The mission lab validates position/full-state covariance,
+computes short-encounter Pc, propagates optional full uncertainty through simulated
+burns, compares candidates and records/export/replays investigations. These changes
+do not resolve observational accuracy, catalog completeness or operational review.
+
+The 2026-10-26 live integration run captured **19,559 objects**, including **5,371
+OMM records**. Of 19,441 eligible backend/JavaScript comparisons, none exceeded the
+100 m software diagnostic threshold; the maximum discrepancy was 7.62 m. The audit
+withheld 118 records and retains their failures in its raw local output. Reference
+SATCAT coverage remains partial: 16,123 undecayed Earth-orbit entries were absent,
+including 864 six-digit identities. That denominator does not imply those entries
+have available public GP data. Some provider requests returned HTTP 403 or no valid
+records; cached elements are not relabelled as fresh observations.
+
+See the [live audit summary](generated/live-catalog-summary.json),
+[provider responses](generated/live-provider-results.json) and
+[real-feed capture screenshot](generated/demo/live-feed-capture.png).
+The complete snapshot and per-object audit remain in `.aurora/audits/` locally.
+The test stack shared Kafka topics with a pre-existing stack; these numbers are
+integration evidence, not an isolated end-to-end throughput benchmark.
+
+---
+
 # Engineering validation — 2026-10-24
 
 Aurora is a public-data review application. It is not yet a validated collision-avoidance decision system.

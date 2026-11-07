@@ -1,0 +1,126 @@
+{
+  "scope": "One local live-ingestion run; public provider responses are partial and are not catalog coverage guarantees.",
+  "events": [
+    {
+      "time": "2026-10-26T15:40:17.50965+05:30",
+      "level": "ERROR",
+      "msg": "fetch failed",
+      "group": "active",
+      "duration": 7.602169375,
+      "err": "provider rejected request: HTTP 403; no immediate retry"
+    },
+    {
+      "time": "2026-10-26T15:40:19.12592+05:30",
+      "level": "ERROR",
+      "msg": "fetch failed",
+      "group": "starlink",
+      "duration": 1.6161862500000002,
+      "err": "provider rejected request: HTTP 403; no immediate retry"
+    },
+    {
+      "time": "2026-10-26T15:40:19.585259+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "cosmos-1408-debris",
+      "count": 3
+    },
+    {
+      "time": "2026-10-26T15:40:21.673318+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "fengyun-1c-debris",
+      "count": 1981
+    },
+    {
+      "time": "2026-10-26T15:40:22.041176+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "iridium-33-debris",
+      "count": 109
+    },
+    {
+      "time": "2026-10-26T15:40:23.017974+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "cosmos-2251-debris",
+      "count": 585
+    },
+    {
+      "time": "2026-10-26T15:40:23.502522+05:30",
+      "level": "ERROR",
+      "msg": "GP parse failed",
+      "group": "2019-006",
+      "err": "no valid GP records"
+    },
+    {
+      "time": "2026-10-26T15:40:24.800886+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "analyst",
+      "count": 565
+    },
+    {
+      "time": "2026-10-26T15:40:25.486096+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "stations",
+      "count": 20
+    },
+    {
+      "time": "2026-10-26T15:40:26.026307+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "visual",
+      "count": 155
+    },
+    {
+      "time": "2026-10-26T15:40:26.542134+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "weather",
+      "count": 73
+    },
+    {
+      "time": "2026-10-26T15:40:27.64379+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "resource",
+      "count": 167
+    },
+    {
+      "time": "2026-10-26T15:40:28.195234+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "science",
+      "count": 46
+    },
+    {
+      "time": "2026-10-26T15:40:29.289075+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "geo",
+      "count": 569
+    },
+    {
+      "time": "2026-10-26T15:40:29.60845+05:30",
+      "level": "ERROR",
+      "msg": "GP parse failed",
+      "group": "gpz",
+      "err": "no valid GP records"
+    },
+    {
+      "time": "2026-10-26T15:40:29.904044+05:30",
+      "level": "ERROR",
+      "msg": "GP parse failed",
+      "group": "gpz-plus",
+      "err": "no valid GP records"
+    },
+    {
+      "time": "2026-10-26T15:40:30.425324+05:30",
+      "level": "INFO",
+      "msg": "published to Kafka",
+      "group": "last-30-days",
+      "count": 252
+    }
+  ]
+}

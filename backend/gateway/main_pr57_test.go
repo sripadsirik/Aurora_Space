@@ -38,7 +38,7 @@ func TestPayloadCountPR57(t *testing.T) {
 
 func TestStateCacheSetAndSnapshotPR57(t *testing.T) {
 	cache := &stateCache{}
-	satellites := json.RawMessage(`[{"noradId":1},{"noradId":2}]`)
+	satellites := json.RawMessage(`[{"noradId":1,"positionTimestamp":"2026-01-01T00:00:00Z"},{"noradId":2,"positionTimestamp":"2026-01-01T00:00:00Z"}]`)
 
 	cache.set("satellites", satellites)
 
@@ -50,7 +50,7 @@ func TestStateCacheSetAndSnapshotPR57(t *testing.T) {
 		t.Errorf("satellites payload = %s, want %s", snap.satellites.payload, satellites)
 	}
 	if snap.satellites.lastUpdated.IsZero() {
-		t.Error("lastUpdated should be set after set()")
+		t.Error("lastUpdated should preserve the supplied propagation epoch")
 	}
 	if snap.conjunctions.count != 0 || snap.conjunctions.payload != nil {
 		t.Error("untouched feeds should remain empty")

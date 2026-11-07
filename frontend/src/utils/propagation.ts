@@ -1,47 +1,19 @@
+import { orbitalElements, elementEpoch, hasCurrentElements } from "./orbitalElements";
+export { orbitalElements, elementEpoch, hasCurrentElements } from "./orbitalElements";
 import { Cartesian3 } from "cesium";
-import { eciToEcf, eciToGeodetic, gstime, propagate, twoline2satrec, type SatRec } from "satellite.js";
+import { eciToEcf, eciToGeodetic, gstime, propagate } from "satellite.js";
 import type { Satellite } from "../types/space";
-
-const records = new Map<number, { key: string; record: SatRec | null }>();
-const MAX_ELEMENT_AGE_DAYS = 14;
-
-export function orbitalElements(satellite: Satellite): SatRec | null {
-  const { tleLine1: line1, tleLine2: line2 } = satellite;
-  if (!line1 || !line2) return null;
-  const key = `${line1}\n${line2}`;
-  const cached = records.get(satellite.noradId);
-  if (cached?.key === key) return cached.record;
-  let record: SatRec | null = null;
-  try {
-    if (line1.length >= 69 && line2.length >= 69 && line1.startsWith("1 ") && line2.startsWith("2 ") && line1.slice(2, 7) === line2.slice(2, 7) && Number(line1.slice(2, 7)) === satellite.noradId) {
-      const parsed = twoline2satrec(line1, line2);
-      if (parsed.error === 0 && Number.isFinite(parsed.jdsatepoch) && parsed.no > 0 && parsed.ecco >= 0 && parsed.ecco < 1) record = parsed;
-    }
-  } catch { /* Invalid element sets have no predicted path. */ }
-  if (records.size > 30000) records.clear();
-  records.set(satellite.noradId, { key, record });
-  return record;
-}
-
-export function elementEpoch(satellite: Satellite): Date | null {
-  const record = orbitalElements(satellite);
-  return record ? new Date((record.jdsatepoch - 2440587.5) * 86400000) : null;
-}
-
-export function hasCurrentElements(satellite: Satellite, date = new Date()): boolean {
-  const epoch = elementEpoch(satellite);
-  return !satellite.decayDate && !!epoch && date.getTime() - epoch.getTime() >= -86400000 && date.getTime() - epoch.getTime() <= MAX_ELEMENT_AGE_DAYS * 86400000;
-}
 
 /** Element age is independent of how recently a propagated position arrived. */
 export function orbitalElementStatus(satellite: Satellite, date = new Date()): string {
+  const format = satellite.omm ? "OMM" : "TLE";
   if (satellite.decayDate) return `Catalog reports decay ${satellite.decayDate} · position withheld`;
   const epoch = elementEpoch(satellite);
-  if (!epoch) return "No valid TLE · path unavailable";
+  if (!epoch) return `No valid ${format} · path unavailable`;
   const days = (date.getTime() - epoch.getTime()) / 86400000;
-  if (days < -1) return "Future TLE epoch · position withheld";
-  if (!hasCurrentElements(satellite, date)) return `Expired TLE · ${Math.abs(days).toFixed(1)}d from epoch · path hidden`;
-  return `${days > 3 ? "Aged TLE" : "TLE age"} · ${Math.max(0, days).toFixed(1)}d · SGP4 prediction`;
+  if (days < -1) return `Future ${format} epoch · position withheld`;
+  if (!hasCurrentElements(satellite, date)) return `Expired ${format} · ${Math.abs(days).toFixed(1)}d from epoch · path hidden`;
+  return `${days > 3 ? `Aged ${format}` : `${format} age`} · ${Math.max(0, days).toFixed(1)}d · SGP4 prediction`;
 }
 
 /** SGP4 TEME position, rotated into Earth-fixed coordinates at the sample time. */

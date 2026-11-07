@@ -11,3 +11,9 @@ backend/bin/*.exe~
 backend/engine-rust/target/
 backend/bin/engine-rust.exe
 .aurora/
+
+# Local browser verification artifacts
+frontend/test-results/
+frontend/playwright-report/
+
+.venv-validation/

@@ -1,0 +1,3 @@
+# Optional independent numerical cross-check; application runtime does not use Python.
+numpy==2.5.4
+scipy==1.18.1

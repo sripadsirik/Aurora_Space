@@ -3,6 +3,7 @@ export type OrbitType = "LEO" | "MEO" | "GEO";
 export type RiskLevel = "nominal" | "watch" | "warning" | "critical";
 
 export interface Satellite {
+  omm?: import("satellite.js").OMMJsonObject;
   noradId: number;
   name: string;
   objectType?: string;

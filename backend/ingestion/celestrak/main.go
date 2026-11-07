@@ -44,20 +44,7 @@ var (
 
 // ── CelesTrak GP JSON record ────────────────────────────────────────────────
 
-type gpRecord struct {
-	ObjectName    string  `json:"OBJECT_NAME"`
-	NoradCatID    int     `json:"NORAD_CAT_ID"`
-	ObjectType    string  `json:"OBJECT_TYPE"`
-	TLELine1      string  `json:"TLE_LINE1"`
-	TLELine2      string  `json:"TLE_LINE2"`
-	MeanMotion    float64 `json:"MEAN_MOTION"`
-	Inclination   float64 `json:"INCLINATION"`
-	Eccentricity  float64 `json:"ECCENTRICITY"`
-	Period        float64 `json:"PERIOD"`
-	Apoapsis      float64 `json:"APOAPSIS"`
-	Periapsis     float64 `json:"PERIAPSIS"`
-	SemiMajorAxis float64 `json:"SEMIMAJOR_AXIS"`
-}
+type gpRecord = shared.GPRecord
 
 // ── Fetch groups ────────────────────────────────────────────────────────────
 
@@ -67,23 +54,23 @@ type fetchGroup struct {
 }
 
 var groups = []fetchGroup{
-	{name: "active", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=3LE"},
-	{name: "starlink", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=3LE"},
-	{name: "cosmos-1408-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-1408-debris&FORMAT=3LE"},
-	{name: "fengyun-1c-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=fengyun-1c-debris&FORMAT=3LE"},
-	{name: "iridium-33-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-33-debris&FORMAT=3LE"},
-	{name: "cosmos-2251-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=3LE"},
-	{name: "2019-006", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=2019-006&FORMAT=3LE"},
-	{name: "analyst", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=analyst&FORMAT=3LE"},
-	{name: "stations", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=3LE"},
-	{name: "visual", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=3LE"},
-	{name: "weather", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=3LE"},
-	{name: "resource", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=3LE"},
-	{name: "science", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=3LE"},
-	{name: "geo", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=3LE"},
-	{name: "gpz", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gpz&FORMAT=3LE"},
-	{name: "gpz-plus", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gpz-plus&FORMAT=3LE"},
-	{name: "last-30-days", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=last-30-days&FORMAT=3LE"},
+	{name: "active", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=JSON"},
+	{name: "starlink", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=JSON"},
+	{name: "cosmos-1408-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-1408-debris&FORMAT=JSON"},
+	{name: "fengyun-1c-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=fengyun-1c-debris&FORMAT=JSON"},
+	{name: "iridium-33-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-33-debris&FORMAT=JSON"},
+	{name: "cosmos-2251-debris", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=cosmos-2251-debris&FORMAT=JSON"},
+	{name: "2019-006", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=2019-006&FORMAT=JSON"},
+	{name: "analyst", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=analyst&FORMAT=JSON"},
+	{name: "stations", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=JSON"},
+	{name: "visual", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=JSON"},
+	{name: "weather", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=JSON"},
+	{name: "resource", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=JSON"},
+	{name: "science", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=JSON"},
+	{name: "geo", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=geo&FORMAT=JSON"},
+	{name: "gpz", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gpz&FORMAT=JSON"},
+	{name: "gpz-plus", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=gpz-plus&FORMAT=JSON"},
+	{name: "last-30-days", url: "https://celestrak.org/NORAD/elements/gp.php?GROUP=last-30-days&FORMAT=JSON"},
 }
 
 // ── HTTP client with retry ──────────────────────────────────────────────────
@@ -114,8 +101,11 @@ func fetchWithRetry(ctx context.Context, url string) ([]byte, error) {
 			continue
 		}
 
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 32_000_001))
 		resp.Body.Close()
+		if len(body) > 32_000_000 {
+			return nil, fmt.Errorf("provider response exceeds 32 MB")
+		}
 
 		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 			return nil, fmt.Errorf("provider rejected request: HTTP %d; no immediate retry", resp.StatusCode)
@@ -248,34 +238,47 @@ func fetchAndPublish(ctx context.Context, group fetchGroup, producer *shared.Pro
 
 	slog.Info("fetch complete", "group", group.name, "bytes", len(body), "duration_s", fmt.Sprintf("%.2f", elapsed))
 
-	records := parseThreeLineElements(body)
+	records := parseGPData(body)
 	if len(records) == 0 {
 		fetchErrors.WithLabelValues(group.name).Inc()
-		slog.Error("TLE parse failed", "group", group.name, "err", "no valid 3LE records")
+		slog.Error("GP parse failed", "group", group.name, "err", "no valid GP records")
 		return
 	}
 
 	satellitesFetched.WithLabelValues(group.name).Set(float64(len(records)))
 	slog.Info("parsed satellites", "group", group.name, "count", len(records))
 
+	const batchSize = 500
+	batch := make([]shared.Record, 0, batchSize)
+	published := 0
+	flush := func() bool {
+		if len(batch) == 0 {
+			return true
+		}
+		if err := producer.PublishBatch(ctx, batch); err != nil {
+			slog.Error("GP batch publish failed", "group", group.name, "err", err)
+			return false
+		}
+		published += len(batch)
+		batch = batch[:0]
+		return true
+	}
 	for _, rec := range records {
 		data, err := json.Marshal(rec)
 		if err != nil {
-			slog.Warn("marshal record failed", "name", rec.ObjectName, "err", err)
+			slog.Warn("marshal record failed", "norad", rec.NoradCatID, "err", err)
 			continue
 		}
-
-		key := rec.ObjectName
-		if rec.NoradCatID > 0 {
-			key = strconv.Itoa(rec.NoradCatID)
-		}
-
-		if err := producer.Publish(ctx, key, data); err != nil {
-			slog.Warn("publish failed", "norad", key, "err", err)
+		batch = append(batch, shared.Record{Key: strconv.Itoa(rec.NoradCatID), Value: data})
+		if len(batch) == batchSize && !flush() {
+			return
 		}
 	}
+	if !flush() {
+		return
+	}
 
-	slog.Info("published to Kafka", "group", group.name, "count", len(records))
+	slog.Info("published to Kafka", "group", group.name, "count", published)
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────

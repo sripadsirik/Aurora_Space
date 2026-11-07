@@ -4,24 +4,25 @@ import "encoding/json"
 
 // Satellite matches frontend/src/types/space.ts Satellite.
 type Satellite struct {
-	MetadataSource    string  `json:"metadataSource,omitempty"`
-	MetadataFetchedAt string  `json:"metadataFetchedAt,omitempty"`
-	DecayDate         string  `json:"decayDate,omitempty"`
-	OperationalStatus string  `json:"operationalStatus,omitempty"`
-	ObjectType        string  `json:"objectType,omitempty"`
-	TLELine1          string  `json:"tleLine1,omitempty"`
-	TLELine2          string  `json:"tleLine2,omitempty"`
-	PositionTimestamp string  `json:"positionTimestamp,omitempty"`
-	NoradID           int     `json:"noradId"`
-	Name              string  `json:"name"`
-	Lat               float64 `json:"lat"`
-	Lon               float64 `json:"lon"`
-	AltitudeKm        float64 `json:"altitudeKm"`
-	VelocityKms       float64 `json:"velocityKms"`
-	OrbitType         string  `json:"orbitType"` // "LEO" | "MEO" | "GEO"
-	RiskLevel         string  `json:"riskLevel"` // "nominal" | "watch" | "warning" | "critical"
-	Owner             string  `json:"owner"`
-	ConjunctionCount  int     `json:"conjunctionCount"`
+	OMM               *GPRecord `json:"omm,omitempty"`
+	MetadataSource    string    `json:"metadataSource,omitempty"`
+	MetadataFetchedAt string    `json:"metadataFetchedAt,omitempty"`
+	DecayDate         string    `json:"decayDate,omitempty"`
+	OperationalStatus string    `json:"operationalStatus,omitempty"`
+	ObjectType        string    `json:"objectType,omitempty"`
+	TLELine1          string    `json:"tleLine1,omitempty"`
+	TLELine2          string    `json:"tleLine2,omitempty"`
+	PositionTimestamp string    `json:"positionTimestamp,omitempty"`
+	NoradID           int       `json:"noradId"`
+	Name              string    `json:"name"`
+	Lat               float64   `json:"lat"`
+	Lon               float64   `json:"lon"`
+	AltitudeKm        float64   `json:"altitudeKm"`
+	VelocityKms       float64   `json:"velocityKms"`
+	OrbitType         string    `json:"orbitType"` // "LEO" | "MEO" | "GEO"
+	RiskLevel         string    `json:"riskLevel"` // "nominal" | "watch" | "warning" | "critical"
+	Owner             string    `json:"owner"`
+	ConjunctionCount  int       `json:"conjunctionCount"`
 }
 
 type SatelliteBatch struct {

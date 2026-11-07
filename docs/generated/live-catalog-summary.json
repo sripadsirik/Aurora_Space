@@ -1,0 +1,51 @@
+{
+  "schema": "aurora-catalog-audit-v2",
+  "capturedAt": "2026-10-26T10:14:57.924Z",
+  "generatedAt": "2026-10-26T10:15:04.887Z",
+  "metadataSource": "https://celestrak.org/pub/satcat.csv",
+  "metadataSHA256": "278c141f0f50cf2cc606f75c5b501c25187682570111269f8ade348639e97ced",
+  "scope": "All objects in supplied Aurora snapshot; SATCAT coverage denominator is undecayed Earth-orbit objects, not a claim of available GP data.",
+  "limitations": "Implementation consistency only: backend positions vs satellite.js using identical elements and position timestamps. Shared source/model errors remain undetected. No radar/optical residuals, covariance validation, or independent truth positions. 100m is a software diagnostic threshold, not an operational accuracy bound.",
+  "summary": {
+    "missingBySourceDataStatus": {
+      "UNSPECIFIED": 15322,
+      "NEA": 801
+    },
+    "ommObjects": 5371,
+    "tleObjects": 14188,
+    "objects": 19559,
+    "withheld": 118,
+    "eligibleCompared": 19441,
+    "eligibleMaxDifferenceM": 7.616667048210903,
+    "eligibleOver100m": 0,
+    "satcatMatches": 18987,
+    "types": {
+      "PAY": 16209,
+      "DEB": 2680,
+      "UNMATCHED": 572,
+      "R/B": 98
+    },
+    "flags": {
+      "expired_elements": 109,
+      "satcat_unmatched": 572,
+      "classification_not_sourced_in_feed": 572,
+      "aged_elements": 866,
+      "catalog_reports_decay": 16,
+      "propagation_unavailable": 11,
+      "implementation_difference_over_100m": 1,
+      "future_elements": 1
+    },
+    "compared": 19548,
+    "p50DifferenceM": 0.8706383449798156,
+    "p99DifferenceM": 7.041529678993796,
+    "maxDifferenceM": 32509341.181577757,
+    "satcatEarthOrbitObjects": 35080,
+    "missingObjects": 16123,
+    "missingSixDigitObjects": 864
+  },
+  "ommEligibleComparison": {
+    "count": 5294,
+    "maxDifferenceM": 7.616667048210903
+  },
+  "snapshotSHA256": "c8e61148af9ac166085e08efdf3386a7a1389c6630571a648adf5bb64d6c6494"
+}

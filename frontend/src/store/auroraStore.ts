@@ -43,7 +43,7 @@ interface AuroraStoreState {
   helioSelectedCME: number | null;
 
   setSelectedSatellite: (satellite: Satellite | null) => void;
-  setSelectedConjunction: (conjunction: Conjunction | null) => void;
+  setSelectedConjunction: (conjunction: Conjunction | null, openDetails?: boolean) => void;
   openPanel: (panel: PanelType) => void;
   closePanel: (panel: PanelType) => void;
   setMode: (mode: VisualMode) => void;
@@ -62,7 +62,7 @@ interface AuroraStoreState {
   setStormAutoTriggered: (triggered: boolean) => void;
   setHelioSelectedCME: (index: number | null) => void;
   closeAllPanels: () => void;
-  recordFeedUpdate: (feed: FeedKey) => void;
+  recordFeedUpdate: (feed: FeedKey, observedAt?: Date) => void;
   setSourceDiagnostics: (rows: SourceDiagnostic[]) => void;
 }
 
@@ -83,7 +83,7 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
   selectedConjunction: null,
   activePanels: new Set<PanelType>(),
   spaceWeather: mockSpaceWeather,
-  satellites: mockSatellites,
+  satellites: env.VITE_WS_URL ? [] : mockSatellites,
   conjunctions: env.VITE_WS_URL ? [] : mockConjunctions,
   isConnectedToBackend: false,
   feedLastUpdated: { satellites: null, conjunctions: null, spaceWeather: null },
@@ -109,12 +109,13 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
         ? openPanelInSet(state.activePanels, "satellite-detail")
         : closePanelInSet(state.activePanels, "satellite-detail")
     })),
-  setSelectedConjunction: (conjunction) =>
+  setSelectedConjunction: (conjunction, openDetails = true) =>
     set((state) => ({
       selectedConjunction: conjunction,
-      activePanels: conjunction
+      ...(!openDetails && conjunction ? { selectedSatellite: null } : {}),
+      activePanels: conjunction && openDetails
         ? openPanelInSet(state.activePanels, "conjunction-detail")
-        : closePanelInSet(state.activePanels, "conjunction-detail")
+        : closePanelInSet(!openDetails && conjunction ? closePanelInSet(state.activePanels, "satellite-detail") : state.activePanels, "conjunction-detail")
     })),
   openPanel: (panel) =>
     set((state) => ({
@@ -179,9 +180,9 @@ export const useAuroraStore = create<AuroraStoreState>((set) => ({
       selectedSatellite: null,
       selectedConjunction: null
     }),
-  recordFeedUpdate: (feed) =>
+  recordFeedUpdate: (feed, observedAt = new Date()) =>
     set((state) => ({
-      feedLastUpdated: { ...state.feedLastUpdated, [feed]: new Date() }
+      feedLastUpdated: { ...state.feedLastUpdated, [feed]: observedAt }
     })),
   setSourceDiagnostics: (rows) => set({ sourceDiagnostics: rows })
 }));

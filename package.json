@@ -2,7 +2,9 @@
   "name": "aurora-space",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "start": "node scripts/start.mjs",
     "demo": "node scripts/start.mjs --demo",
@@ -10,6 +12,10 @@
     "status": "node scripts/start.mjs status",
     "test:launcher": "node --test scripts/start.test.mjs",
     "test": "npm run test:launcher && npm --prefix frontend test",
-    "build": "npm --prefix frontend run build"
+    "build": "npm --prefix frontend run build",
+    "test:e2e": "npm --prefix frontend run test:e2e",
+    "validate:mission": "npm --prefix frontend run validate:mission",
+    "test:backend": "cd backend && go test -race ./...",
+    "check": "npm test && npm run test:backend && npm run build"
   }
 }

@@ -21,8 +21,8 @@ export const getDataStatus = (
   if (received < feeds.length) {
     return { status: "mixed", label: "MIXED DATA", detail: `${received} of ${feeds.length} live feeds received; unavailable layers are marked.` };
   }
-  if (Object.entries(lastUpdated).some(([key, date]) => describeFeedFreshness(date, now, key === "conjunctions" ? 490 : 5, key === "conjunctions" ? 1440 : 15).status !== "live")) {
+  if (Object.entries(lastUpdated).some(([key, date]) => describeFeedFreshness(date, now, key === "conjunctions" ? 490 : key === "satellites" ? 2 : 5, key === "conjunctions" ? 1440 : 15).status !== "live")) {
     return { status: "stale", label: "STALE DATA", detail: "One or more live feeds have not updated recently." };
   }
-  return { status: "live", label: "FEEDS CONNECTED", detail: "Feed receipts are current. Element age, catalog coverage and prediction validity require separate checks; this is not a tracking accuracy assessment." };
+  return { status: "live", label: "FEEDS CONNECTED", detail: "Source update times are current. Satellite tracks are SGP4 predictions, not onboard telemetry. Catalog accuracy requires separate checks." };
 };

@@ -1,0 +1,85 @@
+{
+  "satelliteState": {
+    "count": 20452,
+    "connected": true,
+    "feedTimes": {
+      "satellites": "2026-11-04T22:24:52.980Z",
+      "conjunctions": "2026-11-04T19:06:58.028Z",
+      "spaceWeather": null
+    }
+  },
+  "checkedAt": "2026-11-04T22:25:29.191Z",
+  "mocked": false,
+  "aircraftSnapshots": 4,
+  "firstFetchedAt": "2026-11-04T22:24:51.344855Z",
+  "lastFetchedAt": "2026-11-04T22:25:26.655738Z",
+  "aircraftCount": 728,
+  "movedAircraft": 683,
+  "examples": [
+    {
+      "id": "a24c77",
+      "previous": {
+        "lat": 27.679169,
+        "lon": -84.918823
+      },
+      "current": {
+        "lat": 27.690399,
+        "lon": -84.990234
+      },
+      "positionAgeSeconds": 0.038
+    },
+    {
+      "id": "a324ce",
+      "previous": {
+        "lat": 27.1758,
+        "lon": -84.905038
+      },
+      "current": {
+        "lat": 27.204987,
+        "lon": -84.975983
+      },
+      "positionAgeSeconds": 0.281
+    },
+    {
+      "id": "a6dfe7",
+      "previous": {
+        "lat": 30.515533,
+        "lon": -84.774601
+      },
+      "current": {
+        "lat": 30.524094,
+        "lon": -84.824147
+      },
+      "positionAgeSeconds": 0
+    }
+  ],
+  "launchCount": 30,
+  "launches": [
+    {
+      "name": "Long March 2C | Unknown Payload",
+      "net": "2026-11-05T16:00:00Z",
+      "status": "Go for Launch"
+    },
+    {
+      "name": "Ceres-2 | Unknown Payload",
+      "net": "2026-11-06T23:35:00Z",
+      "status": "Go for Launch"
+    },
+    {
+      "name": "Falcon 9 Block 5 | USSF-432",
+      "net": "2026-11-07T00:46:00Z",
+      "status": "Go for Launch"
+    },
+    {
+      "name": "Long March 12 | SatNet LEO Group TBD?",
+      "net": "2026-11-08T20:25:00Z",
+      "status": "Go for Launch"
+    },
+    {
+      "name": "Falcon 9 Block 5 | USSF-627",
+      "net": "2026-11-10T03:03:00Z",
+      "status": "Go for Launch"
+    }
+  ],
+  "errors": []
+}

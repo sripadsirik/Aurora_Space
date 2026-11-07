@@ -1,0 +1,282 @@
+.aerospace {
+  position: absolute;
+  top: 80px;
+  right: 18px;
+  z-index: 120;
+  font:
+    12px/1.5 Inter,
+    system-ui,
+    sans-serif;
+  color: #deebf6;
+}
+.aerospace button,
+.aerospace input,
+.aerospace select {
+  font: inherit;
+}
+.aerospace button,
+.aerospace select,
+.aerospace input:not([type="checkbox"]) {
+  background: #142331;
+  color: #e4eff8;
+  border: 1px solid #344658;
+  border-radius: 7px;
+  padding: 8px 11px;
+}
+.aerospace button {
+  cursor: pointer;
+}
+.aerospace button:hover {
+  border-color: #91d9e4;
+}
+.aerospace button:focus-visible,
+.aerospace a:focus-visible {
+  outline: 2px solid #8ee9ff;
+  outline-offset: 2px;
+}
+.aerospace button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.aerospace-toggle {
+  float: right;
+  box-shadow: 0 5px 25px #0008;
+}
+.aerospace-toggle span {
+  color: #c5b0ff;
+  margin-left: 12px;
+}
+.aerospace-panel {
+  clear: both;
+  position: relative;
+  top: 10px;
+  width: 370px;
+  max-height: calc(100dvh - 180px);
+  overflow: auto;
+  padding: 20px;
+  background: #09131ff5;
+  border: 1px solid #344658;
+  border-radius: 16px;
+  box-shadow: 0 16px 60px #0009;
+  backdrop-filter: blur(18px);
+}
+.aerospace header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.aerospace small {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  color: #a8d4e8;
+}
+.aerospace h2 {
+  font-size: 24px;
+  font-weight: 500;
+  margin: 5px 0;
+}
+.aerospace h3 {
+  font-size: 16px;
+  margin: 6px 0;
+}
+.aerospace-tabs,
+.aerospace-options {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.aerospace [aria-pressed="true"] {
+  border-color: #b8a0ff;
+  background: #25243e;
+}
+.aerospace-status,
+.aerospace-note,
+.aerospace footer {
+  font-size: 10px;
+  color: #a4b6c9;
+}
+.aerospace-field {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0;
+}
+.aerospace-detail {
+  background: #172332;
+  border-left: 2px solid #b49aff;
+  padding: 14px;
+  margin: 14px 0;
+  border-radius: 6px;
+}
+.launch-countdown {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: #cbb5ff;
+}
+.aerospace-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.aerospace-row {
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+.aerospace-row span {
+  font-size: 10px;
+  color: #b3c0cf;
+}
+.aerospace-row b {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: #cbb5ff;
+}
+.aerospace a {
+  color: #9fdcf3;
+  text-decoration: underline;
+}
+.aerospace footer {
+  margin-top: 16px;
+}
+.aerospace input[type="checkbox"] {
+  accent-color: #b49aff;
+  margin-right: 5px;
+}
+@media (max-width: 600px) {
+  .aerospace {
+    top: 65px;
+    right: 10px;
+  }
+  .aerospace-panel {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 150px);
+    padding: 16px;
+  }
+  .aerospace-toggle span {
+    display: none;
+  }
+}
+.liftoff-banner {
+  position: fixed;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 6px;
+  text-align: center;
+  background: #1d172bea;
+  border: 1px solid #cbb5ff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  min-width: 280px;
+}
+.liftoff-banner strong {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #dfcdff;
+}
+.liftoff-banner span {
+  font-variant-numeric: tabular-nums;
+}
+.liftoff-controls {
+  border-top: 1px solid #78649a;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+.liftoff-controls > button {
+  background: #403257;
+  width: 100%;
+}
+@media (max-width: 700px) {
+  .liftoff-banner {
+    top: auto;
+    bottom: 12px;
+    max-width: 90vw;
+    z-index: 150;
+  }
+  .aerospace:has(.liftoff-banner) .aerospace-panel {
+    max-height: calc(100dvh - 270px);
+  }
+}
+.aerospace {
+  top: 85px;
+}
+.aerospace-panel {
+  top: 0;
+  max-height: calc(100dvh - 190px);
+}
+.aerospace-tabs {
+  display: none;
+}
+.aerospace h2 {
+  font-size: 21px;
+}
+.aerospace-detail dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+.aerospace-detail dt {
+  font-size: 10px;
+  color: #92b3c7;
+}
+.aerospace-detail dd {
+  margin: 3px 0;
+}
+.launch-watch {
+  position: fixed;
+  bottom: 165px;
+  left: 26px;
+  width: 290px;
+  padding: 14px;
+  background: #0b1d2aee;
+  border: 1px solid #8aafc366;
+  border-radius: 12px;
+  display: grid;
+  gap: 7px;
+}
+.launch-watch strong {
+  color: #cbb5ff;
+}
+.launch-watch button {
+  padding: 6px;
+}
+.launch-watch p {
+  font-size: 11px;
+  color: #b3c8d3;
+}
+.liftoff-banner {
+  top: 145px;
+  min-width: 260px;
+}
+.aerospace-detail details {
+  margin-top: 10px;
+}
+.aerospace-detail summary {
+  cursor: pointer;
+  color: #acc9da;
+}
+@media (max-width: 760px) {
+  .aerospace {
+    top: 125px;
+    left: 12px;
+    right: 12px;
+  }
+  .aerospace-panel {
+    width: auto;
+    max-height: calc(100dvh - 265px);
+  }
+  .launch-watch {
+    bottom: 145px;
+    left: 12px;
+    width: 260px;
+  }
+  .aerospace:has(.liftoff-banner) .aerospace-panel {
+    max-height: calc(100dvh - 310px);
+  }
+}

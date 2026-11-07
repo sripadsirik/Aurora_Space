@@ -1,4 +1,7 @@
+import { satelliteSnapshotTime } from "../utils/snapshotTime";
+import { satelliteChunkAssembler } from "../utils/satelliteChunks";
 import { useEffect, useRef } from "react";
+import { useFeedCapture } from "../mission/feedCapture";
 
 import { useAuroraStore } from "../store/auroraStore";
 import type { SourceDiagnostic } from "../types/space";
@@ -30,12 +33,13 @@ const getDiagnosticsUrl = (wsUrl: string): string | null => {
 };
 
 export const useWebSocket = (): void => {
+  const paused = useFeedCapture(s => s.paused);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const wsUrl = env.VITE_WS_URL;
-    if (!wsUrl) return;
+    if (!wsUrl || paused) { useAuroraStore.setState({ isConnectedToBackend: false }); return; }
     const diagnosticsUrl = getDiagnosticsUrl(wsUrl);
     let diagnosticsTimer: ReturnType<typeof setInterval> | null = null;
     let diagnosticsAbort: AbortController | null = null;
@@ -82,14 +86,19 @@ export const useWebSocket = (): void => {
       wsRef.current = ws;
 
       ws.addEventListener("open", () => {
+        if (disposed) return;
         useAuroraStore.setState({ isConnectedToBackend: true });
         void fetchDiagnostics();
       });
 
-      ws.addEventListener("message", (event) => {
+      const assemble = satelliteChunkAssembler();
+      const acceptMessage = (raw: unknown) => {
         try {
-          const message = parseFeedMessage(JSON.parse(event.data as string));
+          if (disposed) return;
+
+          const message = parseFeedMessage(raw);
           if (!message) return;
+          useFeedCapture.getState().append(raw);
 
           switch (message.type) {
             case "satellites":
@@ -99,7 +108,7 @@ export const useWebSocket = (): void => {
                   ? message.payload.find(satellite => satellite.noradId === state.selectedSatellite!.noradId) ?? state.selectedSatellite
                   : null
               }));
-              useAuroraStore.getState().recordFeedUpdate("satellites");
+              useAuroraStore.getState().recordFeedUpdate("satellites", satelliteSnapshotTime(message.payload));
               break;
             case "conjunctions":
               useAuroraStore.setState({
@@ -113,15 +122,32 @@ export const useWebSocket = (): void => {
               useAuroraStore.setState({
                 spaceWeather: message.payload
               });
-              useAuroraStore.getState().recordFeedUpdate("spaceWeather");
+              useAuroraStore.getState().recordFeedUpdate("spaceWeather", message.payload.lastUpdated);
               break;
           }
         } catch {
           // Ignore malformed messages
         }
-      });
+      };
+      ws.addEventListener("message", event => {try {acceptMessage(assemble(JSON.parse(event.data as string)));} catch { /* Invalid JSON cannot replace current data. */ }});
+      // HTTP bootstrap and recovery keep a large catalog available when a
+      // browser/proxy cannot drain the WebSocket snapshot promptly.
+      const recover = async () => {
+        if(disposed) return;
+        const updated=useAuroraStore.getState().feedLastUpdated.satellites;
+        if(updated && Date.now()-new Date(updated).getTime()<45000) return;
+        try {
+          const url=new URL(wsUrl);url.protocol=url.protocol==='wss:'?'https:':'http:';url.pathname='/snapshot';
+          const response=await fetch(url,{signal:AbortSignal.timeout(20000)});
+          if(response.ok){const messages=await response.json();if(Array.isArray(messages)&&!disposed)messages.forEach(acceptMessage);}
+        } catch { /* Retain last observed state and existing freshness indicators. */ }
+      };
+      void recover();
+      const recoveryTimer=setInterval(()=>void recover(),30000);
+      ws.addEventListener('close',()=>clearInterval(recoveryTimer),{once:true});
 
       ws.addEventListener("close", () => {
+        if (disposed) return;
         useAuroraStore.setState({ isConnectedToBackend: false });
         wsRef.current = null;
         if (!disposed) reconnectTimerRef.current = setTimeout(connect, RECONNECT_INTERVAL_MS);
@@ -157,5 +183,5 @@ export const useWebSocket = (): void => {
         wsRef.current = null;
       }
     };
-  }, []);
+  }, [paused]);
 };

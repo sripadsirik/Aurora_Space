@@ -1,9 +1,5 @@
-import { orbitDescription } from "../../utils/propagation";
-import { objectClassification } from "../../utils/objectType";
-import { useState } from "react";
-import { orbitExport } from "../../utils/orbitExport";
-import { downloadText } from "../../utils/download";
-import { propagatedTelemetry, elementEpoch, orbitalElementStatus } from "../../utils/propagation";
+import { SatelliteInspector } from "./SatelliteInspector";
+import { FeedSummary } from "../FeedSummary";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -13,7 +9,6 @@ import { useAuroraStore } from "../../store/auroraStore";
 import type { Satellite, SourceDiagnostic } from "../../types/space";
 import { isBzSouthward } from "../../utils/bzComponent";
 import { getKpColor } from "../../utils/colors";
-import { conjunctionPeerName, conjunctionsForSatellite } from "../../utils/conjunctionLabels";
 import {
   classifyConjunctionRisk,
   conjunctionRiskTextClass,
@@ -24,13 +19,10 @@ import {
   formatMissDistance,
   formatProbability,
   formatProtonFlux,
-  formatUtcTime,
   formatUtcTimestamp
 } from "../../utils/format";
-import { buildKpForecast } from "../../utils/kpForecast";
 import { kpToBarHeight, kpToPercent } from "../../utils/kpScale";
 import {
-  formatAltitudeKm,
   formatKpIndex,
   formatMagneticFieldNt,
   formatSpeedKms
@@ -43,7 +35,6 @@ import {
 } from "../../utils/orbit";
 import { summarizeNoaaScales } from "../../utils/noaaScaleSummary";
 import { normalizeProbability } from "../../utils/probability";
-import { getSpaceWeatherImpact } from "../../utils/satelliteImpact";
 import { isElevatedSolarWind, solarWindSpeedArrow } from "../../utils/solarWind";
 import {
   geomagneticStormScale,
@@ -62,12 +53,6 @@ interface PanelCardProps {
   onClose: () => void;
   children: ReactNode;
 }
-
-const ORBIT_LABELS: Record<Satellite["orbitType"], string> = {
-  LEO: "160-2,000 km",
-  MEO: "2,000-35,786 km",
-  GEO: "~35,786 km"
-};
 
 const riskBadgeClass = (label: "LOW" | "MEDIUM" | "HIGH"): string => {
   if (label === "HIGH") {
@@ -110,9 +95,6 @@ const getStatusClass = (status: SourceDiagnostic["status"]): string => {
   return "text-[#7df0b2]";
 };
 
-const getOrbitPeriodMinutes = (altitudeKm: number): number =>
-  getOrbitalPeriod(earthRadiusMeters + altitudeKm * 1000) / 60;
-
 const PanelCard = ({ title, closeLabel, onClose, children }: PanelCardProps): JSX.Element => (
   <section className="aurora-slide-panel pointer-events-auto flex min-h-[180px] w-full flex-col overflow-hidden">
     <header className="flex items-start justify-between border-b border-white/10 px-3 py-2">
@@ -129,111 +111,6 @@ const PanelCard = ({ title, closeLabel, onClose, children }: PanelCardProps): JS
     <div className="overflow-y-auto px-3 py-2 text-xs text-[#d8ebff]">{children}</div>
   </section>
 );
-
-const SatelliteDetailPanel = (): JSX.Element | null => {
-  const [exportError, setExportError] = useState("");
-  const now = useUtcClock();
-  const selectedSatellite = useAuroraStore((state) => state.selectedSatellite);
-  const conjunctions = useAuroraStore((state) => state.conjunctions);
-  const spaceWeather = useAuroraStore((state) => state.spaceWeather);
-  const closePanel = useAuroraStore((state) => state.closePanel);
-
-  if (!selectedSatellite) {
-    return null;
-  }
-
-  const relatedConjunctions = conjunctionsForSatellite(selectedSatellite, conjunctions);
-
-  const impact = getSpaceWeatherImpact(selectedSatellite, spaceWeather.kpIndex);
-  const telemetry = propagatedTelemetry(selectedSatellite, now);
-  const periodMinutes = telemetry?.periodMinutes ?? getOrbitPeriodMinutes(selectedSatellite.altitudeKm);
-  const epoch = elementEpoch(selectedSatellite);
-
-  return (
-    <PanelCard title="Satellite Detail" closeLabel="Close satellite details" onClose={() => closePanel("satellite-detail")}>
-      <div className="space-y-3">
-        <div>
-          <p className="text-sm font-semibold text-white">{selectedSatellite.name}</p>
-          <p className="text-[11px] text-[#9cc2de]">NORAD {selectedSatellite.noradId}</p>
-          <div className="mt-1 flex gap-2">
-            <span title={objectClassification(selectedSatellite).source} className="rounded-sm border border-white/20 px-2 py-0.5 text-[10px]">{objectClassification(selectedSatellite).label}</span>
-            <span className="rounded-sm border border-white/20 px-2 py-0.5 text-[10px] uppercase">
-              {selectedSatellite.riskLevel === "nominal" ? "No elevated report flag" : `Report flag: ${selectedSatellite.riskLevel}`}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-1 border-t border-white/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">ORBITAL PARAMETERS</p>
-          <p className="text-[10px] text-[#9cc2de]">{objectClassification(selectedSatellite).source}{selectedSatellite.metadataFetchedAt ? ` · fetched ${new Date(selectedSatellite.metadataFetchedAt).toUTCString()}` : ""}</p>
-          {!telemetry && <p className="engineering-caution">Current position unavailable. Any snapshot values below are historical feed values, not a current track.</p>}
-          <p className="text-[10px] leading-relaxed text-[#edc18d]">{orbitalElementStatus(selectedSatellite, now)}</p>
-          <a className="inline-block py-2 text-[10px] text-[#9abfff] underline" href={`https://celestrak.org/NORAD/elements/gp.php?CATNR=${selectedSatellite.noradId}&FORMAT=TLE`} target="_blank" rel="noreferrer">Check public CelesTrak elements ↗</a>
-          <a className="block text-[10px] text-[#9abfff] underline" href={`https://keeptrack.space/satellite/${selectedSatellite.noradId}`} target="_blank" rel="noreferrer">Compare same NORAD object in KeepTrack ↗</a>
-          <div className="grid grid-cols-[1.4fr_1fr] gap-y-1">
-            <span>Position time · UTC</span><span className="text-right">{telemetry ? now.toISOString().replace("T"," ").slice(0,19) : selectedSatellite.positionTimestamp ?? "Unknown"}</span>
-            <span>Orbit Type</span>
-            <span className="text-right">
-              {orbitDescription(selectedSatellite)}
-            </span>
-            <span>{telemetry ? "SGP4 altitude" : "Snapshot altitude"}</span>
-            <span className="text-right">{formatAltitudeKm(telemetry?.altitudeKm ?? selectedSatellite.altitudeKm)}</span>
-            <span>{telemetry ? "Velocity" : "Snapshot velocity"}</span>
-            <span className="text-right">{formatSpeedKms(telemetry?.velocityKms ?? selectedSatellite.velocityKms, 3)}</span>
-            <span>{telemetry ? "Orbital period" : "Approx. period"}</span>
-            <span className="text-right">{periodMinutes.toFixed(1)} min</span>
-            <span>Inclination</span>
-            <span className="text-right">{telemetry ? `${telemetry.inclinationDegrees.toFixed(2)}°` : "Unavailable"}</span>
-            <span>Latitude / longitude</span><span className="text-right">{(telemetry?.lat ?? selectedSatellite.lat).toFixed(2)}° / {(telemetry?.lon ?? selectedSatellite.lon).toFixed(2)}°</span>
-            <span>TLE epoch</span><span className="text-right">{epoch?.toUTCString() ?? "Unavailable"}</span>
-          </div>
-        </div>
-
-        <div className="review-actions">
-          <button disabled={!telemetry} onClick={() => {try {downloadText(`norad-${selectedSatellite.noradId}-trajectory.json`, JSON.stringify(orbitExport(selectedSatellite),null,2));setExportError("");} catch(e) {setExportError(e instanceof Error?e.message:"Export failed");}}}>Export SGP4 trajectory</button>
-          <button disabled={!selectedSatellite.tleLine1 || !selectedSatellite.tleLine2} onClick={()=>downloadText(`${selectedSatellite.noradId}.tle`,`${selectedSatellite.name}\n${selectedSatellite.tleLine1}\n${selectedSatellite.tleLine2}\n`,"text/plain")}>Source TLE</button>
-        </div>
-        {exportError && <p role="alert" className="engineering-caution">{exportError}</p>}
-        <p className="engineering-note">Trajectory: one revolution, 25% past / 75% future, UTC samples in Earth-fixed metres. SGP4 prediction without covariance or maneuver modelling.</p>
-        <div className="space-y-1 border-t border-white/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">CONJUNCTION WARNINGS</p>
-          {relatedConjunctions.length === 0 ? (
-            <p className="rounded-sm border border-[#3ed08a]/40 bg-[#10392a]/60 px-2 py-1 text-[11px] text-[#79ecb4]">
-              NO MATCHING PUBLIC REPORTS
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {relatedConjunctions.map((conjunction) => (
-                <div key={conjunction.id} className="rounded-sm border border-white/10 px-2 py-1">
-                  <p className="truncate text-[11px] text-white">{conjunctionPeerName(selectedSatellite, conjunction)}</p>
-                  <p className="text-[10px] text-[#9cc2de]">
-                    TCA {formatCountdownToTca(conjunction.tca)} | {formatMissDistance(conjunction.missDistanceM)} | Pc {formatProbability(conjunction.probability)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-1 border-t border-white/10 pt-2">
-          <p className="text-[10px] tracking-[0.16em] text-[var(--aurora-accent)]">SPACE WEATHER CONTEXT · HEURISTIC</p>
-          <div className={`inline-block rounded-sm border px-2 py-0.5 text-[10px] ${riskBadgeClass(impact.label)}`}>
-            {impact.label}
-          </div>
-          <p className="text-[11px] text-[#b9d6ee]">
-            {selectedSatellite.orbitType === "LEO"
-              ? "Atmospheric drag risk:"
-              : selectedSatellite.orbitType === "GEO"
-                ? "Surface charging risk:"
-                : "Radiation impact risk:"}{" "}
-            {impact.description}
-          </p>
-          <p className="text-[10px] text-[#8eb1cb]">Computed {formatUtcTime(now)} · no spacecraft telemetry</p>
-        </div>
-      </div>
-    </PanelCard>
-  );
-};
 
 const ConjunctionDetailPanel = (): JSX.Element | null => {
   const selectedConjunction = useAuroraStore((state) => state.selectedConjunction);
@@ -479,6 +356,8 @@ const DataLayerStatusPanel = (): JSX.Element => {
 
   return (
     <PanelCard title="Data Sources" closeLabel="Close data source panel" onClose={() => closePanel("data-layers")}>
+      <FeedSummary />
+      <details className="source-diagnostics"><summary>Connection diagnostics</summary>
       <div className="space-y-2">
         {sourceDiagnostics.length === 0 ? (
           <div className="rounded-sm border border-white/10 px-2 py-2 text-[11px] text-[#9cc2de]">
@@ -519,6 +398,7 @@ const DataLayerStatusPanel = (): JSX.Element => {
           )}
         </div>
       </div>
+      </details>
     </PanelCard>
   );
 };
@@ -545,7 +425,7 @@ export const PanelManager = (): JSX.Element => {
     <div className="aurora-panel-stack pointer-events-none">
       {panelKeys.map((panelKey) => {
         if (panelKey === "satellite-detail") {
-          return <SatelliteDetailPanel key={panelKey} />;
+          return <SatelliteInspector key={panelKey} />;
         }
         if (panelKey === "conjunction-detail") {
           return <ConjunctionDetailPanel key={panelKey} />;

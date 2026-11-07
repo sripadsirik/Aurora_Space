@@ -1,9 +1,41 @@
+# AURORA · Mission Lab
+
+A space situational-awareness platform with a reproducible encounter-analysis lab.
+Inspect orbital uncertainty, simulate eleven maneuver candidates, compare fuel and
+collision probability when supported by full covariance, screen supplied nearby
+objects, and export an integrity-checked investigation archive.
+
+```sh
+npm run demo
+```
+
+Open **Mission lab**, or add `?mission=1` to the local URL. The complete synthetic
+workflow works without API keys or a backend. Live operations use `npm start`.
+Node.js **22.12+** is required for the complete development and validation toolchain.
+
+- [Mission Lab guide, numerical models and demo walkthrough](docs/mission-lab.md)
+- [Reproducible performance and numerical evidence](docs/generated/mission-validation.json)
+- [Independent SciPy cross-check](docs/generated/independent-dynamics.json)
+- [Example engineering report](docs/generated/example-engineering-report.md)
+- [Bundled replay archive](frontend/public/scenarios/pathfinder.json)
+- [Recorded workflow](docs/generated/demo/video.webm) and [desktop preview](docs/generated/demo/encounter-desktop.png)
+- [Live OMM catalog integration audit](docs/generated/live-catalog-summary.json)
+
+**Verification:** `npm run check` · `npm run test:e2e` · `npm run validate:mission`.
+CI runs frontend checks, browser workflows, Go race tests and Rust reference tests.
+
+The live pipeline now ingests CelesTrak OMM JSON and supports six/nine-digit NORAD
+identities without serializing through TLE fields. Existing TLE records remain
+supported. The mission lab is an engineering simulator; supported assumptions and
+observational-validation limits are documented with the results.
+
+---
+
 <img width="3439" height="1324" alt="image" src="https://github.com/user-attachments/assets/7a1ce02b-cdef-4798-92fc-942788287ffb" />
 
 <img width="3439" height="1326" alt="image" src="https://github.com/user-attachments/assets/9d90889a-121c-43eb-a8bc-6b21b88294dc" />
 
-# AURORA
-## Real-Time Space Situational Awareness Platform
+## Space Situational Awareness Platform
 
 ![Status](https://img.shields.io/badge/status-in%20development-cyan?style=for-the-badge)
 ![Rust](https://img.shields.io/badge/Rust-engine-orange?style=for-the-badge&logo=rust)
@@ -743,3 +775,108 @@ field couples weakly no matter how fast the wind. The bands are anchored on the 
 than the wind can feed it. `formatElectricFieldMvM` in `frontend/src/utils/format.ts` renders the
 field (`5.58 mV/m`) for display, and the heliosphere overlay's L1 DSCOVR panel surfaces the
 geoeffective field, colour-coded by coupling band.
+
+## Live globe, object layers and inspectors
+
+Run `npm start`. The upper-left explorer opens **Satellites**, **Aircraft**,
+**Rockets**, or **Earth** in one inspector at a time. **Layers** independently
+shows/hides satellites, aircraft, and rockets/launch sites. Each row's **Only**
+button isolates it; **Show all layers** restores all three. Balanced satellite
+coverage is the default to keep the Earth readable; Full catalog is available.
+
+Objects use recognizable silhouettes at wide zoom and representative 3D meshes
+up close, with bounded model counts. Click overlapping objects to choose from a
+named list. Hover reveals names. Satellite details use the same rounded inspector
+style as the catalog, with current SGP4 measurements, sources, and export controls.
+Click the header's feed-status tag for provider names, data age and record counts.
+
+**Aircraft** uses public adsb.lol observations in the area beneath the camera
+(250 nautical miles), regional presets across several continents, or the worldwide
+public military-tagged feed. Pan anywhere and select **Scan area beneath camera**.
+This is receiver coverage, not every flight worldwide. Military aircraft that do
+not broadcast publicly and missiles are not supplied. Callsign route lookups from
+adsbdb are listed departure/destination metadata, not confirmed routes or predicted
+landings. Unknown routes stay unknown.
+
+Aircraft move at render cadence using a constant-speed/heading estimate bounded
+to 30 seconds, with a two-second blend for small observation corrections. Old
+tracks freeze after 30 seconds and disappear after 90. Selected trails join actual
+observations recorded during this session. Geometric altitude is preferred;
+barometric fallback is labeled. The camera uses Cesium's entity tracking utility
+with an Earth-aligned frame. Orbit and wheel zoom remain available while following;
+Home releases the camera. Satellite follow also stays engaged through zoom buttons.
+
+**Rockets** lists up to 30 recent/upcoming Launch Library 2 missions starting 24
+hours before now. Published status, time precision, launch window, site and webcast
+are preserved. **Follow launch** watches one mission at a time while the page is
+open, starting at the same low, close pad angle as the preview. It watches the
+provider's countdown/status and leaves manual orbit/zoom available. It does not
+start a synthetic ascent at the scheduled launch time. The feed has no live rocket
+ascent/descent coordinates, verified flight path or recovery location.
+
+**Preview simulated liftoff** explicitly starts a generic 180-second eastward
+ascent with a 3D rocket, exhaust and illustrative trail. Pause, restart, scrub,
+change speed or detach the camera. The persistent banner identifies a simulation;
+it is not a replay or live telemetry. Terrain is resolved before the preview starts.
+The model, attitude and profile are representative rather than mission-specific.
+
+**Earth** searches streets/cities through OpenStreetMap Nominatim or navigates
+explicit `latitude, longitude` coordinates offline. **Street map** adds detailed
+OpenStreetMap road tiles; **Satellite imagery** restores the existing base imagery.
+Tiles load only for the interactive view, without download/prefetch features.
+The gateway caches searches,
+identifies the app and limits Nominatim to one outbound request per second;
+there is no autocomplete. Imagery/terrain/buildings depend on Cesium coverage and
+the configured ion token. This is overhead navigation, not street photography.
+Search attribution: [OpenStreetMap](https://www.openstreetmap.org/copyright).
+
+**Earth → Streets & cameras** connects IDOT / Travel Midwest, Lake County PASSAGE,
+Caltrans, TfL, Fintraffic, Transport for NSW and Singapore LTA. Pick a camera on
+the globe or in the list. **Show more cameras** exposes every matching view;
+directional views at the same intersection can share a map marker. Illinois
+shortcuts include Deerfield, Aurora, Naperville, Eola Road, Wacker and Willis Tower.
+
+**Live video only** filters for published streams. FOX 32's official Willis Tower
+and Chicago River players provide scenic live views, and Caltrans HLS streams
+play where supplied and available. Cameras without video remain explicitly labeled
+**Snapshot**. Failed direct streams fall back to the provider image; embedded
+players have reload and provider-page links. Snapshots refresh each minute at the
+provider's own capture cadence, with supplied capture times and stale/error status.
+Only published provider media is accepted. New York Street and McCoy Drive have
+no feeds in the catalogs checked; their shortcuts explain the coverage gap.
+See [camera coverage and verification](docs/camera-coverage.md).
+
+The gateway shares 10-second aircraft, five-minute launch and camera-catalog
+caches across viewers (one minute for Singapore; five minutes for other cameras).
+Failed providers retain original timestamps and back off.
+Large satellite snapshots use bounded WebSocket chunks with HTTP recovery. Live
+mode starts with an empty satellite catalog until real data arrives; sample
+satellites remain confined to demo mode. Data attribution: adsb.lol (ODbL), adsbdb,
+The Space Devs, OpenStreetMap and LTA / data.gov.sg.
+
+Validation commands:
+
+- `npm --prefix frontend test` — feed, motion, tracking and application logic.
+- `npm --prefix frontend run build` — TypeScript and production bundle.
+- `npm --prefix frontend run test:e2e:aerospace` — deterministic aircraft/launch workflow.
+- `npm --prefix frontend run test:e2e` — Mission Lab and Earth/inspector UI workflows.
+- `cd backend && go test -race ./...` — gateway, provider cache and backend tests.
+- `npm run test:launcher` — stack supervision and port handling.
+
+For a real-provider smoke check after starting the stack, run
+`node frontend/scripts/verify-live-aerospace.mjs`. It saves timestamped observations
+and screenshots under `docs/generated/aerospace/`; existing files in that directory
+are historical evidence, not proof that the latest UI changes were browser-tested.
+
+### Feed-status hover and observed rocket input
+
+Hover/focus the header's status tag for the compact source/age/count table,
+with the satellite catalog total first. Click pins it on touch devices. Cached
+snapshot deliveries preserve their source times, so a connected socket cannot
+make stale positions/weather appear current. Provider 429 responses preserve the
+last good data and honor `Retry-After`; error details remain visible.
+
+The optional observed-position bridge can drive a watched rocket's ascent and
+descent from mission-matched WGS84 samples. It is **not connected to a verified
+provider by default**. Setup, schema, limits and data provenance are documented in
+[Observed rocket positions](docs/rocket-telemetry.md). Simulation remains explicit.

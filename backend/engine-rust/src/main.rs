@@ -17,9 +17,11 @@ use tracing::{info, warn};
 
 // ── TLE record (matches CelesTrak gpRecord published by ingestion) ──────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[allow(non_snake_case, dead_code)]
 struct GpRecord {
+    #[serde(flatten)]
+    extra: std::collections::HashMap<String, serde_json::Value>,
     OBJECT_NAME: Option<String>,
     NORAD_CAT_ID: Option<serde_json::Value>,
     OBJECT_TYPE: Option<String>,
@@ -52,6 +54,8 @@ impl GpRecord {
 
 #[derive(Debug, Clone, Serialize)]
 struct SatellitePosition {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    omm: Option<serde_json::Value>,
     #[serde(rename = "tleLine1")]
     tle_line1: String,
     #[serde(rename = "tleLine2")]
@@ -148,6 +152,9 @@ fn eci_to_geodetic(pos_km: [f64; 3], gmst_rad: f64) -> (f64, f64, f64) {
 // ── TLE validation (matches Go isTLEValid) ──────────────────────────────────
 
 fn is_tle_valid(rec: &GpRecord) -> bool {
+    if rec.extra.contains_key("EPOCH") {
+        return omm_elements(rec).is_some();
+    }
     let line1 = rec.TLE_LINE1.as_deref().unwrap_or("").trim();
     let line2 = rec.TLE_LINE2.as_deref().unwrap_or("").trim();
 
@@ -174,24 +181,75 @@ fn is_tle_valid(rec: &GpRecord) -> bool {
     true
 }
 
+// Decode CelesTrak OMM directly; preserve numeric identity and fractional UTC epoch.
+fn omm_elements(rec: &GpRecord) -> Option<sgp4::Elements> {
+    for (key, expected) in [
+        ("REF_FRAME", "TEME"),
+        ("TIME_SYSTEM", "UTC"),
+        ("CENTER_NAME", "EARTH"),
+        ("MEAN_ELEMENT_THEORY", "SGP4"),
+    ] {
+        if let Some(value) = rec.extra.get(key) {
+            if value.as_str()? != expected {
+                return None;
+            }
+        }
+    }
+    let mut value = serde_json::to_value(rec).ok()?;
+    let object = value.as_object_mut()?;
+    object
+        .entry("CLASSIFICATION_TYPE")
+        .or_insert(serde_json::json!("U"));
+    object.entry("REV_AT_EPOCH").or_insert(serde_json::json!(0));
+    object
+        .entry("ELEMENT_SET_NO")
+        .or_insert(serde_json::json!(0));
+    object
+        .entry("EPHEMERIS_TYPE")
+        .or_insert(serde_json::json!(0));
+    let epoch = object
+        .get("EPOCH")?
+        .as_str()?
+        .trim_end_matches('Z')
+        .to_string();
+    object.insert("EPOCH".to_string(), serde_json::json!(epoch));
+    let elements: sgp4::Elements = serde_json::from_value(value).ok()?;
+    if elements.norad_id == 0
+        || elements.norad_id > 999999999
+        || elements.ephemeris_type != 0
+        || elements.mean_motion <= 0.0
+        || elements.mean_motion > 20.0
+        || elements.eccentricity < 0.0
+        || elements.eccentricity >= 0.9
+        || elements.inclination < 0.0
+        || elements.inclination > 180.0
+    {
+        return None;
+    }
+    Some(elements)
+}
+
 // ── SGP4 propagation ────────────────────────────────────────────────────────
 
 fn propagate_satellite(rec: &GpRecord) -> Option<SatellitePosition> {
-    let line1 = rec.TLE_LINE1.as_deref()?.trim();
-    let line2 = rec.TLE_LINE2.as_deref()?.trim();
+    let line1 = rec.TLE_LINE1.as_deref().unwrap_or("").trim();
+    let line2 = rec.TLE_LINE2.as_deref().unwrap_or("").trim();
     let norad_id = rec.norad_id()?;
     let name = rec.OBJECT_NAME.clone().unwrap_or_default();
 
-    let elements =
-        sgp4::Elements::from_tle(Some(name.clone()), line1.as_bytes(), line2.as_bytes()).ok()?;
+    let elements = if rec.extra.contains_key("EPOCH") {
+        omm_elements(rec)?
+    } else {
+        sgp4::Elements::from_tle(Some(name.clone()), line1.as_bytes(), line2.as_bytes()).ok()?
+    };
 
-    let constants = sgp4::Constants::from_elements(&elements).ok()?;
+    let constants = sgp4::Constants::from_elements_afspc_compatibility_mode(&elements).ok()?;
 
     let now = Utc::now();
     let epoch = elements.datetime;
     let epoch_utc = epoch.and_utc();
 
-    let minutes_since_epoch = (now - epoch_utc).num_seconds() as f64 / 60.0;
+    let minutes_since_epoch = (now - epoch_utc).num_microseconds()? as f64 / 60_000_000.0;
 
     let prediction = constants
         .propagate(sgp4::MinutesSinceEpoch(minutes_since_epoch))
@@ -222,6 +280,11 @@ fn propagate_satellite(rec: &GpRecord) -> Option<SatellitePosition> {
     let velocity_kms = (vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]).sqrt();
 
     Some(SatellitePosition {
+        omm: if rec.extra.contains_key("EPOCH") {
+            Some(serde_json::to_value(rec).ok()?)
+        } else {
+            None
+        },
         tle_line1: line1.to_string(),
         tle_line2: line2.to_string(),
         position_timestamp: now.to_rfc3339(),
@@ -315,7 +378,32 @@ async fn ingest_tle(payload: &[u8], cache: &TleCache) -> bool {
         return false;
     }
 
-    cache.write().await.insert(id.to_string(), rec);
+    if !is_tle_valid(&rec) {
+        return false;
+    }
+    let epoch = |r: &GpRecord| -> Option<chrono::NaiveDateTime> {
+        if r.extra.contains_key("EPOCH") {
+            return Some(omm_elements(r)?.datetime);
+        }
+        Some(
+            sgp4::Elements::from_tle(
+                None,
+                r.TLE_LINE1.as_deref()?.as_bytes(),
+                r.TLE_LINE2.as_deref()?.as_bytes(),
+            )
+            .ok()?
+            .datetime,
+        )
+    };
+    let mut records = cache.write().await;
+    if let Some(old) = records.get(&id.to_string()) {
+        if let (Some(old_epoch), Some(new_epoch)) = (epoch(old), epoch(&rec)) {
+            if old_epoch > new_epoch {
+                return false;
+            }
+        }
+    }
+    records.insert(id.to_string(), rec);
     true
 }
 
@@ -772,4 +860,55 @@ async fn main() {
     let _ = producer.flush(Duration::from_secs(5));
 
     info!("aurora rust engine stopped");
+}
+
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+    #[test]
+    fn omm_matches_published_vallado_vectors() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../internal/sgp4/testdata/vallado.json"))
+                .unwrap();
+        for case in fixture["cases"].as_array().unwrap() {
+            let rec: GpRecord = serde_json::from_value(case["omm"].clone()).unwrap();
+            let elements = omm_elements(&rec).expect("OMM decode");
+            let constants =
+                sgp4::Constants::from_elements_afspc_compatibility_mode(&elements).unwrap();
+            for sample in case["samples"].as_array().unwrap() {
+                let pred = constants
+                    .propagate(sgp4::MinutesSinceEpoch(
+                        sample["seconds"].as_f64().unwrap() / 60.0,
+                    ))
+                    .unwrap();
+                let error = (0..3)
+                    .map(|i| (pred.position[i] - sample["r"][i].as_f64().unwrap()).powi(2))
+                    .sum::<f64>()
+                    .sqrt();
+                assert!(error < 0.001, "{}: {} km", case["id"], error);
+            }
+        }
+    }
+    #[tokio::test]
+    async fn rejects_older_epoch_and_preserves_six_digit_identity() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../internal/sgp4/testdata/vallado.json"))
+                .unwrap();
+        let mut rec = fixture["cases"][0]["omm"].clone();
+        rec["NORAD_CAT_ID"] = serde_json::json!(100001);
+        let cache: TleCache = Arc::new(RwLock::new(HashMap::new()));
+        assert!(ingest_tle(&serde_json::to_vec(&rec).unwrap(), &cache).await);
+        rec["EPOCH"] = serde_json::json!("2000-06-26T00:00:00Z");
+        assert!(!ingest_tle(&serde_json::to_vec(&rec).unwrap(), &cache).await);
+        assert!(cache.read().await.contains_key("100001"));
+    }
+    #[test]
+    fn rejects_unsupported_omm_frame() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../internal/sgp4/testdata/vallado.json"))
+                .unwrap();
+        let mut rec = fixture["cases"][0]["omm"].clone();
+        rec["REF_FRAME"] = serde_json::json!("GCRF");
+        assert!(omm_elements(&serde_json::from_value(rec).unwrap()).is_none());
+    }
 }

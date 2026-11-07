@@ -1,3 +1,4 @@
+import { useExplorer } from "../../explorer/store";
 import { objectClassification } from "../../utils/objectType";
 import { useEffect, useState } from "react";
 import { useAuroraStore } from "../../store/auroraStore";
@@ -41,13 +42,16 @@ export const SceneControls = (): JSX.Element => {
           {earthView && <>
             <span className="scene-field">Camera destinations</span>
             <div className="scene-segmented" role="group" aria-label="Camera destinations">
-              <button onClick={() => scene.requestCamera("home")}>Earth</button><button onClick={() => scene.requestCamera("terminator")}>Night edge</button><button onClick={() => scene.requestCamera("polar")}>North pole</button>
+              <button onClick={() => scene.requestCamera("home")}>Earth</button><button onClick={() => scene.requestCamera("catalog")}>Catalog</button><button onClick={() => scene.requestCamera("terminator")}>Night edge</button><button onClick={() => scene.requestCamera("polar")}>North pole</button>
             </div>
+            <span className="scene-field">Catalog density</span>
+            <div className="scene-segmented" role="group" aria-label="Catalog density settings"><button aria-pressed={scene.catalogDensity === "all"} onClick={() => scene.setCatalogDensity("all")}>Full catalog</button><button aria-pressed={scene.catalogDensity === "reduced"} onClick={() => scene.setCatalogDensity("reduced")}>Reduced density</button></div>
             <div className="scene-toggles">
-              {([['lighting', 'Day / night lighting'], ['orbitPaths', 'Selected SGP4 orbit path'], ['coverage', 'Selected satellite footprint'], ['spaceWeather', 'Space weather overlays'], ['autoRotate', 'Slow camera rotation']] as const).map(([key, label]) => (
+              {([['lighting', 'Day / night lighting'], ['orbitPaths', 'Selected SGP4 orbit path'], ['conjunctionPaths', 'Conjunction paths'], ['coverage', 'Selected satellite footprint'], ['spaceWeather', 'Space weather overlays'], ['autoRotate', 'Slow camera rotation']] as const).map(([key, label]) => (
                 <label key={key} className="scene-toggle"><span>{label}</span><input type="checkbox" checked={scene[key]} disabled={(key === 'autoRotate' && scene.following)} onChange={() => scene.toggle(key)} /><span className="scene-switch" aria-hidden="true" /></label>
               ))}
             </div>
+            <p className="scene-note">Use All paths or Isolate pair in the Conjunction pairs tab. {scene.conjunctionPaths && scene.conjunctionPathCount && <><strong>{scene.conjunctionPathCount.available} / {scene.conjunctionPathCount.total} paths available.</strong> {scene.conjunctionPathCount.available < scene.conjunctionPathCount.total && "Some objects have missing or unusable orbital elements. "}</>}These are {live ? "catalog SGP4 orbits, not verified encounter locations" : "illustrative demo trajectories"}. Select a pair to highlight its solid A and dashed B paths.</p>
           </>}
           <p className="scene-note">{hasValidCesiumIonToken(env.VITE_CESIUM_ION_TOKEN) ? "Cesium terrain and imagery enabled; the bundled Earth map is the fallback." : "Bundled Earth imagery. Add a Cesium ion token for detailed terrain and buildings."}</p>
           <div className="scene-shortcuts"><span>Drag to orbit</span><span>Scroll to zoom</span><span>Right-drag to tilt</span><span><kbd>H</kbd> Home · <kbd>V</kbd> View · <kbd>0</kbd> Immerse</span></div>
@@ -55,6 +59,8 @@ export const SceneControls = (): JSX.Element => {
       )}
       <div className="scene-toolbar" role="toolbar" aria-label="Globe controls">
         <button className="scene-tool scene-view-button" aria-expanded={open} onClick={() => setOpen(!open)} title="View controls (V)"><span aria-hidden="true">◈</span> View</button>
+        {earthView && !earthOnly && <button className="scene-tool scene-conjunction-button" aria-label="Conjunction paths" aria-pressed={scene.conjunctionPaths} onClick={() => { if (!scene.conjunctionPaths) { scene.setOpsPanel("pairs"); useExplorer.getState().set({catalogOpen:true}); } scene.toggle("conjunctionPaths"); }} title="Show or hide conjunction orbit paths"><span className="scene-conjunction-full">Conjunction </span>paths <span className="scene-path-status">{scene.conjunctionPaths ? "On" : "Off"}</span></button>}
+        {selected && scene.satellitesOn && <button className="scene-tool scene-follow-tool" aria-pressed={scene.following} onClick={()=>scene.setFollowing(!scene.following)}>{scene.following?"Stop following":"Follow satellite"}</button>}
         <span className="scene-divider" />
         <button className="scene-tool" onClick={() => scene.requestCamera("home")} title="Reset camera (H)" aria-label="Reset camera">⌂</button>
         <button className="scene-tool" onClick={() => scene.requestCamera("zoom-in")} title="Zoom in" aria-label="Zoom in">+</button>
@@ -62,7 +68,7 @@ export const SceneControls = (): JSX.Element => {
         <span className="scene-divider" />
         <button className="scene-tool scene-immerse-button" aria-pressed={earthOnly} onClick={toggleEarth} title="Immersive Earth (0)">{earthOnly ? "Exit immersive" : "Immerse"}</button>
       </div>
-      {selected && earthView && !earthOnly && <div className="scene-selection"><div><span className="scene-eyebrow">{live ? (orbitalElementStatus(selected)) : "DEMO · SIMULATED"}</span><strong>{selected.name} · #{selected.noradId}</strong><span>{orbitDescription(selected)}</span><span>{objectClassification(selected).label}</span><span>{Math.round(selected.altitudeKm).toLocaleString()} km · {selected.orbitType}</span><span>Representative model · illustrative attitude & size</span><div className="orbit-frame-choice" role="group" aria-label="Trajectory reference frame"><button aria-pressed={scene.orbitFrame==="orbital"} onClick={()=>scene.setOrbitFrame("orbital")}>Orbital space</button><button aria-pressed={scene.orbitFrame==="earth-fixed"} onClick={()=>scene.setOrbitFrame("earth-fixed")}>Earth-fixed</button><button onClick={()=>scene.requestCamera("orbit")}>Fit orbit</button></div><span>{scene.orbitFrame==="orbital" ? "TEME path · whole orbit oriented at current UTC" : "Earth-fixed positions · Earth rotates between samples"}</span><span>{elementEpoch(selected) ? `TLE epoch ${elementEpoch(selected)!.toUTCString()}` : "No TLE: predicted path unavailable"}</span></div><button className="scene-follow" aria-pressed={scene.following} onClick={() => scene.setFollowing(!scene.following)}>{scene.following ? "Following ●" : "Follow ↗"}</button></div>}
+
     </div>
   );
 };

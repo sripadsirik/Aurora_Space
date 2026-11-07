@@ -1,3 +1,5 @@
+import { useMissionStore } from "../../mission/store";
+import { scenarioFromCdm } from "../../mission/cdm";
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useUtcClock } from "../../hooks/useUtcClock";
 import { useAuroraStore } from "../../store/auroraStore";
@@ -80,6 +82,7 @@ export const IntelAnalysisPanel = (): JSX.Element | null => {
       <div className="review-inspector-heading"><span className="scene-eyebrow">REPORT INSPECTOR</span><h3>{selected.id}</h3><p>{selected.source}</p></div>
       <div className="review-object-buttons">{selected.objects.map(o=>{const sat=satellites.find(s=>String(s.noradId)===o.id);return <button key={o.id} disabled={!sat} title={sat?"Inspect current catalog orbit in OPS":"Object absent from current satellite catalog"} onClick={()=>{if(sat){setSatellite(sat);setMode("OPS");}}}>{o.name}<span>#{o.id} · {sat?"Inspect satellite ↗":"Not in catalog"}</span></button>;})}</div>
       <dl className="engineering-readouts"><dt>TCA · UTC</dt><dd>{utc(selected.tca)}</dd><dt>Report issued</dt><dd>{utc(selected.createdAt)}</dd><dt>Time to TCA</dt><dd>{((Date.parse(selected.tca)-now.getTime())/3600000).toFixed(2)} h</dd><dt>Miss distance</dt><dd>{number(selected.missDistanceM," m")}</dd><dt>Supplied Pc</dt><dd>{pc(selected.pc)}</dd><dt>Pc method</dt><dd>{selected.method}</dd><dt>Relative speed</dt><dd>{number(selected.relativeSpeedMs," m/s")}</dd></dl>
+      <button onClick={()=>{try{useMissionStore.getState().launch(scenarioFromCdm(selected,[4,2]));}catch(e){setError((e as Error).message);}}}>Open in Mission lab · assumed radii 4 m / 2 m</button>
       <h4>Data available for assessment</h4><div className="review-coverage">{selected.objects.map((o,i)=><div key={o.id}><strong>Object {i+1}</strong><span>State vector: {completeness.states[i]?"6 fields supplied":"incomplete / absent"}</span><span>Position covariance: {completeness.positionCovariances[i]?"6 RTN terms supplied":"incomplete / absent"}</span><span>Frame: {o.fields.REF_FRAME ?? "not supplied"}</span></div>)}</div>
       <p className="engineering-note">Field presence is not covariance validation. Pc is provider-supplied, not recalculated here. Maneuver assessment also requires validated uncertainties, hard-body radii, operational ephemerides and mission constraints.</p>
       <details><summary>Related reports ({related.length})</summary><p className="engineering-note">Same object pair and TCA within 30 minutes; confirm event identity with the provider.</p>{related.map(r=><button className="review-revision" key={key(r)} onClick={()=>setSelectedKey(key(r))}>{utc(r.createdAt)}<span>Pc {pc(r.pc)} · {number(r.missDistanceM," m")}</span></button>)}</details>
