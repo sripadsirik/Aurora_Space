@@ -5,13 +5,55 @@ Inspect orbital uncertainty, simulate eleven maneuver candidates, compare fuel a
 collision probability when supported by full covariance, screen supplied nearby
 objects, and export an integrity-checked investigation archive.
 
+## Access AURORA
+
+**[Open the free public demo](https://sripadsirik.github.io/Aurora_Space/)** —
+use it in your browser without an account or installation. The GitHub Pages site
+hosts the demo frontend with sample data. Live satellite, aircraft, launch and
+camera feeds require the backend described below.
+
+**[Browse the public source code](https://github.com/sripadsirik/Aurora_Space)**
+to inspect the implementation, download a ZIP through **Code → Download ZIP**, or
+fork the repository. No GitHub account is needed to view or clone the code.
+
+### Run the latest version locally
+
+Install **Git** and **Node.js 22.12+**, then run:
+
 ```sh
+git clone https://github.com/sripadsirik/Aurora_Space.git
+cd Aurora_Space
 npm run demo
 ```
 
-Open **Mission lab**, or add `?mission=1` to the local URL. The complete synthetic
-workflow works without API keys or a backend. Live operations use `npm start`.
-Node.js **22.12+** is required for the complete development and validation toolchain.
+Open **[http://localhost:5173](http://localhost:5173)**. The launcher installs
+frontend dependencies automatically. Select **Mission lab**, or open
+**[Mission Lab directly](http://localhost:5173/?mission=1)**. The complete synthetic
+workflow works without API keys or a backend. Press **Ctrl+C** to stop.
+
+### Run with live public data
+
+Also install **Go 1.21+** and **Docker Desktop**, start Docker Desktop, then run
+this from the cloned repository:
+
+```sh
+npm start
+```
+
+Open **[http://localhost:5173](http://localhost:5173)**. This starts the frontend,
+gateway, orbital engine, ingestion services and Kafka. Space-Track credentials
+are optional for conjunction data; see [startup and configuration](#start-everything-in-one-terminal).
+The feed-status badge shows whether data is demo, live, mixed, stale or offline.
+
+### Contribute
+
+[Report bugs or request features](https://github.com/sripadsirik/Aurora_Space/issues),
+or fork the repository, make your changes on a branch, and
+[open a pull request](https://github.com/sripadsirik/Aurora_Space/pulls) against
+`main`. Run `npm run check` before submitting code changes; see the verification
+commands and guides below for browser and numerical checks.
+
+## Mission Lab guides
 
 - [Mission Lab guide, numerical models and demo walkthrough](docs/mission-lab.md)
 - [Reproducible performance and numerical evidence](docs/generated/mission-validation.json)
@@ -580,7 +622,7 @@ Aurora_Space/
 
 ## Start everything in one terminal
 
-Install **Node.js 22+**, **Go 1.21+**, and **Docker Desktop**. From the repository root:
+Install **Node.js 22.12+**, **Go 1.21+**, and **Docker Desktop**. From the repository root:
 
 ```bash
 npm start
@@ -667,9 +709,11 @@ following [Space-Track's API guidelines](https://www.space-track.org/documentati
 
 ### Free public demo
 
-The GitHub Pages workflow publishes `frontend/dist` at
-https://sripadsirik.github.io/Aurora_Space/ when frontend changes reach `main`.
-Pages hosts the demo frontend; the Go/Rust/Kafka backend still needs its own host.
+**[Open the public demo](https://sripadsirik.github.io/Aurora_Space/)** with no
+account or installation. The GitHub Pages workflow publishes `frontend/dist`
+when frontend changes reach `main`. Pages hosts the demo frontend; the
+Go/Rust/Kafka backend still needs its own host. To use live feeds locally, follow
+[Run with live public data](#run-with-live-public-data).
 A repository secret named `VITE_CESIUM_ION_TOKEN` is optional. Use a token restricted
 to the app's assets and deployment URL because frontend tokens are public.
 
