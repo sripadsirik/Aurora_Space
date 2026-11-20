@@ -1,3 +1,5 @@
+import { Events } from "./events/Events";
+import { useEvents } from "./events/store";
 import { EarthPanel } from "./earth/EarthPanel";
 import { Explorer } from "./explorer/Explorer";
 import { AerospacePanel } from "./aerospace/AerospacePanel";
@@ -30,6 +32,7 @@ import { illinoisPlaces } from "./earth/cameraNetworks";
 
 export const App = (): JSX.Element => {
   useWebSocket();
+  const eventsOpen = useEvents(s => s.open);
   const missionOpen = useMissionStore(s => s.open);
   const satellites = useAuroraStore((state) => state.satellites);
   const conjunctions = useAuroraStore((state) => state.conjunctions);
@@ -77,6 +80,8 @@ export const App = (): JSX.Element => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggleEarthOnlyMode]);
 
+
+  if (eventsOpen) return <ErrorBoundary><Events /></ErrorBoundary>;
 
   if (missionOpen) return <ErrorBoundary><MissionControl /></ErrorBoundary>;
 

@@ -1,9 +1,15 @@
-# AURORA · Mission Lab
+# AURORA · Mission Lab & Live Events
 
 A space situational-awareness platform with a reproducible encounter-analysis lab.
 Inspect orbital uncertainty, simulate eleven maneuver candidates, compare fuel and
 collision probability when supported by full covariance, screen supplied nearby
 objects, and export an integrity-checked investigation archive.
+
+Track Formula 1 weekends from orbit to the circuit: browse the season calendar,
+inspect practice and qualifying, and replay real races with 3D cars and synchronized
+telemetry on Earth.
+
+![Aurora Formula 1 Events: Las Vegas weekend, season calendar, countdowns and 3D circuit](docs/images/f1-events-calendar.png)
 
 ## Access AURORA
 
@@ -53,6 +59,26 @@ or fork the repository, make your changes on a branch, and
 `main`. Run `npm run check` before submitting code changes; see the verification
 commands and guides below for browser and numerical checks.
 
+## Formula 1 Events
+
+Open **Events ↗** in the navigation, or [open Events directly](https://sripadsirik.github.io/Aurora_Space/?events=1).
+Browse upcoming races or the complete season, switch to the next calendar year,
+and inspect the full weekend: practice, sprint qualifying/sprints where scheduled,
+qualifying, and the Grand Prix. Race and session countdowns update every second;
+times switch between local time and UTC. Unpublished future calendars are shown
+explicitly and can be refreshed.
+
+Select a completed session and **Watch real replay** for real recorded car positions,
+a 3D circuit on Earth, driver-follow cameras, running order, lap/tyre data, flags,
+weather, and speed/throttle/brake/gear/RPM telemetry. The session timeline supports
+seeking and playback speed controls. Try **2025 → Full season → Las Vegas**.
+
+Historical OpenF1 data is public. Live sessions require an OpenF1 subscription and
+`OPENF1_ACCESS_TOKEN` in `backend/.env`, then `npm start`. Live playback uses a buffer;
+missing or stale channels are identified. Car placement is approximate and the
+viewer reports its circuit-alignment residual. See the [F1 Events guide](docs/f1-events.md)
+for setup, data sources, and positioning limits.
+
 ## Mission Lab guides
 
 - [Mission Lab guide, numerical models and demo walkthrough](docs/mission-lab.md)
@@ -73,9 +99,7 @@ observational-validation limits are documented with the results.
 
 ---
 
-<img width="3439" height="1324" alt="image" src="https://github.com/user-attachments/assets/7a1ce02b-cdef-4798-92fc-942788287ffb" />
-
-<img width="3439" height="1326" alt="image" src="https://github.com/user-attachments/assets/9d90889a-121c-43eb-a8bc-6b21b88294dc" />
+![Real Las Vegas race replay with running order, tyre compounds and driver telemetry](docs/images/f1-race-telemetry.png)
 
 ## Space Situational Awareness Platform
 

@@ -1,3 +1,4 @@
+import { useEvents } from "../events/store";
 import { useEffect, useState } from "react";
 import { useExplorer } from "./store";
 import { detachAerospaceCamera, useAerospace } from "../aerospace/store";
@@ -76,6 +77,18 @@ export function Explorer() {
           onClick={() => open("launches")}
         >
           ↑ Rockets
+        </button>
+        <button
+          aria-pressed={useEvents.getState().open}
+          onClick={() => {
+            detachAerospaceCamera();
+            useAuroraStore.getState().closeAllPanels();
+            ui.set({ catalogOpen: false, earthOpen: false });
+            air.set({ open: false });
+            useEvents.getState().setOpen(true);
+          }}
+        >
+          Events ↗
         </button>
         <button aria-pressed={ui.earthOpen} onClick={() => open("earth")}>
           Earth

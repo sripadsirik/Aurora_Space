@@ -513,6 +513,7 @@ func main() {
 	registerAerospace(mux)
 	registerRocketTelemetry(mux)
 	registerEarth(mux)
+	registerEvents(mux)
 	mux.HandleFunc("/ws", wsHandler(h, cache))
 	mux.HandleFunc("/diagnostics", diagnosticsHandler(cache))
 	mux.HandleFunc("/snapshot", func(w http.ResponseWriter, r *http.Request) {
