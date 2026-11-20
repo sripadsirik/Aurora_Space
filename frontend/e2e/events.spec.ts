@@ -218,3 +218,96 @@ test("recorded session loads real channels, supports pause, selection and seekin
   await seek.dispatchEvent("keyup", { key: "ArrowRight" });
   await expect(page.getByRole("button", { name: "Play replay" })).toBeVisible();
 });
+
+test("free sector timing moves the followed car on Earth alongside video", async ({
+  page,
+}) => {
+  let feed: import("@playwright/test").WebSocketRoute;
+  const record = (message: unknown) => JSON.stringify(message) + "\x1e";
+  await page.routeWebSocket(
+    "wss://livetiming.formula1.com/signalrcore",
+    (ws) => {
+      feed = ws;
+      ws.onMessage((raw) => {
+        const request = JSON.parse(String(raw).split("\x1e")[0]);
+        if (request.protocol) ws.send(record({}));
+        if (request.target === "Subscribe")
+          ws.send(
+            record({
+              type: 3,
+              invocationId: "1",
+              result: {
+                SessionInfo: {
+                  Key: 123,
+                  Meeting: { Name: "Las Vegas Grand Prix" },
+                  StartDate: "2026-11-20",
+                  Name: "Practice 3",
+                },
+                SessionStatus: { Status: "Started" },
+                TrackStatus: { Status: "1" },
+                DriverList: {
+                  44: {
+                    RacingNumber: "44",
+                    FullName: "Lewis Hamilton",
+                    Tla: "HAM",
+                  },
+                },
+                TimingData: {
+                  Lines: {
+                    44: { Position: "2", LastLapTime: { Value: "1:36.100" } },
+                  },
+                },
+              },
+            }),
+          );
+      });
+    },
+  );
+  const delta = (topic: string, data: unknown) =>
+    feed.send(
+      record({
+        type: 1,
+        target: "feed",
+        arguments: [topic, data, "2026-11-20T12:00:00.000Z"],
+      }),
+    );
+  await page.goto("/?events=earth");
+  await page.getByRole("button", { name: "Watch free live timing" }).click();
+  await expect(page.getByLabel("Live driver")).toContainText("Lewis Hamilton");
+  await page.getByRole("button", { name: "Follow car" }).click();
+  const position = () =>
+    page.evaluate(async () => {
+      const path = "/src/events/store.ts";
+      const { viewer } = (await import(path)).useEvents.getState();
+      const car = viewer?.trackedEntity;
+      return car?.id === "f1-44"
+        ? car.position.getValue(viewer.clock.currentTime).x
+        : null;
+    });
+  expect(await position()).toBeNull();
+  delta("TimingData", {
+    Lines: { 44: { Sectors: { 0: { Value: "32.100" } } } },
+  });
+  await expect.poll(position).toEqual(expect.any(Number));
+  const before = await position();
+  await page.clock.setFixedTime(new Date("2026-11-20T12:00:05Z"));
+  await expect.poll(position).not.toBe(before);
+  await page.getByRole("button", { name: "Video on Earth" }).click();
+  await page
+    .getByLabel("Open a replay file")
+    .setInputFiles("../docs/generated/demo/video.webm");
+  const player = page.getByLabel("Race video player");
+  await expect
+    .poll(() => player.evaluate((el: HTMLVideoElement) => el.readyState))
+    .toBeGreaterThan(1);
+  await player.evaluate((el: HTMLVideoElement) => el.play());
+  await expect
+    .poll(() => player.evaluate((el: HTMLVideoElement) => el.currentTime))
+    .toBeGreaterThan(0);
+  expect(await position()).toEqual(expect.any(Number));
+  delta("TrackStatus", { Status: "5" });
+  await expect(page.getByText(/Red flag · positions paused/)).toBeVisible();
+  await expect.poll(position).toBeNull();
+  await page.getByRole("button", { name: "Close video" }).click();
+  await expect(player).toHaveCount(0);
+});

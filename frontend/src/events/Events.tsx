@@ -1,3 +1,5 @@
+import { RaceVideo } from "./RaceVideo";
+import { useFreeTiming } from "./freeTiming";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEvents } from "./store";
 import {
@@ -81,6 +83,14 @@ function EventWorkspace() {
   const session = sessions.find((s) => s.session_key === sessionId);
   const race = races.find((r) => r.round === raceId);
   const next = nextRace(races, now);
+  const [timingRace, setTimingRace] = useState<Race | null>(null);
+  const free = !!race && timingRace === race;
+  const timing = useFreeTiming(race, free);
+  const [freeDriver, setFreeDriver] = useState<number | null>(null);
+  const [video, setVideo] = useState(false);
+  const timingDriver =
+    timing.cars.find((d) => d.driver_number === freeDriver) ?? timing.cars[0];
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -463,6 +473,7 @@ function EventWorkspace() {
   );
   const startWatching = (isLive: boolean) => {
     if (!session) return;
+    setTimingRace(null);
     setLive(isLive);
     setTime(isLive ? Date.now() - 18000 : Date.parse(session.date_start));
     setWindowStart(Date.parse(session.date_start));
@@ -489,16 +500,21 @@ function EventWorkspace() {
       >
         {race && (
           <RaceScene
-            key={race.Circuit.circuitId + "-" + (sessionId ?? "preview")}
+            key={
+              race.Circuit.circuitId +
+              "-" +
+              (free ? "timing" : (sessionId ?? "preview"))
+            }
             race={race}
             track={tracks[race.Circuit.circuitId]}
             drivers={drivers}
             locations={locations}
             time={time}
-            selected={selected}
+            selected={free ? (timingDriver?.driver_number ?? null) : selected}
             follow={follow}
-            onSelect={setSelected}
-            watching={watching}
+            onSelect={free ? setFreeDriver : setSelected}
+            watching={watching || free}
+            timingCars={free ? timing.cars : undefined}
             races={races}
             onRace={setRaceId}
             onRelease={() => setFollow(false)}
@@ -527,7 +543,7 @@ function EventWorkspace() {
             </select>
           </label>
           {race && <p>{race.Circuit.circuitName}</p>}
-          {sessions.length > 0 && (
+          {sessions.length > 0 && !free && (
             <label>
               Weekend session
               <select
@@ -542,9 +558,61 @@ function EventWorkspace() {
               </select>
             </label>
           )}
+          {race && (
+            <button
+              aria-pressed={free}
+              onClick={() => {
+                setTimingRace(free ? null : race);
+                setWatching(false);
+                setPlaying(false);
+                setFollow(false);
+              }}
+            >
+              {free ? "Stop free live tracking" : "Watch free live timing"}
+            </button>
+          )}
+          {free && (
+            <>
+              <p role="status">
+                {timing.session} {timing.status}
+              </p>
+              <p>
+                Positions are estimated between sector updates. Cars appear
+                after their first fresh sector crossing.
+              </p>
+              {timingDriver && (
+                <>
+                  <label>
+                    Live driver
+                    <select
+                      value={timingDriver.driver_number}
+                      onChange={(e) => setFreeDriver(+e.target.value)}
+                    >
+                      {timing.cars.map((d) => (
+                        <option key={d.driver_number} value={d.driver_number}>
+                          {d.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p>
+                    P{timingDriver.rank ?? "—"} · Lap time{" "}
+                    {timingDriver.lap ?? "—"}
+                  </p>
+                  <button onClick={() => setFollow(!follow)}>
+                    {follow ? "Release camera" : "Follow car"}
+                  </button>
+                </>
+              )}
+            </>
+          )}
+          <button aria-expanded={video} onClick={() => setVideo(!video)}>
+            {video ? "Hide video" : "Video on Earth"}
+          </button>
           {session &&
             Date.parse(session.date_start) <= now &&
             !session.is_cancelled &&
+            !free &&
             !watching && (
               <button
                 className="event-watch"
@@ -553,17 +621,19 @@ function EventWorkspace() {
                 {activeSession ? "Watch live on Earth" : "Replay on Earth"}
               </button>
             )}
-          <p role="status">
-            {watching
-              ? feedState
-              : sessionState ||
-                (nextSession
-                  ? "Next: " +
-                    nextSession.name +
-                    " in " +
-                    countdown(nextSession.start, now)
-                  : calendarState)}
-          </p>
+          {!free && (
+            <p role="status">
+              {watching
+                ? feedState
+                : sessionState ||
+                  (nextSession
+                    ? "Next: " +
+                      nextSession.name +
+                      " in " +
+                      countdown(nextSession.start, now)
+                    : calendarState)}
+            </p>
+          )}
           {watching && (
             <>
               <label>
@@ -611,6 +681,12 @@ function EventWorkspace() {
             Weekend details, stats &amp; replays ↗
           </button>
         </main>
+      )}
+      {!details && video && (
+        <RaceVideo
+          vegas={race?.Circuit.circuitId === "vegas" && race.season === "2026"}
+          onClose={() => setVideo(false)}
+        />
       )}
       {details && (
         <main className="events-workspace" aria-label="Live events">

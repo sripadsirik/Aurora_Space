@@ -73,11 +73,21 @@ a 3D circuit on Earth, driver-follow cameras, running order, lap/tyre data, flag
 weather, and speed/throttle/brake/gear/RPM telemetry. The session timeline supports
 seeking and playback speed controls. Try **2025 → Full season → Las Vegas**.
 
-Historical OpenF1 data is public. Live sessions require an OpenF1 subscription and
-`OPENF1_ACCESS_TOKEN` in `backend/.env`, then `npm start`. Live playback uses a buffer;
-missing or stale channels are identified. Car placement is approximate and the
-viewer reports its circuit-alignment residual. See the [F1 Events guide](docs/f1-events.md)
-for setup, data sources, and positioning limits.
+Choose **Watch free live timing** on Earth before or during a weekend session. Aurora
+waits for the selected Grand Prix, then moves each car along the circuit after its first
+fresh sector crossing. The free feed supplies lap and sector times.
+Positions between crossings are estimates. **Follow car** keeps the camera on a driver.
+
+**Video on Earth** opens a player alongside either tracking mode. Load a replay file,
+a shareable YouTube video, or a compatible HTTPS video stream. The 2026 Las Vegas
+weekend also has official practice highlights and a link to Apple’s free U.S. broadcast.
+The broadcast opens on Apple TV and can float above Earth using Picture in Picture
+where supported. Video playback and the telemetry clock are independent.
+
+![Las Vegas on Aurora Earth between practice sessions, with the weekend video panel open](docs/images/f1-weekend-video.jpg)
+
+Historical OpenF1 telemetry is free. Measured live OpenF1 telemetry requires a
+subscription and a server-side access token. [F1 Events guide](docs/f1-events.md)
 
 ## Mission Lab guides
 

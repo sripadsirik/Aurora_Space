@@ -1,6 +1,6 @@
 # Formula 1 Events
 
-Open **Events ↗** on Aurora’s main Earth. Select a Grand Prix and weekend session, then choose **Watch live on Earth** or **Replay on Earth**. Click a car or select a driver and choose **Follow car** to keep the camera on it. The panel shows speed, gear, throttle and braking. Zoom out to see other Grands Prix as selectable globe markers.
+Open **Events ↗** on Aurora’s main Earth. Select a Grand Prix and weekend session, then choose **Watch free live timing** for the current session or **Replay on Earth** for a recording. Click a car or select a driver and choose **Follow car** to keep the camera on it. OpenF1 telemetry includes speed, gear, throttle and braking when available. Zoom out to see other Grands Prix as selectable globe markers.
 
 Choose **Weekend details, stats & replays** for the season calendar, results and replay timeline. **Track on Earth** brings the same session and playback time back onto the globe. The direct link `/?events=1` opens the details page.
 
@@ -38,7 +38,24 @@ throttle, brake, gear, RPM, weather, and race-control messages use the replay cl
 Unavailable channels display a dash rather than a generated value. Initial loading
 can take tens of seconds because requests are queued to respect provider limits.
 
-## Live sessions
+## Free live timing and video
+
+Select the weekend and choose **Watch free live timing**. Leave Events open and
+Aurora listens for the active session at this Grand Prix. The browser subscribes
+to Formula 1’s public driver list, session status, flags and lap/sector timing.
+After a driver crosses a sector line, their model moves through the estimated
+next third of the circuit. Its pace comes from a recent lap or the first split.
+Real sector lengths and corner speeds vary. Red flags, stops and stale timing
+interrupt the estimate. Select a live driver and choose **Follow car**.
+
+**Video on Earth** accepts local video files, YouTube links that permit embedding,
+and browser-playable HTTPS MP4, WebM and HLS streams. Use the player controls
+to align a recording with the telemetry replay. For 2026 Las Vegas, the panel
+includes F1 practice highlights and the broadcaster’s live player. Apple offers
+every session free in the U.S. that weekend. Open the broadcast on Apple TV and
+use Picture in Picture if your browser supports it. [Apple broadcast details](https://www.apple.com/newsroom/2026/11/formula-1-las-vegas-grand-prix-streams-live-on-apple-tv-this-weekend/)
+
+## Measured live telemetry
 
 Live OpenF1 access requires an OpenF1 subscription and a valid access token. Obtain
 the token through [OpenF1](https://openf1.org/) and set it in the ignored

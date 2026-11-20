@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { TrafficCamera } from "./data";
 import { useUtcClock } from "../hooks/useUtcClock";
 
-function HlsVideo({ url, name, onError }: { url: string; name: string; onError: () => void }) {
+export function HlsVideo({ url, name, onError }: { url: string; name: string; onError: () => void }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = ref.current!;

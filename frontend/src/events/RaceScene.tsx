@@ -1,3 +1,4 @@
+import { circuitSampler, estimateProgress, type TimingCar } from "./freeTiming";
 import { useEvents } from "./store";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -48,6 +49,7 @@ interface Props {
   follow: boolean;
   onSelect: (n: number) => void;
   watching: boolean;
+  timingCars?: TimingCar[];
   races: Race[];
   onRace: (round: string) => void;
   onRelease: () => void;
@@ -197,12 +199,15 @@ export function RaceScene(props: Props) {
         sphere.radius * 3.1,
       ),
     });
+    const alongTrack = props.track
+      ? circuitSampler(props.track.coordinates)
+      : null;
     const cars = new Map<number, Entity>();
     const heading = new Map<number, number>();
     const tick = v.clock.onTick.addEventListener(() => {
       const p = latest.current,
         a = alignmentRef.current;
-      if (!p.watching || !a || !layout) {
+      if (!p.watching || (!a && !p.timingCars) || !layout) {
         if (
           v.trackedEntity &&
           cars.has(Number(String(v.trackedEntity.id).slice(3)))
@@ -211,35 +216,47 @@ export function RaceScene(props: Props) {
         for (const e of cars.values()) e.show = false;
         return;
       }
-      for (const driver of p.drivers) {
-        const group = samplesRef.current.get(driver.driver_number) || [],
-          xy = samplePosition(group, p.time);
+      // A newly added model gets its Cesium tracking bounds on the next viewer tick.
+      const selectedEntity = p.selected ? cars.get(p.selected) : undefined;
+      const visible = new Set<number>();
+      const clock = p.timingCars ? Date.now() : p.time;
+      const metersPerDegree = 111320 * Math.cos((layout.lat * Math.PI) / 180);
+      for (const driver of p.timingCars ?? p.drivers) {
+        const group = samplesRef.current.get(driver.driver_number) || [];
+        const positionAt = (at: number): XY | null => {
+          if (p.timingCars && alongTrack) {
+            const progress = estimateProgress(driver as TimingCar, at);
+            if (progress === null) return null;
+            const [lon, lat] = alongTrack(progress);
+            return [
+              (lon - layout.lon) * metersPerDegree,
+              (lat - layout.lat) * 111320,
+            ];
+          }
+          const sample = samplePosition(group, at);
+          return sample && a
+            ? circuitPosition(
+                transform(sample, a),
+                layout.points,
+                Math.min(18, Math.max(6, a.error)),
+              )
+            : null;
+        };
+        const en = positionAt(clock);
+        if (!en) continue;
         let entity = cars.get(driver.driver_number);
-        if (!xy) {
-          if (entity) entity.show = false;
-          continue;
-        }
-        const surfacePoint = (point: XY) =>
-          circuitPosition(
-            transform(point, a),
-            layout.points,
-            Math.min(18, Math.max(6, a.error)),
-          );
-        const en = surfacePoint(xy),
-          longitude =
-            layout.lon +
-            en[0] / (111320 * Math.cos((layout.lat * Math.PI) / 180)),
+        const longitude = layout.lon + en[0] / metersPerDegree,
           latitude = layout.lat + en[1] / 111320;
         const height =
           v.scene.globe.getHeight(
             Cartographic.fromDegrees(longitude, latitude),
           ) ?? 0;
         const pos = Cartesian3.fromDegrees(longitude, latitude, height + 0.25);
-        const next = samplePosition(group, p.time + 250),
-          prev = samplePosition(group, p.time - 250);
+        const next = positionAt(clock + 250),
+          prev = positionAt(clock - 250);
         let h = heading.get(driver.driver_number) || 0;
         if (next || prev) {
-          const other = surfacePoint((next || prev)!);
+          const other = (next || prev)!;
           const dx = next ? other[0] - en[0] : en[0] - other[0],
             dy = next ? other[1] - en[1] : en[1] - other[1];
           h = carHeading(dx, dy, h);
@@ -276,7 +293,8 @@ export function RaceScene(props: Props) {
           });
           cars.set(driver.driver_number, entity);
         }
-        entity.show = p.watching;
+        visible.add(driver.driver_number);
+        entity.show = true;
         entity.position = new ConstantPositionProperty(pos);
         entity.orientation = new ConstantProperty(
           Transforms.headingPitchRollQuaternion(
@@ -289,9 +307,11 @@ export function RaceScene(props: Props) {
             driver.driver_number === p.selected ? 1.2 : 1,
           );
       }
-      const chosen = p.selected ? cars.get(p.selected) : undefined;
-      if (p.follow && chosen?.show) {
-        if (v.trackedEntity !== chosen) v.trackedEntity = chosen;
+      for (const [id, entity] of cars) {
+        if (!visible.has(id)) entity.show = false;
+      }
+      if (p.follow && selectedEntity?.show) {
+        if (v.trackedEntity !== selectedEntity) v.trackedEntity = selectedEntity;
       } else if (v.trackedEntity) v.trackedEntity = undefined;
     });
     const handler = new ScreenSpaceEventHandler(v.scene.canvas);
@@ -365,9 +385,11 @@ export function RaceScene(props: Props) {
           ? "REAL CIRCUIT GEOMETRY"
           : "CIRCUIT LOCATION · layout unavailable"}
         <span>
-          {props.watching
-            ? alignmentState
-            : "Select a session to load real car positions"}
+          {props.timingCars
+            ? "Estimated from live lap and sector timing"
+            : props.watching
+              ? alignmentState
+              : "Select a session to load real car positions"}
         </span>
       </div>
     </div>
