@@ -1,5 +1,10 @@
+import { useEvents } from "./store";
 import { useEffect, useRef, useState } from "react";
 import {
+  CustomDataSource,
+  Cartographic,
+  DistanceDisplayCondition,
+  HeightReference,
   Viewer,
   Color,
   Cartesian3,
@@ -19,6 +24,8 @@ import {
 } from "cesium";
 import {
   align,
+  circuitPosition,
+  carHeading,
   localTrack,
   transform,
   type Alignment,
@@ -41,10 +48,13 @@ interface Props {
   follow: boolean;
   onSelect: (n: number) => void;
   watching: boolean;
+  races: Race[];
+  onRace: (round: string) => void;
+  onRelease: () => void;
 }
 export function RaceScene(props: Props) {
-  const root = useRef<HTMLDivElement>(null),
-    latest = useRef(props);
+  const viewer = useEvents((s) => s.viewer);
+  const latest = useRef(props);
   latest.current = props;
   const [view, setView] = useState("track"),
     [alignmentState, setAlignmentState] = useState("Waiting for position data");
@@ -84,37 +94,50 @@ export function RaceScene(props: Props) {
     }
   }, [props.locations, props.track]);
   useEffect(() => {
-    alignmentRef.current = null;
-    setAlignmentState("Waiting for position data");
-  }, [props.race.Circuit.circuitId]);
-  useEffect(() => {
-    if (!root.current) return;
-    const v = new Viewer(root.current, {
-      baseLayer: false,
-      animation: false,
-      timeline: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      baseLayerPicker: false,
-      navigationHelpButton: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      shouldAnimate: true,
-    });
+    if (!viewer || viewer.isDestroyed()) return;
+    const v = viewer;
     viewerRef.current = v;
-    v.scene.backgroundColor = Color.fromCssColorString("#080d14");
-    v.scene.globe.baseColor = Color.fromCssColorString("#162430");
-    v.scene.globe.enableLighting = false;
-    v.imageryLayers.addImageryProvider(
+    const originalView = {
+      destination: v.camera.positionWC.clone(),
+      orientation: {
+        direction: v.camera.directionWC.clone(),
+        up: v.camera.upWC.clone(),
+      },
+    };
+    const layer = new CustomDataSource("F1 race weekend");
+    void v.dataSources.add(layer);
+    const imagery = v.imageryLayers.addImageryProvider(
       new UrlTemplateImageryProvider({
         url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        credit:
-          "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+        credit: "Tiles © Esri and its imagery providers",
         maximumLevel: 19,
       }),
     );
+    for (const race of props.races) {
+      const point = race.Circuit.Location;
+      layer.entities.add({
+        id: "gp-" + race.round,
+        position: Cartesian3.fromDegrees(+point.long, +point.lat),
+        point: {
+          pixelSize: 9,
+          color: Color.CORAL,
+          distanceDisplayCondition: new DistanceDisplayCondition(
+            20000,
+            30000000,
+          ),
+        },
+        label: {
+          text: race.raceName,
+          font: "13px sans-serif",
+          showBackground: true,
+          pixelOffset: new Cartesian2(0, -17),
+          distanceDisplayCondition: new DistanceDisplayCondition(
+            20000,
+            30000000,
+          ),
+        },
+      });
+    }
     const location = props.race.Circuit.Location;
     const lon = Number(location.long),
       lat = Number(location.lat);
@@ -128,25 +151,28 @@ export function RaceScene(props: Props) {
       const ps = props.track.coordinates.map((p) =>
         Cartesian3.fromDegrees(p[0], p[1], 1),
       );
-      v.entities.add({
+      layer.entities.add({
         polyline: {
           positions: ps,
+          clampToGround: true,
           width: 16,
           material: Color.fromCssColorString("#151a24"),
         },
       });
-      v.entities.add({
+      layer.entities.add({
         polyline: {
           positions: ps,
+          clampToGround: true,
           width: 3,
           material: Color.fromCssColorString("#f6f0e5"),
         },
       });
       const p = props.track.coordinates[0];
-      v.entities.add({
+      layer.entities.add({
         position: Cartesian3.fromDegrees(p[0], p[1], 5),
         label: {
           text: "START / FINISH",
+          heightReference: HeightReference.CLAMP_TO_GROUND,
           font: "bold 12px monospace",
           fillColor: Color.WHITE,
           pixelOffset: new Cartesian2(0, -20),
@@ -176,7 +202,12 @@ export function RaceScene(props: Props) {
     const tick = v.clock.onTick.addEventListener(() => {
       const p = latest.current,
         a = alignmentRef.current;
-      if (!a || !layout) {
+      if (!p.watching || !a || !layout) {
+        if (
+          v.trackedEntity &&
+          cars.has(Number(String(v.trackedEntity.id).slice(3)))
+        )
+          v.trackedEntity = undefined;
         for (const e of cars.values()) e.show = false;
         return;
       }
@@ -188,20 +219,30 @@ export function RaceScene(props: Props) {
           if (entity) entity.show = false;
           continue;
         }
-        const en = transform(xy, a),
+        const surfacePoint = (point: XY) =>
+          circuitPosition(
+            transform(point, a),
+            layout.points,
+            Math.min(18, Math.max(6, a.error)),
+          );
+        const en = surfacePoint(xy),
           longitude =
             layout.lon +
             en[0] / (111320 * Math.cos((layout.lat * Math.PI) / 180)),
           latitude = layout.lat + en[1] / 111320;
-        const pos = Cartesian3.fromDegrees(longitude, latitude, 2);
+        const height =
+          v.scene.globe.getHeight(
+            Cartographic.fromDegrees(longitude, latitude),
+          ) ?? 0;
+        const pos = Cartesian3.fromDegrees(longitude, latitude, height + 0.25);
         const next = samplePosition(group, p.time + 250),
           prev = samplePosition(group, p.time - 250);
         let h = heading.get(driver.driver_number) || 0;
         if (next || prev) {
-          const other = transform((next || prev)!, a);
+          const other = surfacePoint((next || prev)!);
           const dx = next ? other[0] - en[0] : en[0] - other[0],
             dy = next ? other[1] - en[1] : en[1] - other[1];
-          if (Math.hypot(dx, dy) > 0.05) h = Math.atan2(dx, dy);
+          h = carHeading(dx, dy, h);
         }
         heading.set(driver.driver_number, h);
         const color = Color.fromCssColorString(
@@ -211,10 +252,11 @@ export function RaceScene(props: Props) {
               : "eeeeee"),
         );
         if (!entity) {
-          entity = v.entities.add({
+          entity = layer.entities.add({
             id: "f1-" + driver.driver_number,
             name: driver.full_name,
             position: pos,
+            viewFrom: new Cartesian3(-30, -35, 19),
             model: {
               uri: import.meta.env.BASE_URL + "events/car.glb",
               minimumPixelSize: 22,
@@ -255,23 +297,29 @@ export function RaceScene(props: Props) {
     const handler = new ScreenSpaceEventHandler(v.scene.canvas);
     handler.setInputAction((e: { position: Cartesian2 }) => {
       const picked = v.scene.pick(e.position);
+      if (picked?.id instanceof Entity && picked.id.id.startsWith("gp-"))
+        latest.current.onRace(picked.id.id.slice(3));
       if (
         picked?.id instanceof Entity &&
         String(picked.id.id).startsWith("f1-")
       )
         latest.current.onSelect(Number(String(picked.id.id).slice(3)));
     }, ScreenSpaceEventType.LEFT_CLICK);
-    const resize = new ResizeObserver(() => v.resize());
-    resize.observe(root.current);
     return () => {
-      resize.disconnect();
       tick();
-      handler.destroy();
-      v.destroy();
+      if (!handler.isDestroyed()) handler.destroy();
+      if (!v.isDestroyed()) {
+        v.trackedEntity = undefined;
+        v.camera.cancelFlight();
+        v.dataSources.remove(layer, true);
+        v.imageryLayers.remove(imagery, true);
+        v.camera.setView(originalView);
+      }
       viewerRef.current = undefined;
     };
-  }, [props.race.Circuit.circuitId, props.track]);
+  }, [viewer, props.race.Circuit.circuitId, props.track, props.races]);
   const changeView = (kind: string) => {
+    props.onRelease();
     setView(kind);
     const v = viewerRef.current;
     if (!v) return;
@@ -301,7 +349,6 @@ export function RaceScene(props: Props) {
   };
   return (
     <div className="race-scene">
-      <div ref={root} className="race-canvas" />
       <div className="race-view-switch">
         {["earth", "track", "overhead"].map((k) => (
           <button

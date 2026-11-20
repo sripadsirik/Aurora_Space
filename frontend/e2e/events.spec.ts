@@ -163,9 +163,12 @@ test("recorded session loads real channels, supports pause, selection and seekin
   });
   await page.goto("/?events=1");
   await page.getByRole("button", { name: "Watch real replay ↗" }).click();
-  await expect(page.locator(".events-track-badge")).toContainText("REPLAY", {
-    timeout: 30000,
-  });
+  await expect(page.locator(".events-track-badge-inline")).toContainText(
+    "REPLAY",
+    {
+      timeout: 30000,
+    },
+  );
   await expect(page.locator(".race-map-note")).toContainText("fit error", {
     timeout: 30000,
   });
@@ -187,6 +190,29 @@ test("recorded session loads real channels, supports pause, selection and seekin
   await expect(
     page.getByRole("combobox", { name: "Replay speed" }),
   ).toHaveValue("4");
+  const originalCanvas = await page
+    .locator(".cesium-widget canvas")
+    .elementHandle();
+  await page.getByRole("button", { name: "Track on Earth" }).click();
+  await expect(
+    page.getByRole("button", { name: "Release camera" }),
+  ).toBeVisible();
+  await expect(page.locator(".event-instruments")).toContainText("244");
+  expect(await originalCanvas!.evaluate((el) => el.isConnected)).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const path = "/src/events/store.ts";
+        const { viewer } = (await import(path)).useEvents.getState();
+        return viewer.trackedEntity?.id;
+      }),
+    )
+    .toBe("f1-44");
+  await page.getByRole("button", { name: "overhead", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Follow car" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Weekend details, stats & replays" })
+    .click();
   const seek = page.getByRole("slider", { name: "Session replay time" });
   await seek.fill(String(start + 60000));
   await seek.dispatchEvent("keyup", { key: "ArrowRight" });

@@ -1,6 +1,8 @@
 # Formula 1 Events
 
-Open **Events ↗** in Aurora's Earth navigation, or use `/?events=1`.
+Open **Events ↗** on Aurora’s main Earth. Select a Grand Prix and weekend session, then choose **Watch live on Earth** or **Replay on Earth**. Click a car or select a driver and choose **Follow car** to keep the camera on it. The panel shows speed, gear, throttle and braking. Zoom out to see other Grands Prix as selectable globe markers.
+
+Choose **Weekend details, stats & replays** for the season calendar, results and replay timeline. **Track on Earth** brings the same session and playback time back onto the globe. The direct link `/?events=1` opens the details page.
 
 ## Calendar and weekends
 

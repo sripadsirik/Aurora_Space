@@ -9,7 +9,7 @@ Track Formula 1 weekends from orbit to the circuit: browse the season calendar,
 inspect practice and qualifying, and replay real races with 3D cars and synchronized
 telemetry on Earth.
 
-![Aurora Formula 1 Events: Las Vegas weekend, season calendar, countdowns and 3D circuit](docs/images/f1-events-calendar.png)
+![Following Max Verstappen on Aurora’s Earth during a replay of the 2025 Las Vegas Grand Prix](docs/images/f1-follow-earth.png)
 
 ## Access AURORA
 
@@ -61,7 +61,7 @@ commands and guides below for browser and numerical checks.
 
 ## Formula 1 Events
 
-Open **Events ↗** in the navigation, or [open Events directly](https://sripadsirik.github.io/Aurora_Space/?events=1).
+Open **Events ↗** on the main Earth to select a circuit, watch telemetry, and follow a car. Choose **Weekend details, stats & replays** for the calendar and timing tower, or [open Events directly](https://sripadsirik.github.io/Aurora_Space/?events=1).
 Browse upcoming races or the complete season, switch to the next calendar year,
 and inspect the full weekend: practice, sprint qualifying/sprints where scheduled,
 qualifying, and the Grand Prix. Race and session countdowns update every second;

@@ -6,7 +6,13 @@ import {
   weekend,
   type Race,
 } from "./data";
-import { align, transform, type XY } from "./alignment";
+import {
+  align,
+  transform,
+  circuitPosition,
+  carHeading,
+  type XY,
+} from "./alignment";
 const race = {
   date: "2026-11-22",
   time: "04:00:00Z",
@@ -84,4 +90,26 @@ describe("Telemetry to Earth registration", () => {
     expect(align([[0, 0]], [[0, 0]])).toBeNull();
     expect(align(Array(40).fill([0, 0]), Array(20).fill([1, 1]))).toBeNull();
   });
+});
+
+it("keeps the car nose tangent through a right-angle turn and holds heading at rest", () => {
+  const circuit: XY[] = [
+    [0, 0],
+    [50, 0],
+    [50, 50],
+  ];
+  expect(circuitPosition([20, 3], circuit, 6)).toEqual([20, 0]);
+  expect(circuitPosition([48, 20], circuit, 6)).toEqual([50, 20]);
+  expect(circuitPosition([12, 20], circuit, 6)).toEqual([12, 20]);
+  for (const [east, north] of [
+    [1, 0],
+    [0, 1],
+    [-1, 0],
+    [0, -1],
+  ]) {
+    const h = carHeading(east, north, 0);
+    expect(Math.cos(-h)).toBeCloseTo(east);
+    expect(Math.sin(-h)).toBeCloseTo(north);
+  }
+  expect(carHeading(0, 0, 1.2)).toBe(1.2);
 });

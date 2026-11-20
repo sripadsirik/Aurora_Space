@@ -70,7 +70,7 @@ export const App = (): JSX.Element => {
         return;
       }
 
-      if (event.key === "0") {
+      if (!useEvents.getState().open && event.key === "0") {
         event.preventDefault();
         toggleEarthOnlyMode();
       }
@@ -81,7 +81,7 @@ export const App = (): JSX.Element => {
   }, [toggleEarthOnlyMode]);
 
 
-  if (eventsOpen) return <ErrorBoundary><Events /></ErrorBoundary>;
+
 
   if (missionOpen) return <ErrorBoundary><MissionControl /></ErrorBoundary>;
 
@@ -96,6 +96,8 @@ export const App = (): JSX.Element => {
           />
         </div>
 
+        <Events />
+        {!eventsOpen && <>
         <SceneControls />
         <AerospacePanel />
         <Explorer />
@@ -128,6 +130,7 @@ export const App = (): JSX.Element => {
             <Timeline />
           </>
         )}
+        </>}
       </div>
     </ErrorBoundary>
   );

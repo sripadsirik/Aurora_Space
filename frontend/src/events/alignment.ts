@@ -129,3 +129,43 @@ export function align(samples: XY[], track: XY[]): Alignment | null {
     }
   return best && best.error < 65 ? best : null;
 }
+
+// Location samples have no lane information. Fit small offsets to the racing
+// surface while preserving larger deviations such as a pit-lane excursion.
+export function circuitPosition(
+  point: XY,
+  circuit: XY[],
+  tolerance: number,
+): XY {
+  let best = point;
+  let nearest = tolerance * tolerance;
+  for (let i = 1; i < circuit.length; i++) {
+    const [x, y] = circuit[i - 1];
+    const dx = circuit[i][0] - x,
+      dy = circuit[i][1] - y;
+    const length2 = dx * dx + dy * dy;
+    if (!length2) continue;
+    const t = Math.max(
+      0,
+      Math.min(1, ((point[0] - x) * dx + (point[1] - y) * dy) / length2),
+    );
+    const px = x + t * dx,
+      py = y + t * dy;
+    const distance = (point[0] - px) ** 2 + (point[1] - py) ** 2;
+    if (distance < nearest) {
+      nearest = distance;
+      best = [px, py];
+    }
+  }
+  return best;
+}
+
+// Cesium rotates the glTF +Z nose onto local +X. Its heading is clockwise
+// from east, while north is the positive Y axis of the circuit map.
+export function carHeading(
+  east: number,
+  north: number,
+  previous: number,
+): number {
+  return Math.hypot(east, north) > 0.05 ? Math.atan2(-north, east) : previous;
+}

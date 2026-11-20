@@ -85,6 +85,7 @@ export function Explorer() {
             useAuroraStore.getState().closeAllPanels();
             ui.set({ catalogOpen: false, earthOpen: false });
             air.set({ open: false });
+            useSceneStore.getState().setFollowing(false);
             useEvents.getState().setOpen(true);
           }}
         >

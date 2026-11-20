@@ -1,3 +1,4 @@
+import { useEvents } from "../events/store";
 import { installEarth } from "../earth/scene";
 import { useEarth } from "../earth/store";
 import { useExplorer, type PickChoice } from "../explorer/store";
@@ -1552,12 +1553,12 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       if (currentModeRef.current === "HELIO" && !earthOnlyRef.current) {
         catalogModels.update(activeSatAnimStates, false);
         updateHelioVisuals(time, deltaSeconds, true);
-        presentation.update(time, deltaSeconds);
+        if (!useEvents.getState().open) presentation.update(time, deltaSeconds);
         return;
       }
       if (earthOnlyRef.current) {
         catalogModels.update(activeSatAnimStates, false);
-        presentation.update(time, deltaSeconds);
+        if (!useEvents.getState().open) presentation.update(time, deltaSeconds);
         if (useSceneStore.getState().autoRotate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches && nowMs - earthOnlyLastInteractionMs > EARTH_ONLY_IDLE_DELAY_MS) {
           viewer.camera.rotate(Cartesian3.UNIT_Z, CesiumMath.toRadians(EARTH_ONLY_ROTATION_DEGREES_PER_SECOND) * deltaSeconds);
         }
@@ -1614,7 +1615,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
           state: !live ? "demo" : catalogWorkerFailed ? "error" : !snapshot ? "loading" : usable ? "ready" : "late" });
       }
       catalogModels.update(activeSatAnimStates, settings.satellitesOn);
-      presentation.update(time, deltaSeconds);
+      if (!useEvents.getState().open) presentation.update(time, deltaSeconds);
 
       if (earthOnlyRef.current || currentModeRef.current === "HELIO") {
         selectedSatelliteRing.show = false;
@@ -1977,6 +1978,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       const dx = event.position.x - mouseDownPosition.x;
       const dy = event.position.y - mouseDownPosition.y;
       if (Math.sqrt(dx * dx + dy * dy) > 5) return;
+      if (useEvents.getState().open) return;
       const pickedList = viewer.scene.drillPick(event.position, 24, 12, 12);
       if(currentModeRef.current==='HELIO') {for(const p of pickedList){const id=getPickedHelioPlanetId(p.id);if(id){flyCameraToHelioPlanet(id);return;}}return;}
       const choices=pickChoices(pickedList);
@@ -1986,7 +1988,9 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
 
     const disposeAerospace = installAerospace(viewer);
     const disposeEarth = installEarth(viewer);
+    useEvents.setState({ viewer });
     return () => {
+      useEvents.setState({ viewer: null });
       disposeEarth();
       disposeAerospace();
       isDisposed = true;
