@@ -220,7 +220,14 @@ test("camera pagination, street filters and video failure fallback", async ({ pa
     await route.fulfill({ json: { data, fetchedAt: new Date().toISOString(), stale: false }, headers: { "Access-Control-Allow-Origin": "*" } });
   });
   for (const host of ["cctv.travelmidwest.com", "cwwp2.dot.ca.gov"]) await page.route(`https://${host}/**`, route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"/>' }));
-  await page.route("https://wzmedia.dot.ca.gov/**", route => route.fulfill({ status: 404, headers: { "Access-Control-Allow-Origin": "*" }, body: "unavailable" }));
+  // Deliver the failing manifest after checking the player. An immediate mock 404
+  // can correctly replace the video with the snapshot before Playwright sees it.
+  let failManifest!: () => void;
+  const manifestPending = new Promise<void>(resolve => { failManifest = resolve; });
+  await page.route("https://wzmedia.dot.ca.gov/**", async route => {
+    await manifestPending;
+    await route.fulfill({ status: 404, headers: { "Access-Control-Allow-Origin": "*" }, body: "unavailable" });
+  });
   await page.goto("/?cameras=illinois&area=aurora");
   const earth = page.getByRole("region", { name: "Earth and public cameras" });
   await expect(earth).toContainText("160 matching cameras");
@@ -231,7 +238,11 @@ test("camera pagination, street filters and video failure fallback", async ({ pa
   await expect(earth).toContainText("1 matching cameras");
   await expect(earth.getByRole("heading", { name: "Eola / Liberty · North view" })).toBeVisible();
   await earth.getByLabel("Camera network", { exact: true }).selectOption("california");
-  await expect(earth.locator("video")).toBeVisible();
+  try {
+    await expect(earth.locator("video")).toBeVisible();
+  } finally {
+    failManifest();
+  }
   await expect(earth).toContainText("Video could not be loaded", { timeout: 30000 });
   await expect(earth.getByAltText("I-580 video test public road image")).toBeVisible();
   await expect(earth.locator("video")).toHaveCount(0);
