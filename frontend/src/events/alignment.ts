@@ -132,12 +132,13 @@ export function align(samples: XY[], track: XY[]): Alignment | null {
 
 // Location samples have no lane information. Fit small offsets to the racing
 // surface while preserving larger deviations such as a pit-lane excursion.
-export function circuitPosition(
+export function circuitPose(
   point: XY,
   circuit: XY[],
   tolerance: number,
-): XY {
+): { position: XY; tangent?: XY } {
   let best = point;
+  let tangent: XY | undefined;
   let nearest = tolerance * tolerance;
   for (let i = 1; i < circuit.length; i++) {
     const [x, y] = circuit[i - 1];
@@ -155,9 +156,10 @@ export function circuitPosition(
     if (distance < nearest) {
       nearest = distance;
       best = [px, py];
+      tangent = [dx / Math.sqrt(length2), dy / Math.sqrt(length2)];
     }
   }
-  return best;
+  return { position: best, tangent };
 }
 
 // Cesium rotates the glTF +Z nose onto local +X. Its heading is clockwise
@@ -168,4 +170,25 @@ export function carHeading(
   previous: number,
 ): number {
   return Math.hypot(east, north) > 0.05 ? Math.atan2(-north, east) : previous;
+}
+
+// Project heading onto the racing surface even when consecutive samples jitter
+// across it. For pit-lane excursions, use the measured direction of travel.
+export function trackHeading(
+  tangent: XY | undefined,
+  motion: XY,
+  previous?: number,
+) {
+  if (!tangent) return carHeading(...motion, previous ?? 0);
+  const dot = tangent[0] * motion[0] + tangent[1] * motion[1];
+  let direction = Math.sign(dot);
+  if (Math.abs(dot) < 0.5) {
+    if (previous !== undefined) return previous;
+    direction = 1;
+  }
+  return carHeading(
+    direction * tangent[0],
+    direction * tangent[1],
+    previous ?? 0,
+  );
 }

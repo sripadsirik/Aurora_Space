@@ -14,6 +14,7 @@ import {
   HeadingPitchRange,
   HeadingPitchRoll,
   Transforms,
+  TrackingReferenceFrame,
   ConstantPositionProperty,
   ConstantProperty,
   ColorBlendMode,
@@ -25,8 +26,8 @@ import {
 } from "cesium";
 import {
   align,
-  circuitPosition,
-  carHeading,
+  circuitPose,
+  trackHeading,
   localTrack,
   transform,
   type Alignment,
@@ -234,16 +235,15 @@ export function RaceScene(props: Props) {
             ];
           }
           const sample = samplePosition(group, at);
-          return sample && a
-            ? circuitPosition(
-                transform(sample, a),
-                layout.points,
-                Math.min(18, Math.max(6, a.error)),
-              )
-            : null;
+          return sample && a ? transform(sample, a) : null;
         };
-        const en = positionAt(clock);
-        if (!en) continue;
+        const raw = positionAt(clock);
+        if (!raw) continue;
+        const { position: en, tangent } = circuitPose(
+          raw,
+          layout.points,
+          Math.min(18, Math.max(6, a?.error ?? 0)),
+        );
         let entity = cars.get(driver.driver_number);
         const longitude = layout.lon + en[0] / metersPerDegree,
           latitude = layout.lat + en[1] / 111320;
@@ -254,13 +254,13 @@ export function RaceScene(props: Props) {
         const pos = Cartesian3.fromDegrees(longitude, latitude, height + 0.25);
         const next = positionAt(clock + 250),
           prev = positionAt(clock - 250);
-        let h = heading.get(driver.driver_number) || 0;
-        if (next || prev) {
-          const other = (next || prev)!;
-          const dx = next ? other[0] - en[0] : en[0] - other[0],
-            dy = next ? other[1] - en[1] : en[1] - other[1];
-          h = carHeading(dx, dy, h);
-        }
+        const from = prev ?? raw,
+          to = next ?? raw;
+        const h = trackHeading(
+          tangent,
+          [to[0] - from[0], to[1] - from[1]],
+          heading.get(driver.driver_number),
+        );
         heading.set(driver.driver_number, h);
         const color = Color.fromCssColorString(
           "#" +
@@ -273,14 +273,14 @@ export function RaceScene(props: Props) {
             id: "f1-" + driver.driver_number,
             name: driver.full_name,
             position: pos,
-            viewFrom: new Cartesian3(-30, -35, 19),
+            trackingReferenceFrame: TrackingReferenceFrame.INERTIAL,
+            viewFrom: new Cartesian3(-32, 0, 13),
             model: {
               uri: import.meta.env.BASE_URL + "events/car.glb",
               minimumPixelSize: 22,
               maximumScale: 5,
               color,
-              colorBlendMode: ColorBlendMode.MIX,
-              colorBlendAmount: 0.65,
+              colorBlendMode: ColorBlendMode.HIGHLIGHT,
             },
             label: {
               text: driver.name_acronym,
@@ -311,7 +311,8 @@ export function RaceScene(props: Props) {
         if (!visible.has(id)) entity.show = false;
       }
       if (p.follow && selectedEntity?.show) {
-        if (v.trackedEntity !== selectedEntity) v.trackedEntity = selectedEntity;
+        if (v.trackedEntity !== selectedEntity)
+          v.trackedEntity = selectedEntity;
       } else if (v.trackedEntity) v.trackedEntity = undefined;
     });
     const handler = new ScreenSpaceEventHandler(v.scene.canvas);

@@ -5,7 +5,8 @@ def box(cx,cy,cz,x,y,z,material):
  for n,vs in [((1,0,0),[(1,-1,-1),(1,1,-1),(1,1,1),(1,-1,1)]),((-1,0,0),[(-1,1,-1),(-1,-1,-1),(-1,-1,1),(-1,1,1)]),((0,1,0),[(-1,1,-1),(1,1,-1),(1,1,1),(-1,1,1)]),((0,-1,0),[(1,-1,-1),(-1,-1,-1),(-1,-1,1),(1,-1,1)]),((0,0,1),[(-1,-1,1),(1,-1,1),(1,1,1),(-1,1,1)]),((0,0,-1),[(-1,1,-1),(1,1,-1),(1,-1,-1),(-1,-1,-1)])]:
   k=len(positions)//3
   for a,b,c in vs:positions.extend([cx+a*x/2,cy+b*y/2,cz+c*z/2]);normals.extend(n)
-  indices.extend([k,k+1,k+2,k,k+2,k+3])
+  if n[1]: indices.extend([k,k+2,k+1,k,k+3,k+2])
+  else: indices.extend([k,k+1,k+2,k,k+2,k+3])
  parts.append((first,len(indices)-first,material))
 # glTF Y-up, forward +Z. Original stylized open-wheel mesh in meters.
 box(0,.42,0,.7,.35,3.9,0);box(0,.42,-.4,1.35,.35,1.7,0)
@@ -19,7 +20,12 @@ for x in [-.86,.86]:
   for j in range(12):
    a=j*math.tau/12;b=(j+1)*math.tau/12;k=len(positions)//3
    for dx,t in [(-.2,a),(.2,a),(.2,b),(-.2,b)]:positions.extend([x+dx,.36+.36*math.cos(t),z+.36*math.sin(t)]);normals.extend([0,math.cos(t),math.sin(t)])
-   indices.extend([k,k+1,k+2,k,k+2,k+3])
+   indices.extend([k,k+2,k+1,k,k+3,k+2])
+   for side in [-1,1]:
+    k=len(positions)//3
+    for y,r in [(0,0),(.36*math.cos(a),.36*math.sin(a)),(.36*math.cos(b),.36*math.sin(b))]:
+     positions.extend([x+side*.2,.36+y,z+r]);normals.extend([side,0,0])
+    indices.extend([k,k+1,k+2] if side>0 else [k,k+2,k+1])
   parts.append((first,len(indices)-first,1))
   box(x,.36,z,.42,.36,.36,1)
 buff=struct.pack('<%sf'%len(positions),*positions)+struct.pack('<%sf'%len(normals),*normals)+struct.pack('<%sH'%len(indices),*indices)

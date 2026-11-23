@@ -3,6 +3,7 @@ import {
   Cartesian2,
   LabelStyle,
   Color,
+  ConstantProperty,
   CustomDataSource,
   HeightReference,
   UrlTemplateImageryProvider,
@@ -88,15 +89,24 @@ export function installEarth(viewer: Viewer) {
         },
       });
   };
+  const highlight = (id: string | null, active: boolean) => {
+    if (!id) return;
+    const camera = source.entities.getById(id);
+    if (camera?.label) camera.label.show = new ConstantProperty(active);
+    if (camera?.billboard) camera.billboard.color = new ConstantProperty(active ? Color.WHITE : Color.fromCssColorString("#b2e4df"));
+  };
   const unsub = useEarth.subscribe((s, old) => {
     if (s.mapStyle !== old.mapStyle) updateMap();
     if (
       s.cameras !== old.cameras ||
       s.camerasOn !== old.camerasOn ||
-      s.selected !== old.selected
-      || s.cameraNetwork !== old.cameraNetwork || s.cameraArea !== old.cameraArea
+      s.cameraNetwork !== old.cameraNetwork || s.cameraArea !== old.cameraArea
     )
       render();
+    else if (s.selected !== old.selected) {
+      highlight(old.selected, false);
+      highlight(s.selected, true);
+    }
     if (s.destinationId !== old.destinationId && s.destination) {
       const air = useAerospace.getState();
       air.set({

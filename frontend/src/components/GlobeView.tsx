@@ -1951,7 +1951,7 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
         else if(typeof id?.id==='string'){
           const key=id.id,state=useAerospace.getState();
           const camera=useEarth.getState().cameras.find(c=>c.id===key);
-          if(camera&&useEarth.getState().camerasOn){found.set(key,{id:key,name:camera.name,detail:'Public traffic camera · Singapore',select:()=>{useAuroraStore.getState().closeAllPanels();useAerospace.getState().set({open:false});useExplorer.getState().set({catalogOpen:false,earthOpen:true});useEarth.getState().set({selected:key});}});continue;}
+          if(camera&&useEarth.getState().camerasOn){found.set(key,{id:key,name:camera.name,detail:camera.source || 'Public traffic camera',select:()=>{useAuroraStore.getState().closeAllPanels();useAerospace.getState().set({open:false});useExplorer.getState().set({catalogOpen:false,earthOpen:true});useEarth.getState().set({selected:key});}});continue;}
 
           const a=state.aircraft.find(a=>'air:'+a.id===key),l=state.launches.find(l=>'launch:'+l.id===key);
           if(a||l)found.set(key,{id:key,name:a?.name||l!.name,detail:a?`${a.model} · ${a.military?'Military-tagged aircraft':'Aircraft'}`:'Launch site',select:()=>{useAuroraStore.getState().closeAllPanels();state.set({selected:key,open:true,tab:a?'aircraft':'launches',simulation:null});}});

@@ -2,6 +2,9 @@ import type { TrafficCamera } from "./data";
 
 export const cameraNetworks = [
   { id: "illinois", name: "Illinois & Midwest", source: "IDOT / Travel Midwest / Lake County PASSAGE", url: "https://www.gettingaroundillinois.com/", lat: 41.88, lon: -87.63, feeds: [...Array.from({ length: 4 }, (_, i) => `illinois-${i}`), "illinois-passage"] },
+  { id: "hong-kong", name: "Hong Kong", source: "Hong Kong Transport Department", url: "https://data.gov.hk/en-data/dataset/hk-td-tis_2-traffic-snapshot-images", lat: 22.32, lon: 114.17, feeds: ["hong-kong"] },
+  { id: "british-columbia", name: "British Columbia, Canada", source: "DriveBC", url: "https://www.drivebc.ca/", lat: 49.28, lon: -123.12, feeds: ["british-columbia"] },
+  { id: "new-zealand", name: "New Zealand", source: "NZ Transport Agency Waka Kotahi", url: "https://www.journeys.nzta.govt.nz/traffic-and-travel-information/traffic-cameras", lat: -41.29, lon: 174.78, feeds: ["new-zealand"] },
   { id: "california", name: "California, USA", source: "Caltrans", url: "https://dot.ca.gov/programs/traffic-operations/traveler-information/cwwp", lat: 37.77, lon: -122.42, feeds: Array.from({ length: 12 }, (_, i) => `california-${i + 1}`) },
   { id: "london", name: "London, UK", source: "Powered by TfL Open Data", url: "https://tfl.gov.uk/info-for/open-data-users/", lat: 51.5074, lon: -0.1278, feeds: ["london"] },
   { id: "finland", name: "Finland", source: "Fintraffic / Digitraffic", url: "https://www.digitraffic.fi/en/road-traffic/", lat: 60.17, lon: 24.94, feeds: ["finland"] },

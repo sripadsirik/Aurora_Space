@@ -194,10 +194,8 @@ export function EarthPanel() {
         Public traffic cameras · connected networks
       </label>
       <p className="earth-note">
-        Public road cameras and Chicago scenic webcams. Live video plays where the
-        provider supplies a stream; other cameras publish snapshots. Coverage
-        is limited to the connected networks. Still images refresh at the provider’s
-        cadence; camera metadata is checked every minute and cached for up to five minutes.
+        Select a network to explore its published road views. Snapshots refresh every minute while open. Cameras with video have a player.
+        {!env.VITE_WS_URL && " The public demo includes a selection of camera locations. Run the live gateway for full connected catalogs."}
       </p>
       {earth.camerasOn && (
         <>
@@ -207,13 +205,13 @@ export function EarthPanel() {
               {cameraNetworks.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
             </select>
           </label>
-          <div className="inspector-actions" aria-label="Illinois camera shortcuts">
+          {["all", "illinois"].includes(earth.cameraNetwork) && <div className="inspector-actions" aria-label="Illinois camera shortcuts">
             {illinoisPlaces.map(p => <button key={p.id} aria-pressed={earth.cameraArea === p.id} onClick={() => {
               setCameraQuery("");
               earth.set({ cameraNetwork: "illinois", cameraArea: p.id, selected: null });
               earth.locate(p.lat, p.lon, p.name);
             }}>{p.name}</button>)}
-          </div>
+          </div>}
           {earth.cameraArea && <button onClick={() => earth.set({ cameraArea: "" })}>Show entire network</button>}
           {selectedPlace?.note && <p className="earth-note">{selectedPlace.note}</p>}
           {(earth.cameraArea === "uic" || earth.cameraArea === "uiuc") && (

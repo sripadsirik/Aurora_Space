@@ -1,6 +1,6 @@
 # Public camera coverage
 
-Checked November 5, 2026. Counts are observations of the providers' catalogs and
+The Illinois coverage below was checked November 5, 2026. Counts are observations of the providers' catalogs and
 will change as cameras are added, removed or unavailable.
 
 | Area | Verified coverage and behavior |
@@ -11,6 +11,21 @@ will change as cameras are added, removed or unavailable.
 | New York Street / McCoy Drive | No named feeds found in the connected public catalogs. Shortcuts explain this gap without substituting nearby markers for cameras on these roads. This does not imply that physical cameras do not exist. |
 | Willis Tower | FOX 32's official live scenic player, located at Willis Tower on South Wacker Drive. The stream played at 1280px width during verification, but its view was obscured. |
 | Chicago River / Wacker area | FOX 32's official live scenic player; playback verified at 1280px width. The marker denotes the approximate viewing area, not a surveyed camera location or every Wacker intersection. |
+
+## International road cameras
+
+The public demo ships locations and publisher image URLs for 53 road cameras checked November 23, 2026. Opening a camera requests the image from its publisher. The directory also works when the live gateway is unavailable. Regional directories with a successful live catalog use that catalog, including additions and removals.
+
+| Region | Coverage in the public demo | Publisher |
+| --- | --- | --- |
+| Hong Kong | 18 district views, including both approaches to Aberdeen Tunnel | [Hong Kong Transport Department](https://data.gov.hk/en-data/dataset/hk-td-tis_2-traffic-snapshot-images) |
+| British Columbia | Five regional views. The gateway retrieves the current province-wide catalog and displays partner credits and reported delays. | [DriveBC](https://www.drivebc.ca/) |
+| London | Five JamCam snapshots | [Powered by TfL Open Data](https://tfl.gov.uk/info-for/open-data-users/) |
+| Finland | Five road-weather camera presets | [Fintraffic / Digitraffic](https://www.digitraffic.fi/en/road-traffic/) |
+| New Zealand | 15 regional highway views. The gateway reads the NZTA camera feed and filters out offline cameras and those under maintenance. | [NZTA public camera catalog](https://trafficnz.info/service/traffic-cameras/rest/2) |
+| California | Five District 4 highway cameras | [Caltrans](https://dot.ca.gov/programs/traffic-operations/traveler-information/cwwp) |
+
+The gateway also serves Singapore and New South Wales. An individual camera can return an unavailable image while the publisher’s directory remains online.
 
 ## Sources
 

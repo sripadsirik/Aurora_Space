@@ -15,6 +15,7 @@ import (
 // Fixed upstreams prevent arbitrary proxying. Each feed has a shared cache and
 // failure backoff, so additional dashboard viewers do not multiply API requests.
 type aerospaceFeed struct {
+	decode    func([]byte) ([]byte, error)
 	mu        sync.Mutex
 	url       string
 	ttl       time.Duration
@@ -54,6 +55,9 @@ func (f *aerospaceFeed) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			body, readErr := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK && readErr == nil && f.decode != nil {
+				body, readErr = f.decode(body)
+			}
 			if resp.StatusCode == http.StatusOK && readErr == nil && json.Valid(body) {
 				f.body, f.fetched, f.failed = body, time.Now().UTC(), false
 				f.retryAt, f.lastError = time.Time{}, ""

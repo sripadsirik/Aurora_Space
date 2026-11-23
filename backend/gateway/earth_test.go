@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -59,5 +60,21 @@ func TestPlaceSearchRejectsProviderErrors(t *testing.T) {
 	search.ServeHTTP(w, httptest.NewRequest("GET", "/api/earth/search?q=London", nil))
 	if w.Code != 503 {
 		t.Fatal("invalid provider data must remain unavailable", w.Code)
+	}
+}
+
+func TestRoadCameraCatalogs(t *testing.T) {
+	for _, tc := range []struct{ body, id string }{
+		{`<image-list><image><key>H210F</key><description>Tunnel</description><latitude>22.27</latitude><longitude>114.18</longitude><url>https://tdcctv.data.one.gov.hk/H210F.JPG</url></image></image-list>`, "H210F"},
+		{`<p:GetCamerasResponse xmlns:p="nz"><p:camera><p:id>714</p:id><p:lat>-43.92</p:lat><p:lon>171.72</p:lon><p:imageUrl>http://www.trafficnz.info/camera/714.jpg</p:imageUrl></p:camera><p:camera><p:id>715</p:id><p:lat>-43</p:lat><p:lon>171</p:lon><p:offline>true</p:offline></p:camera></p:GetCamerasResponse>`, "714"},
+	} {
+		data, err := roadCameraXML([]byte(tc.body))
+		var views []roadSnapshot
+		if err != nil || json.Unmarshal(data, &views) != nil || len(views) != 1 || views[0].ID != tc.id || !strings.HasPrefix(views[0].Image, "https://") {
+			t.Fatalf("unexpected camera response for %s: %s (%v)", tc.id, data, err)
+		}
+	}
+	if _, err := roadCameraXML([]byte("<html/>")); err == nil {
+		t.Fatal("accepted an error page as a catalog")
 	}
 }

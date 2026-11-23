@@ -79,3 +79,18 @@ describe("public camera networks", () => {
     expect(filterCameras(chicagoCameras, "illinois", "wacker").some(c => c.id.endsWith("fox32-river"))).toBe(true);
   });
 });
+
+it("uses the matching DriveBC frame and preserves provider credits and delay flags", () => {
+  const road = {
+    id: 581, name: "Bridgeview Drive - E", links: { imageDisplay: "/images/581.jpg?t=123" },
+    location: { coordinates: [-122.861842, 49.213189] }, is_on: true, should_appear: true,
+    credit: "Partner agency", marked_delayed: true
+  };
+  const cameras = parsePublicCameras([road, { ...road, is_on: false },
+    { ...road, links: { imageDisplay: "/images/999.jpg" } }], "british-columbia");
+  expect(cameras).toHaveLength(1);
+  expect(cameras[0]).toMatchObject({
+    image: "https://www.drivebc.ca/images/581.jpg", source: "DriveBC / Partner agency",
+    lat: 49.213189, lon: -122.861842, imageStale: true, observedAt: null
+  });
+});

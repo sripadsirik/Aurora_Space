@@ -94,7 +94,7 @@ may differ from the configuration used by a particular season. Missing layouts
 still show the circuit's Earth location, with position rendering unavailable.
 
 Cars interpolate between nearby position samples, stop extrapolating after two
-seconds, and do not bridge gaps over 2.5 seconds. Heading is estimated from movement.
+seconds, and do not bridge gaps over 2.5 seconds. On the racing surface each car points along the local circuit segment in its direction of travel. Away from the circuit, heading follows the position samples. The follow camera sits behind the car and turns with its nose.
 The source does not resolve exact lateral track placement. This is a sampled race
 visualization, not a collision-accurate digital twin. Team colors are applied to the
 original generic car; official team car designs and liveries are not included.

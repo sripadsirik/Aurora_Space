@@ -5,11 +5,23 @@ import { cameraNetworks, filterCameras } from "./cameraNetworks";
 import { mergeCameraFeeds, parsePublicCameras } from "./publicCameras";
 import type { TrafficCamera } from "./data";
 import { chicagoCameras } from "./chicagoCameras";
+import directory from "./cameraDirectory.json";
+
+const listed = directory.map(row => {
+  const network = cameraNetworks.find(network => network.id === row.network)!;
+  return { ...row, observedAt: null, source: network.source, providerUrl: network.url };
+});
 
 export function useCameraFeeds(enabled: boolean) {
   const [info, setInfo] = useState({ fetched: "", errors: [] as string[], loading: true });
   useEffect(() => {
     if (!enabled) return;
+    if (!env.VITE_WS_URL) {
+      useEarth.getState().set({ cameras: [...chicagoCameras, ...listed], feed: { at: "", error: false } });
+      setInfo({ fetched: "", errors: [], loading: false });
+      return;
+    }
+    const gateway = env.VITE_WS_URL;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     const cached = new Map<string, { cameras: TrafficCamera[]; at: string }>();
@@ -17,8 +29,7 @@ export function useCameraFeeds(enabled: boolean) {
       const errors: string[] = [];
       await Promise.all(cameraNetworks.flatMap(network => network.feeds.map(async feed => {
         try {
-          if (!env.VITE_WS_URL) throw Error("Start the live gateway");
-          const url = new URL(env.VITE_WS_URL);
+          const url = new URL(gateway);
           url.protocol = url.protocol === "wss:" ? "https:" : "http:";
           url.pathname = "/api/earth/cameras/" + feed;
           url.search = "";
@@ -38,7 +49,7 @@ export function useCameraFeeds(enabled: boolean) {
       })));
       if (controller.signal.aborted) return;
       const values = cameraNetworks.flatMap(n => n.feeds).flatMap(feed => cached.has(feed) ? [cached.get(feed)!] : []);
-      const cameras = mergeCameraFeeds([...chicagoCameras, ...values.flatMap(v => v.cameras)]);
+      const cameras = mergeCameraFeeds([...chicagoCameras, ...values.flatMap(v => v.cameras), ...listed.filter(c => !cached.has(c.feed))]);
       const fetched = values.length ? new Date(Math.min(...values.map(v => Date.parse(v.at)))).toISOString() : "";
       const state = useEarth.getState();
       state.set({ cameras, feed: { at: fetched, error: errors.length > 0 },

@@ -28,7 +28,7 @@ import { SceneControls } from "./components/scene/SceneControls";
 import { useAerospace } from "./aerospace/store";
 import { useEarth } from "./earth/store";
 import { useExplorer } from "./explorer/store";
-import { illinoisPlaces } from "./earth/cameraNetworks";
+import { cameraNetworks, illinoisPlaces } from "./earth/cameraNetworks";
 
 export const App = (): JSX.Element => {
   useWebSocket();
@@ -56,7 +56,8 @@ export const App = (): JSX.Element => {
         simulation: null,
       });
     }
-    if (["all", "singapore", "illinois", "california", "london", "finland", "nsw"].includes(params.get("cameras") || "")) {
+    const network = cameraNetworks.find(n => n.id === params.get("cameras"));
+    if (network || params.get("cameras") === "all") {
       useEarth.getState().set({ camerasOn: true, cameraNetwork: params.get("cameras")!, cameraArea: params.get("area") || "" });
       useExplorer.getState().set({ earthOpen: !launchId });
       const place = illinoisPlaces.find(p => p.id === params.get("area"));

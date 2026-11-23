@@ -9,7 +9,8 @@ import {
 import {
   align,
   transform,
-  circuitPosition,
+  circuitPose,
+  trackHeading,
   carHeading,
   type XY,
 } from "./alignment";
@@ -98,9 +99,9 @@ it("keeps the car nose tangent through a right-angle turn and holds heading at r
     [50, 0],
     [50, 50],
   ];
-  expect(circuitPosition([20, 3], circuit, 6)).toEqual([20, 0]);
-  expect(circuitPosition([48, 20], circuit, 6)).toEqual([50, 20]);
-  expect(circuitPosition([12, 20], circuit, 6)).toEqual([12, 20]);
+  expect(circuitPose([20, 3], circuit, 6).position).toEqual([20, 0]);
+  expect(circuitPose([48, 20], circuit, 6).position).toEqual([50, 20]);
+  expect(circuitPose([12, 20], circuit, 6).position).toEqual([12, 20]);
   for (const [east, north] of [
     [1, 0],
     [0, 1],
@@ -111,5 +112,8 @@ it("keeps the car nose tangent through a right-angle turn and holds heading at r
     expect(Math.cos(-h)).toBeCloseTo(east);
     expect(Math.sin(-h)).toBeCloseTo(north);
   }
+  expect(trackHeading([0, 1], [5, 12])).toBeCloseTo(-Math.PI / 2);
+  expect(trackHeading([0, 1], [5, -12])).toBeCloseTo(Math.PI / 2);
+  expect(trackHeading([0, 1], [0, 0])).toBeCloseTo(-Math.PI / 2);
   expect(carHeading(0, 0, 1.2)).toBe(1.2);
 });

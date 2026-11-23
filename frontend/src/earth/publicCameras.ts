@@ -17,6 +17,9 @@ function imageAllowed(image: unknown, network: string): image is string {
   try {
     const u = new URL(image);
     if (u.protocol !== "https:" || u.username || u.password) return false;
+    if (network === "hong-kong") return u.hostname === "tdcctv.data.one.gov.hk" && /^\/[a-z0-9_-]+\.jpg$/i.test(u.pathname);
+    if (network === "new-zealand") return u.hostname === "www.trafficnz.info" && /^\/camera\/\d+\.jpg$/.test(u.pathname);
+    if (network === "british-columbia") return u.hostname === "www.drivebc.ca" && /^\/images\/\d+\.jpg$/.test(u.pathname);
     if (network === "illinois") return ["cctv.travelmidwest.com", "www.lakecountypassage.com"].includes(u.hostname);
     if (network === "california") return u.hostname === "cwwp2.dot.ca.gov";
     if (network === "london") return u.hostname === "s3-eu-west-1.amazonaws.com" && u.pathname.startsWith("/jamcams.tfl.gov.uk/");
@@ -52,7 +55,26 @@ export function parsePublicCameras(data: any, feed: string): TrafficCamera[] {
     rows.push(camera);
     return camera;
   };
-  if (feed === "illinois-passage") {
+  if (network.id === "new-zealand" || network.id === "hong-kong") {
+    if (!Array.isArray(data)) throw Error("Invalid road camera catalog");
+    for (const view of data) {
+      if (view) add(view.id, view.name, view.lat, view.lon, view.image);
+    }
+  } else if (network.id === "british-columbia") {
+    if (!Array.isArray(data)) throw Error("Invalid DriveBC camera catalog");
+    for (const c of data) {
+      if (!Number.isSafeInteger(c?.id) || !c.is_on || !c.should_appear) continue;
+      const image = c.links?.imageDisplay;
+      if (typeof image !== "string" || image.split("?")[0] !== `/images/${c.id}.jpg`) continue;
+      const camera = add(String(c.id), c.name_override || c.name, c.location?.coordinates?.[1],
+        c.location?.coordinates?.[0], "https://www.drivebc.ca" + image.split("?")[0]);
+      if (camera) {
+        camera.source = ["DriveBC", c.credit].filter(Boolean).join(" / ");
+        camera.imageStale = !!(c.marked_stale || c.marked_delayed);
+        camera.providerUrl = network.url;
+      }
+    }
+  } else if (feed === "illinois-passage") {
     if (!Array.isArray(data)) throw Error("Invalid Lake County PASSAGE camera feed");
     for (const c of data) {
       if (!c?.id || !Array.isArray(c.approaches?.approach)) continue;

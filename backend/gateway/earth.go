@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,17 +12,77 @@ import (
 	"time"
 )
 
+// The two agencies publish one XML element per directional road view.
+type roadViewXML struct {
+	ID          string   `xml:"id"`
+	Key         string   `xml:"key"`
+	Name        string   `xml:"name"`
+	Description string   `xml:"description"`
+	Lat         *float64 `xml:"lat"`
+	Lon         *float64 `xml:"lon"`
+	Latitude    *float64 `xml:"latitude"`
+	Longitude   *float64 `xml:"longitude"`
+	ImageURL    string   `xml:"imageUrl"`
+	URL         string   `xml:"url"`
+	Offline     bool     `xml:"offline"`
+	Maintenance bool     `xml:"underMaintenance"`
+}
+type roadSnapshot struct {
+	ID    string  `json:"id"`
+	Name  string  `json:"name"`
+	Lat   float64 `json:"lat"`
+	Lon   float64 `json:"lon"`
+	Image string  `json:"image"`
+}
+
+func roadCameraXML(body []byte) ([]byte, error) {
+	var catalog struct {
+		XMLName xml.Name
+		Cameras []roadViewXML `xml:"camera"`
+		Images  []roadViewXML `xml:"image"`
+	}
+	if err := xml.Unmarshal(body, &catalog); err != nil {
+		return nil, err
+	}
+	views := make([]roadSnapshot, 0)
+	switch catalog.XMLName.Local {
+	case "image-list":
+		for _, v := range catalog.Images {
+			if v.Key != "" && v.Latitude != nil && v.Longitude != nil {
+				views = append(views, roadSnapshot{v.Key, v.Description, *v.Latitude, *v.Longitude, v.URL})
+			}
+		}
+	case "GetCamerasResponse":
+		for _, v := range catalog.Cameras {
+			if v.ID != "" && !v.Offline && !v.Maintenance && v.Lat != nil && v.Lon != nil {
+				image := strings.Replace(v.ImageURL, "http://www.trafficnz.info/", "https://www.trafficnz.info/", 1)
+				views = append(views, roadSnapshot{v.ID, v.Name, *v.Lat, *v.Lon, image})
+			}
+		}
+	default:
+		return nil, fmt.Errorf("unexpected camera catalog %q", catalog.XMLName.Local)
+	}
+	return json.Marshal(views)
+}
+
 // Public, published camera catalogs only. No scanning or arbitrary URL proxying.
 func registerEarth(mux *http.ServeMux) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	mux.Handle("/api/earth/cameras/singapore", &aerospaceFeed{url: "https://api.data.gov.sg/v1/transport/traffic-images", ttl: time.Minute, client: client})
 	for name, endpoint := range map[string]string{
+		"british-columbia": "https://www.drivebc.ca/api/webcams/",
 		"illinois-passage": "https://www.lakecountypassage.com/rest/cctv",
 		"london":           "https://api.tfl.gov.uk/Place/Type/JamCam",
 		"nsw":              "https://data.livetraffic.com/cameras/traffic-cam.json",
 		"finland":          "https://tie.digitraffic.fi/api/weathercam/v1/stations",
 	} {
 		mux.Handle("/api/earth/cameras/"+name, &aerospaceFeed{url: endpoint, ttl: 5 * time.Minute, client: client})
+	}
+	for name, endpoint := range map[string]string{
+		"hong-kong":   "https://static.data.gov.hk/td/traffic-snapshot-images/code/Traffic_Camera_Locations_En.xml",
+		"new-zealand": "https://trafficnz.info/service/traffic-cameras/rest/2",
+	} {
+		mux.Handle("/api/earth/cameras/"+name, &aerospaceFeed{url: endpoint, ttl: 5 * time.Minute, client: client, decode: roadCameraXML})
 	}
 	for district := 1; district <= 12; district++ {
 		mux.Handle(fmt.Sprintf("/api/earth/cameras/california-%d", district), &aerospaceFeed{

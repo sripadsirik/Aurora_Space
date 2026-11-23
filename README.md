@@ -1,26 +1,29 @@
 # AURORA · Mission Lab & Live Events
 
-A space situational-awareness platform with a reproducible encounter-analysis lab.
-Inspect orbital uncertainty, simulate eleven maneuver candidates, compare fuel and
-collision probability when supported by full covariance, screen supplied nearby
-objects, and export an integrity-checked investigation archive.
+[![Engineering verification](https://github.com/sripadsirik/Aurora_Space/actions/workflows/engineering.yml/badge.svg?branch=main)](https://github.com/sripadsirik/Aurora_Space/actions/workflows/engineering.yml)
+[![GitHub Pages deployment](https://github.com/sripadsirik/Aurora_Space/actions/workflows/deploy-pages.yml/badge.svg?branch=main)](https://github.com/sripadsirik/Aurora_Space/actions/workflows/deploy-pages.yml)
 
-Track Formula 1 weekends from orbit to the circuit: browse the season calendar,
-inspect practice and qualifying, and replay real races with 3D cars and synchronized
-telemetry on Earth.
+Aurora puts satellites, launch sites, public road cameras, and Formula 1 circuits on one interactive Earth. The Mission Lab lets you reproduce an orbital encounter, compare eleven maneuver candidates, and export the evidence behind a decision.
+
+**[Open Aurora](https://sripadsirik.github.io/Aurora_Space/)** · **[Explore road cameras](https://sripadsirik.github.io/Aurora_Space/?cameras=hong-kong)** · **[Replay F1 on Earth](https://sripadsirik.github.io/Aurora_Space/?events=earth)** · **[Try Mission Lab](https://sripadsirik.github.io/Aurora_Space/?mission=1)**
+
+## Explore Earth and orbit
+
+| Road cameras | Places |
+| --- | --- |
+| [![The Wan Chai entrance to Aberdeen Tunnel alongside its camera marker in Hong Kong](docs/images/earth-road-camera.jpg)](docs/images/earth-road-camera.jpg) | [![Sydney Opera House selected in Aurora’s place search](docs/images/earth-place-search.jpg)](docs/images/earth-place-search.jpg) |
+| **Earth → Camera network**. Select a road to see its provider’s image and location. Hong Kong Transport Department supplies the Aberdeen Tunnel view pictured here. | **Earth → Find a street, city or coordinates**. Search by name with the gateway running, or enter coordinates in the public demo. |
+| **Satellites** | **Rocket countdowns** |
+| [![Orbital data for a selected satellite on Aurora Earth](docs/images/satellite-inspector.jpg)](docs/images/satellite-inspector.jpg) | [![Archived countdown for a Long March 2C launch from Xichang](docs/generated/aerospace/live-launches.png)](docs/generated/aerospace/live-launches.png) |
+| **Satellites → Satellite details**. Inspect the selected object’s altitude, speed, period and inclination, then choose **Fit orbit**. | **Rockets**. Select a mission to see its countdown, launch window and launch site. This screenshot preserves the countdown at the time of capture. |
+
+The public demo includes a camera directory with provider-hosted snapshots in Hong Kong, British Columbia, California, London, Finland, and New Zealand. The live gateway also retrieves the regional catalogs, including Illinois, Singapore, and New South Wales. Each publisher sets image availability and refresh times. [Camera coverage and sources](docs/camera-coverage.md)
 
 ![Following Max Verstappen on Aurora’s Earth during a replay of the 2025 Las Vegas Grand Prix](docs/images/f1-follow-earth.png)
 
 ## Access AURORA
 
-**[Open the free public demo](https://sripadsirik.github.io/Aurora_Space/)** —
-use it in your browser without an account or installation. The GitHub Pages site
-hosts the demo frontend with sample data. Live satellite, aircraft, launch and
-camera feeds require the backend described below.
-
-**[Browse the public source code](https://github.com/sripadsirik/Aurora_Space)**
-to inspect the implementation, download a ZIP through **Code → Download ZIP**, or
-fork the repository. No GitHub account is needed to view or clone the code.
+The public demo runs in a browser without installation. Start the local live stack for satellite, aircraft, and launch feeds, street-name search, and the full connected camera catalogs.
 
 ### Run the latest version locally
 
