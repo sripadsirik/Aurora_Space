@@ -44,6 +44,6 @@ func TestCDMEmptyAndInvalid(t *testing.T) {
 }
 func TestQueryIsDateBounded(t *testing.T) {
 	if strings.Contains(cdmURL, "limit/20") || !strings.Contains(cdmURL, "TCA/%3Enow") || !strings.Contains(cdmURL, "CREATED/%3Enow-3") {
-		t.Fatal(cdmURL)
+		t.Fatalf("unexpected CDM query %q", cdmURL)
 	}
 }

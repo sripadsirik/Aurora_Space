@@ -54,5 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install librdkafka build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libsasl2-dev libssl-dev
       - run: cargo test --manifest-path backend/engine-rust/Cargo.toml --locked
       - run: cargo fmt --manifest-path backend/engine-rust/Cargo.toml --check

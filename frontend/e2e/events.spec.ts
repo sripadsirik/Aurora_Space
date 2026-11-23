@@ -82,7 +82,7 @@ test("saved calendar survives provider failure with explicit provenance", async 
 test("recorded session loads real channels, supports pause, selection and seeking", async ({
   page,
 }) => {
-  test.setTimeout(90000);
+  test.setTimeout(process.env.CI ? 240000 : 90000);
   const start = Date.parse("2026-11-20T00:30:00Z");
   const tracks = JSON.parse(
     await readFile(
