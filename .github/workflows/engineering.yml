@@ -35,6 +35,25 @@ jobs:
           path: |
             frontend/test-results
             docs/generated
+  aerospace-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm --prefix frontend run test:e2e:aerospace
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: aerospace-browser-evidence
+          path: frontend/test-results
   go:
     runs-on: ubuntu-latest
     steps:

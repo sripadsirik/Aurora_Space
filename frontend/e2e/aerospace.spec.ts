@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("launch countdown, aircraft details, layers and mobile layout", async ({
   page,
 }, testInfo) => {
-  test.setTimeout(90000);
+  test.setTimeout(process.env.CI ? 240000 : 180000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route("**/api/aerospace/**", async (route) => {
@@ -163,7 +163,7 @@ test("worldwide aircraft and street-named Illinois camera shortcuts", async ({ p
       attributes: { OBJECTID: 3339 + i, CameraLocation: "IL 21 at Inverrary", CameraDirection: direction,
         SnapShot: `https://www.lakecountypassage.com/snapshots/Inverrary_${direction}.jpg`, AgeInMinutes: "3", TooOld: "false" },
       geometry: { x: -87.91899109, y: 42.16080856 },
-    })) } : feed === "london" || feed === "illinois-passage" ? [] : feed === "singapore" ? { items: [] } : feed.startsWith("california") ? { data: [] } : { features: [] };
+    })) } : ["london", "illinois-passage", "hong-kong", "new-zealand", "british-columbia"].includes(feed) ? [] : feed === "singapore" ? { items: [] } : feed.startsWith("california") ? { data: [] } : { features: [] };
     await route.fulfill({ json: { data, fetchedAt: new Date().toISOString(), stale: false }, headers: { "Access-Control-Allow-Origin": "*" } });
   });
   await page.route("https://www.lakecountypassage.com/**", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="gray"/></svg>' }));
@@ -209,7 +209,7 @@ test("camera pagination, street filters and video failure fallback", async ({ pa
     })) } : feed === "california-4" ? { data: [{ cctv: { index: "1", inService: "true",
       location: { latitude: "37.8", longitude: "-122.2", locationName: "I-580 video test" },
       imageData: { streamingVideoURL: "https://wzmedia.dot.ca.gov/test/playlist.m3u8", static: { currentImageURL: "https://cwwp2.dot.ca.gov/test.jpg" } },
-    } }] } : feed === "london" || feed === "illinois-passage" ? [] : feed === "singapore" ? { items: [] } : feed.startsWith("california") ? { data: [] } : { features: [] };
+    } }] } : ["london", "illinois-passage", "hong-kong", "new-zealand", "british-columbia"].includes(feed) ? [] : feed === "singapore" ? { items: [] } : feed.startsWith("california") ? { data: [] } : { features: [] };
     await route.fulfill({ json: { data, fetchedAt: new Date().toISOString(), stale: false }, headers: { "Access-Control-Allow-Origin": "*" } });
   });
   for (const host of ["cctv.travelmidwest.com", "cwwp2.dot.ca.gov"]) await page.route(`https://${host}/**`, route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"/>' }));

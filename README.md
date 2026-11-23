@@ -19,7 +19,7 @@ Aurora puts satellites, launch sites, public road cameras, and Formula 1 circuit
 
 The public demo includes a camera directory with provider-hosted snapshots in Hong Kong, British Columbia, California, London, Finland, and New Zealand. The live gateway also retrieves the regional catalogs, including Illinois, Singapore, and New South Wales. Each publisher sets image availability and refresh times. [Camera coverage and sources](docs/camera-coverage.md)
 
-![Following Max Verstappen on Aurora’s Earth during a replay of the 2025 Las Vegas Grand Prix](docs/images/f1-follow-earth.png)
+![The chase camera follows Lando Norris at 138 km/h in the recorded 2026 Las Vegas Grand Prix](docs/images/f1-vegas-chase.jpg)
 
 ## Access AURORA
 
