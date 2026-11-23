@@ -64,18 +64,27 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     polyline: { positions: new CallbackProperty(() => [groundPosition, focusPosition], false), width: 1, material: accent.withAlpha(0.35) }
   });
 
+  const gl = viewer.canvas.getContext("webgl2") ?? viewer.canvas.getContext("webgl");
+  const rendererInfo = gl?.getExtension("WEBGL_debug_renderer_info");
+  const softwareRenderer = !!rendererInfo && /swiftshader|llvmpipe|softpipe|software rasterizer/i.test(
+    gl!.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL)
+  );
+
   function applyQuality() {
     const { quality, lighting } = useSceneStore.getState();
+    // Leave an explicit Cinema selection available on every renderer.
+    const lightweight = quality === "performance" || (softwareRenderer && quality === "balanced");
     viewer.useBrowserRecommendedResolution = true;
-    viewer.resolutionScale = quality === "cinematic" ? Math.min(window.devicePixelRatio, 1.6) : quality === "performance" ? 0.8 : 1;
-    viewer.targetFrameRate = quality === "performance" ? 30 : 60;
-    viewer.scene.msaaSamples = quality === "performance" ? 1 : 4;
-    viewer.scene.globe.maximumScreenSpaceError = quality === "cinematic" ? 1.5 : quality === "performance" ? 4 : 2;
+    if (softwareRenderer && lightweight) viewer.resolutionScale = quality === "performance" ? 0.5 : 0.6;
+    else viewer.resolutionScale = quality === "cinematic" ? Math.min(window.devicePixelRatio, 1.6) : quality === "performance" ? 0.8 : 1;
+    viewer.targetFrameRate = lightweight ? 30 : 60;
+    viewer.scene.msaaSamples = lightweight ? 1 : 4;
+    viewer.scene.globe.maximumScreenSpaceError = quality === "cinematic" ? 1.5 : lightweight ? 4 : 2;
     viewer.scene.globe.enableLighting = lighting;
     viewer.scene.globe.dynamicAtmosphereLighting = true;
     viewer.scene.globe.dynamicAtmosphereLightingFromSun = true;
     viewer.scene.globe.atmosphereLightIntensity = 12;
-    viewer.scene.postProcessStages.fxaa.enabled = quality !== "performance";
+    viewer.scene.postProcessStages.fxaa.enabled = !lightweight;
     const bloom = viewer.scene.postProcessStages.bloom;
     bloom.enabled = quality === "cinematic";
     bloom.uniforms.glowOnly = false;
@@ -84,7 +93,7 @@ export function enhanceScene(viewer: Viewer, access: SceneAccess) {
     bloom.uniforms.delta = 0.7;
     bloom.uniforms.sigma = 2.5;
     bloom.uniforms.stepSize = 1;
-    viewer.scene.highDynamicRange = quality !== "performance";
+    viewer.scene.highDynamicRange = !lightweight;
     viewer.scene.requestRender();
   }
 

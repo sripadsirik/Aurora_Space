@@ -410,15 +410,6 @@ export const GlobeView = ({ satellites, conjunctions, spaceWeather }: GlobeViewP
       msaaSamples: 4
     });
 
-    // Software WebGL shares CPU time with input handling and telemetry decoding.
-    // Reduce only the globe's internal pixel count on these renderers.
-    const gl = viewer.canvas.getContext("webgl2") ?? viewer.canvas.getContext("webgl");
-    const rendererInfo = gl?.getExtension("WEBGL_debug_renderer_info");
-    if (gl && rendererInfo && /swiftshader|llvmpipe|softpipe|software rasterizer/i.test(gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL))) {
-      viewer.resolutionScale = 0.6;
-      viewer.scene.msaaSamples = 1;
-      viewer.targetFrameRate = 30;
-    }
     viewer.scene.backgroundColor = Color.BLACK;
     viewer.scene.highDynamicRange = true;
     viewer.scene.globe.baseColor = Color.fromCssColorString("#10202d");
