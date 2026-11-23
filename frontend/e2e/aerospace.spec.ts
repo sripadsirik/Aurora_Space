@@ -1,10 +1,7 @@
 import { test, expect } from "@playwright/test";
-test("launch countdown, aircraft details, layers and mobile layout", async ({
-  page,
-}, testInfo) => {
-  test.setTimeout(process.env.CI ? 240000 : 180000);
+async function openAerospace(page: import("@playwright/test").Page) {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", e => errors.push(e.message));
   await page.route("**/api/aerospace/**", async (route) => {
     const data = route.request().url().endsWith("/launches")
       ? {
@@ -48,6 +45,11 @@ test("launch countdown, aircraft details, layers and mobile layout", async ({
     });
   });
   await page.goto("/");
+  return errors;
+}
+
+test("launch countdown, layer choices and simulated ascent", async ({page}, testInfo) => {
+  const errors = await openAerospace(page);
   await expect(
     page.getByRole("region", { name: "Orbital operations" }),
   ).toHaveCount(0);
@@ -108,6 +110,11 @@ test("launch countdown, aircraft details, layers and mobile layout", async ({
     .toBeLessThan(10);
   await page.getByRole("button", { name: "Exit preview" }).click();
   await expect(page.locator(".liftoff-banner")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("aircraft details, mobile layout and feed status", async ({page}, testInfo) => {
+  const errors = await openAerospace(page);
   await page.getByRole("button", { name: "✈ Aircraft", exact: true }).click();
   await page.getByLabel("Coverage region").selectOption("florida");
   await expect(
