@@ -9,22 +9,20 @@ Aurora puts satellites, aircraft, launch pads, road cameras, and Formula 1 cars 
 
 ## Satellites, planes and rockets
 
-| Satellite · Hubble Space Telescope | Plane · Douglas DC-8 | Rocket · Space Launch System |
-| --- | --- | --- |
-| [![Hubble’s telescope body and solar panels above the curve of Earth](docs/images/hubble-in-orbit.jpg)](docs/images/hubble-in-orbit.jpg) | [![NASA’s four-engine DC-8 banking over the snow-covered Sierra Nevada](docs/images/dc8-in-flight.jpg)](docs/images/dc8-in-flight.jpg) | [![The orange core and white boosters of Artemis I lifting off from Kennedy Space Center](docs/images/artemis-i-launch.jpg)](docs/images/artemis-i-launch.jpg) |
-| Photographed from Atlantis after Hubble’s final servicing mission in 2009. [NASA](https://science.nasa.gov/asset/hubble/hubbles-final-release-over-earth-2009/) | NASA’s airborne laboratory over California in 1998. [NASA / Jim Ross](https://images.nasa.gov/details/EC98-44444-004) | Artemis I leaving Pad 39B in 2022. [NASA / Kevin Davis and Chris Coleman](https://www.nasa.gov/image-article/one-year-ago-artemis-i-lifts-off/) |
-
-### The views inside Aurora
-
-| Following Hubble | Following flight SWA1125 | Simulated liftoff at Kennedy |
-| --- | --- | --- |
-| [![Hubble selected on its orbit in Aurora, with altitude and speed alongside the globe](docs/images/hubble-follow.jpg)](docs/images/hubble-follow.jpg) | [![Aurora following Southwest flight SWA1125 on the globe with its altitude and speed in the inspector](docs/images/aircraft-follow.jpg)](docs/images/aircraft-follow.jpg) | [![A representative rocket rising from Pad 39B in Aurora’s simulated ascent using the archived Artemis I launch record](docs/images/rocket-liftoff-preview.jpg)](docs/images/rocket-liftoff-preview.jpg) |
+| Flight photography | Aurora globe view |
+| --- | --- |
+| [![Hubble’s telescope body and solar panels above the curve of Earth](docs/images/hubble-in-orbit.jpg)](docs/images/hubble-in-orbit.jpg) | [![Hubble selected on its orbit in Aurora, with altitude and speed alongside the globe](docs/images/hubble-follow.jpg)](docs/images/hubble-follow.jpg) |
+| **Satellite.** Hubble after its final servicing mission in 2009. [NASA](https://science.nasa.gov/asset/hubble/hubbles-final-release-over-earth-2009/) | **Follow satellite.** Hubble’s catalog entry, orbital path and current SGP4 estimate. |
+| [![NASA’s four-engine DC-8 banking over the snow-covered Sierra Nevada](docs/images/dc8-in-flight.jpg)](docs/images/dc8-in-flight.jpg) | [![Aurora following Southwest flight SWA1125 with its altitude and speed in the inspector](docs/images/aircraft-follow.jpg)](docs/images/aircraft-follow.jpg) |
+| **Plane.** NASA’s DC-8 airborne laboratory over California in 1998. [NASA / Jim Ross](https://images.nasa.gov/details/EC98-44444-004) | **Follow aircraft.** A Southwest flight in the Florida receiver region, with its callsign, altitude, heading and speed. |
+| [![The orange core and white boosters of Artemis I lifting off from Kennedy Space Center](docs/images/artemis-i-launch.jpg)](docs/images/artemis-i-launch.jpg) | [![A representative rocket rising from Pad 39B in Aurora’s simulated ascent using the archived Artemis I mission record](docs/images/rocket-liftoff-preview.jpg)](docs/images/rocket-liftoff-preview.jpg) |
+| **Rocket.** Artemis I leaving Pad 39B in 2022. [NASA / Kevin Davis and Chris Coleman](https://www.nasa.gov/image-article/one-year-ago-artemis-i-lifts-off/) | **Preview simulated liftoff.** A representative rocket at Kennedy using the archived Artemis I mission record. |
 
 - **Satellites.** Select an object by name or NORAD ID. Inspect its altitude, speed, inclination and element epoch. **Fit orbit** frames the predicted trajectory and **Follow satellite** keeps the object in view. The live stack propagates CelesTrak orbital elements with SGP4. The feed badge shows when the catalog was received. [O3b mPOWER inspector](docs/images/satellite-inspector.jpg)
 - **Aircraft.** Open **Aircraft → Worldwide** for recent OpenSky observations, or choose a regional adsb.lol feed. Select a flight and choose **Follow aircraft**. Movement between reports uses the last reported speed and heading for up to 30 seconds. Tracks disappear after 90 seconds without a fresh position. Coverage depends on receivers and provider quotas.
 - **Rockets.** Select a mission in **Rockets** to see the launch window, pad, countdown, status and webcast when supplied by Launch Library 2. **Follow launch** watches the pad and mission status. **Preview simulated liftoff** flies an illustrative three-minute ascent. Observed flight paths require a configured source of mission-matched positions. [Rocket telemetry guide](docs/rocket-telemetry.md)
 
-The launch preview above uses the archived Artemis I mission record. Here is the countdown view for a different mission, Long March 2C at Xichang, captured before its launch window.
+Aurora’s countdown for the Long March 2C mission at Xichang, captured before its launch window.
 
 [![Archived Long March 2C launch countdown, pad location and mission window in Aurora](docs/generated/aerospace/live-launches.png)](docs/generated/aerospace/live-launches.png)
 
